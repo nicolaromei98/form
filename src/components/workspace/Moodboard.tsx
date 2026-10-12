@@ -8,6 +8,8 @@ import { ingestImage, isImageFile, useAssetUrl } from "@/lib/assets";
 import { useWidth } from "@/lib/useWidth";
 import type { MoodInput, MoodItem, MoodLayout } from "@/lib/schema";
 import { BlockShell } from "./blocks";
+import { Popover } from "./parts";
+import { ColorPicker } from "./ColorPicker";
 import { DecodeText } from "../text/TextMotion";
 import { ShuffleText } from "../text/ShuffleText";
 
@@ -34,7 +36,9 @@ export function MoodboardBlock() {
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
-  const colorRef = useRef<HTMLInputElement>(null);
+  // FORM's own colour picker, anchored under the Colour button
+  const [colourAnchor, setColourAnchor] = useState<HTMLButtonElement | null>(null);
+  const [colourAt, setColourAt] = useState<{ x: number; y: number } | null>(null);
 
   // Board height follows its content (in board-width units), with room to drop below
   const bottom = items.reduce((m, it) => Math.max(m, it.y + it.h), 0);
@@ -115,14 +119,16 @@ export function MoodboardBlock() {
     };
   }, [selected, commit, boardRef]);
 
-  // Native colour picker: add the swatch once the picker commits, not on every drag
-  useEffect(() => {
-    const input = colorRef.current;
-    if (!input) return;
-    const onChange = () => commit([{ op: "addMoodItems", items: [{ kind: "color", hex: input.value }] }], "add colour");
-    input.addEventListener("change", onChange);
-    return () => input.removeEventListener("change", onChange);
-  }, [commit]);
+  const toggleColour = () => {
+    if (colourAt || !colourAnchor) return setColourAt(null);
+    const r = colourAnchor.getBoundingClientRect();
+    const h = 360; // picker height, so it opens upwards when there's no room below
+    setColourAt({
+      x: Math.max(16, Math.min(r.right - 280, window.innerWidth - 296)),
+      y: r.bottom + 8 + h > window.innerHeight ? Math.max(16, r.top - 8 - h) : r.bottom + 8,
+    });
+  };
+  const closeColour = useCallback(() => setColourAt(null), []);
 
   const addNote = () => {
     commit([{ op: "addMoodItems", items: [{ kind: "note", text: "" }] }], "add note");
@@ -161,7 +167,9 @@ export function MoodboardBlock() {
           </div>
           <div className="glass flex h-[44px] items-center gap-0.5 rounded-full p-1">
             <ToolButton onClick={addNote}>Note</ToolButton>
-            <ToolButton onClick={() => colorRef.current?.click()}>Colour</ToolButton>
+            <ToolButton ref={setColourAnchor} onClick={toggleColour}>
+              Colour
+            </ToolButton>
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
@@ -181,7 +189,14 @@ export function MoodboardBlock() {
               e.currentTarget.value = "";
             }}
           />
-          <input ref={colorRef} type="color" defaultValue="#c8b8a6" className="pointer-events-none absolute h-0 w-0 opacity-0" tabIndex={-1} aria-hidden />
+          <Popover anchor={colourAnchor} pos={colourAt} onClose={closeColour}>
+            <ColorPicker
+              onAdd={(hex, name) => {
+                commit([{ op: "addMoodItems", items: [{ kind: "color", hex, text: name }] }], "add colour");
+                closeColour();
+              }}
+            />
+          </Popover>
         </div>
       </div>
 
@@ -253,9 +268,10 @@ export function MoodboardBlock() {
   );
 }
 
-function ToolButton({ onClick, children }: { onClick: () => void; children: string }) {
+function ToolButton({ onClick, children, ref }: { onClick: () => void; children: string; ref?: (el: HTMLButtonElement | null) => void }) {
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onClick}
       className="focus-ring t-body-s h-full cursor-pointer rounded-full px-3.5 text-text-2 transition-colors hover:bg-black/[0.05] hover:text-text"
