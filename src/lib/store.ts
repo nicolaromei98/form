@@ -67,6 +67,8 @@ interface FormState {
   engine: EngineId;
   commandHistory: string[];
   reducedMotion: boolean;
+  /** The "about this project" intro over the workspace */
+  intro: boolean;
 
   /* actions */
   submit: (command: string) => Promise<boolean>;
@@ -86,6 +88,7 @@ interface FormState {
   setSpawn: (rects: Rect[] | null) => void;
   setEngine: (e: EngineId) => void;
   setReducedMotion: (v: boolean) => void;
+  setIntro: (open: boolean) => void;
 }
 
 let captionId = 0;
@@ -116,6 +119,7 @@ export const useForm = create<FormState>()(
       engine: "demo",
       commandHistory: [],
       reducedMotion: false,
+      intro: false,
 
       async submit(command) {
         const text = command.trim();
@@ -297,6 +301,10 @@ export const useForm = create<FormState>()(
 
       setReducedMotion(v) {
         set({ reducedMotion: v });
+      },
+
+      setIntro(open) {
+        set(open ? { intro: true, composerOpen: false } : { intro: false });
       },
     }),
     {

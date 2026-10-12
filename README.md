@@ -9,6 +9,7 @@ npm run dev -- --port 3417
 
 ## Demo script (≈ 90 s)
 
+0. **Intro.** A first visit opens a short note over the blurred workspace: a personal project, in development, with what works today. The **ⓘ** button in the top bar reopens it.
 1. **Empty workspace.** The organic agent floats in the centre. Hover it and its volumes draw in around a `• →` nucleus.
 2. Click it (or press `/`). It stretches into the command capsule and one volume detaches to become the close button.
 3. `Create a project tracker for my new website` → volumes leave the agent, fly to four slots, swell into ink silhouettes and cool into glass task cards.

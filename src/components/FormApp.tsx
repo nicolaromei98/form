@@ -7,6 +7,7 @@ import { move } from "@/lib/motion";
 import { AgentLayer } from "./agent/AgentLayer";
 import { Workspace } from "./workspace/Workspace";
 import { Chrome } from "./Chrome";
+import { Intro } from "./Intro";
 
 const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement && (el.isContentEditable || el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT");
@@ -34,6 +35,8 @@ export function FormApp() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const st = useForm.getState();
+      // The intro owns the keyboard while it's open
+      if (st.intro) return;
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z" && !isTyping(e.target)) {
         e.preventDefault();
@@ -76,6 +79,7 @@ export function FormApp() {
         <Workspace />
       </main>
       <AgentLayer />
+      <Intro />
     </MotionConfig>
   );
 }

@@ -16,6 +16,7 @@ export function Chrome() {
   const reset = useForm((s) => s.reset);
   const engine = useForm((s) => s.engine);
   const changes = useForm((s) => s.log.length);
+  const setIntro = useForm((s) => s.setIntro);
 
   return (
     <>
@@ -38,6 +39,10 @@ export function Chrome() {
             <span className={`h-[6px] w-[6px] rounded-full ${engine === "demo" ? "border border-text-3" : "bg-ink"}`} />
             {engine === "demo" ? "Demo parser · no API key" : "Claude · server-side"}
           </span>
+          <IconButton label="About this project" disabled={false} onClick={() => setIntro(true)}>
+            <circle cx="8" cy="8" r="5.6" />
+            <path d="M8 7.3v3.4M8 5.2v.01" />
+          </IconButton>
           <AnimatePresence initial={false}>
             {(hasTool || canUndo) && (
               <motion.div
