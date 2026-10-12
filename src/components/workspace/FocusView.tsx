@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { DecodeText, TEXT, revealBlocks, revealWords } from "../text/TextMotion";
@@ -74,10 +74,41 @@ function DecisionStack({ pick, doc }: { pick: FocusPick; doc: Doc }) {
   );
 }
 
+/**
+ * Keeps a display title on one line: it never grows past its CSS size, and
+ * shrinks just enough when a long title would overflow its column.
+ */
+function useFitLine(text: string) {
+  const box = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const wrap = box.current;
+    const line = wrap?.firstElementChild as HTMLElement | null;
+    if (!wrap || !line) return;
+    const fit = () => {
+      line.style.fontSize = "";
+      const room = wrap.clientWidth;
+      let size = parseFloat(getComputedStyle(line).fontSize);
+      // Width isn't perfectly linear in font size (rounding, kerning), so converge in a few passes
+      for (let i = 0; i < 4; i++) {
+        const need = line.getBoundingClientRect().width;
+        if (need <= room) break;
+        size *= (room / need) * 0.995;
+        line.style.fontSize = `${size}px`;
+      }
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(wrap);
+    return () => ro.disconnect();
+  }, [text]);
+  return box;
+}
+
 function Decision({ pick, number, leaving, onGone }: { pick: FocusPick; number: string; leaving: boolean; onGone: (id: string) => void }) {
   const { task, next, chosenBy } = pick;
   const { lead, point } = summaryOf(pick);
   const root = useRef<HTMLElement>(null);
+  const titleBox = useFitLine(task.title);
   const update = useForm((s) => s.updateTask);
   const commit = useForm((s) => s.commit);
   const select = useForm((s) => s.select);
@@ -116,8 +147,8 @@ function Decision({ pick, number, leaving, onGone }: { pick: FocusPick; number: 
         <DecodeText text={`${chosenBy === "form" ? "FORM suggests" : "Your focus"} · ${number}`} delay={0.2} className="t-micro text-text-3" />
       </div>
 
-      <div data-r="title" className="mt-5">
-        <EditableText value={task.title} label="Task title" onCommit={(v) => update(task.id, { title: v })} className="t-display-xl" />
+      <div ref={titleBox} data-r="title" className="mt-5 min-w-0">
+        <EditableText value={task.title} label="Task title" onCommit={(v) => update(task.id, { title: v })} className="t-display-xl whitespace-nowrap" />
       </div>
 
       {/* One sentence instead of chips and lists: where it stands, then why it matters now */}
