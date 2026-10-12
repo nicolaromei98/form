@@ -127,12 +127,15 @@ function TeamBoard() {
 
   return (
     <div className="relative">
+      {/* The panel resizes with its rows on the same curve, instead of snapping to the new height */}
       <motion.div
         aria-hidden
+        layout
         className="glass absolute inset-0"
         style={{ borderRadius: 36 }}
         initial={{ opacity: 0, scale: 0.985 }}
         animate={{ opacity: 1, scale: 1, transition: move }}
+        transition={{ layout: move }}
       />
       <div className="relative p-3 md:p-5">
         <motion.div
@@ -173,8 +176,21 @@ function TeamBoard() {
           </div>
         </motion.div>
 
-        <AnimatePresence>
-          {plan && <PlanCard key="plan" doc={doc} plan={plan} loads={loads} onAccept={() => resolvePlan(true)} onDiscard={() => resolvePlan(false)} />}
+        {/* On resolve the card leaves the flow at once and dissolves in place, so the rows and the
+            handed-over task all glide to their final places on one curve, measured once */}
+        <AnimatePresence mode="popLayout">
+          {plan && (
+            <motion.div
+              key="plan"
+              className="tone-dark mb-4 overflow-hidden rounded-[26px] bg-ink text-on-ink"
+              initial={{ opacity: 0, height: 0, filter: "blur(8px)" }}
+              animate={{ opacity: 1, height: "auto", filter: "blur(0px)" }}
+              exit={{ opacity: 0, filter: "blur(10px)", transition: { duration: 0.3, ease: ease.out } }}
+              transition={move}
+            >
+              <PlanCard doc={doc} plan={plan} loads={loads} onAccept={() => resolvePlan(true)} onDiscard={() => resolvePlan(false)} />
+            </motion.div>
+          )}
         </AnimatePresence>
 
         <div ref={ref}>
@@ -200,10 +216,14 @@ function TeamBoard() {
             })}
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line px-1 pt-4">
+        <motion.div
+          layout="position"
+          transition={{ layout: move }}
+          className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line px-1 pt-4"
+        >
           <span className="t-data text-text-3">Load is open work by estimate · steps count inside their task · drag a task onto someone to hand it over</span>
           {sample && <span className="t-data text-text-3">Sample team · rename anyone</span>}
-        </div>
+        </motion.div>
       </div>
 
       {drag &&
@@ -270,7 +290,9 @@ function Row({
   const workEnd = tail ? 2 * PAD + tail - GAP : 0;
 
   return (
-    <div
+    <motion.div
+      layout="position"
+      transition={{ layout: move }}
       data-team-row={id}
       className={`relative grid items-center gap-x-4 gap-y-3 border-b border-line py-4 last:border-b-0 ${narrow ? "grid-cols-1" : ""}`}
       style={narrow ? undefined : { gridTemplateColumns: `${labelW}px minmax(0, 1fr)` }}
@@ -320,10 +342,17 @@ function Row({
       >
         {p ? (
           <>
-            {/* A full lane holds exactly `capacity` days of work; overflow continues as a hatch */}
-            <div className={`absolute inset-y-0 left-0 bg-black/[0.045] ${workEnd > laneEnd ? "rounded-l-full" : "rounded-full"}`} style={{ width: laneEnd }} />
-            {workEnd > laneEnd && <div className="absolute inset-y-0 rounded-r-full" style={{ left: laneEnd, width: workEnd - laneEnd, background: HATCH }} />}
-            <div className="absolute -inset-y-1 w-[1.5px] rounded-full bg-ink" style={{ left: laneEnd }} />
+            {/* A full lane holds exactly `capacity` days of work. Overflow continues as a hatch that
+                starts under the lane's round end, so it grows out of it and retreats into it */}
+            <motion.div
+              className="absolute inset-y-0 rounded-r-full"
+              style={{ background: HATCH }}
+              initial={false}
+              animate={{ left: laneEnd - TRACK_H / 2, width: Math.max(TRACK_H / 2, workEnd - laneEnd + TRACK_H / 2), opacity: workEnd > laneEnd ? 1 : 0 }}
+              transition={move}
+            />
+            <motion.div className="absolute inset-y-0 left-0 rounded-full bg-[#e9e9e7]" initial={false} animate={{ width: laneEnd }} transition={move} />
+            <motion.div className="absolute -inset-y-1 w-[1.5px] rounded-full bg-ink" initial={false} animate={{ left: laneEnd }} transition={move} />
           </>
         ) : (
           <div className="absolute inset-0 rounded-full border border-dashed border-line-2" />
@@ -355,7 +384,7 @@ function Row({
                 style={{ left: PAD + at, width: w - GAP, top: PAD, height: SEG_H }}
                 initial={{ opacity: 0, filter: "blur(6px)" }}
                 animate={{ opacity: 1, filter: "blur(0px)" }}
-                exit={{ opacity: 0, transition: { duration: 0.2 } }}
+                exit={{ opacity: 0, transition: { duration: 0.35, ease: ease.out } }}
                 transition={{ duration: 0.5, ease: ease.out, delay: 0.25 }}
               >
                 <span className="truncate">{t.title}</span>
@@ -365,7 +394,7 @@ function Row({
           })}
         </AnimatePresence>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -397,9 +426,10 @@ function Segment({
       className={`${ink ? "tone-dark bg-ink text-on-ink" : "tone-light bg-white/90 text-text"} t-body-s absolute flex cursor-grab touch-none items-center gap-2 overflow-hidden px-3.5 shadow-[0_8px_22px_-14px_rgba(0,0,0,0.4)] select-none active:cursor-grabbing ${
         unsized || leaving ? "border-[1.5px] border-dashed border-text-3" : ""
       } ${selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""}`}
-      style={{ left: PAD + left, width: width - GAP, top: PAD, height: SEG_H, borderRadius: SEG_H / 2 }}
-      animate={{ opacity: dragging ? 0.25 : leaving ? 0.4 : dim ? 0.5 : 1 }}
-      transition={{ layout: move, opacity: { duration: 0.25 } }}
+      style={{ left: PAD + left, top: PAD, height: SEG_H, borderRadius: SEG_H / 2 }}
+      initial={false}
+      animate={{ width: width - GAP, opacity: dragging ? 0.25 : leaving ? 0.4 : dim ? 0.5 : 1 }}
+      transition={{ layout: move, width: move, opacity: { duration: 0.3 } }}
       title={`${task.title} · ${unsized ? "no estimate" : `${task.estimate}d`} · ${task.progress}%`}
     >
       {highlight && <span className="h-[6px] w-[6px] shrink-0 rounded-full bg-signal" />}
@@ -417,7 +447,7 @@ function Avatar({ person, over }: { person: Person | null; over: boolean }) {
     return <span className="t-body-s grid h-[40px] w-[40px] shrink-0 place-items-center rounded-full border border-dashed border-text-4 text-text-3">?</span>;
   return (
     <span
-      className={`t-body-s relative grid h-[40px] w-[40px] shrink-0 place-items-center rounded-full bg-ink font-medium text-on-ink ${over ? "ring-2 ring-signal ring-offset-2 ring-offset-[var(--paper)]" : ""}`}
+      className={`t-body-s relative grid h-[40px] w-[40px] shrink-0 place-items-center rounded-full bg-ink font-medium text-on-ink ring-offset-2 ring-offset-[var(--paper)] transition-[box-shadow] duration-500 ${over ? "ring-2 ring-signal" : "ring-0 ring-transparent"}`}
     >
       {initials(person.name)}
     </span>
@@ -458,13 +488,7 @@ function PlanCard({ doc, plan, loads, onAccept, onDiscard }: { doc: Doc; plan: R
   const worst = loads.filter((l) => l.over > 0).sort((a, b) => b.over - a.over)[0];
   const one = moves.length === 1 ? moves[0] : null;
   return (
-    <motion.div
-      className="tone-dark mb-4 overflow-hidden rounded-[26px] bg-ink text-on-ink"
-      initial={{ opacity: 0, height: 0, filter: "blur(8px)" }}
-      animate={{ opacity: 1, height: "auto", filter: "blur(0px)" }}
-      exit={{ opacity: 0, height: 0, filter: "blur(6px)", transition: { duration: 0.3 } }}
-      transition={move}
-    >
+    <>
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 p-5 md:p-6">
         <div className="min-w-0">
           <span className="t-micro text-on-ink/50">FORM suggests</span>
@@ -503,7 +527,7 @@ function PlanCard({ doc, plan, loads, onAccept, onDiscard }: { doc: Doc; plan: R
           </button>
         </div>
       </div>
-    </motion.div>
+    </>
   );
 }
 
