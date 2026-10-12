@@ -16,6 +16,9 @@ import { ShuffleText } from "../text/ShuffleText";
 const BUILD = { label: 0.16, track: 0.24, step: 0.07 };
 const TRACK_H = 52;
 const SEG_H = 42;
+/** Tasks sit concentric in their lane: the same inset on every side */
+const PAD = (TRACK_H - SEG_H) / 2;
+const GAP = 4;
 const NONE = "__unassigned";
 const SAMPLE_IDS = ["p-marta", "p-sara", "p-luca"];
 const HATCH = "repeating-linear-gradient(-45deg, rgba(214,69,69,0.2) 0 5px, rgba(214,69,69,0.06) 5px 10px)";
@@ -66,7 +69,7 @@ function TeamBoard() {
   const trackW = Math.max(120, width - labelW - (narrow ? 0 : 16));
   const span = (l: Load) => Math.max(l.person?.capacity ?? 0, l.days + l.unsized);
   const maxDays = Math.max(4, ...loads.map(span), ...(preview ?? []).map(span)) + 0.5;
-  const dayW = trackW / maxDays;
+  const dayW = (trackW - 2 * PAD + GAP) / maxDays;
   const unassigned = loads[loads.length - 1];
   const showUnassigned = unassigned.tasks.length > 0 || Boolean(preview?.[preview.length - 1].tasks.length) || drag != null;
   const rows = showUnassigned ? loads : loads.slice(0, -1);
@@ -263,6 +266,8 @@ function Row({
   const own = lay(load.tasks, 0);
   const tail = own.length ? own[own.length - 1].at + own[own.length - 1].w : 0;
   const landing = lay(incoming, tail);
+  const laneEnd = p ? 2 * PAD + p.capacity * dayW - GAP : 0;
+  const workEnd = tail ? 2 * PAD + tail - GAP : 0;
 
   return (
     <div
@@ -315,11 +320,10 @@ function Row({
       >
         {p ? (
           <>
-            <div className="absolute inset-y-0 left-0 rounded-full bg-black/[0.045]" style={{ width: p.capacity * dayW }} />
-            {load.over > 0 && (
-              <div className="absolute inset-y-0 rounded-r-full" style={{ left: p.capacity * dayW, width: load.over * dayW, background: HATCH }} />
-            )}
-            <div className="absolute -inset-y-1 w-[1.5px] rounded-full bg-ink" style={{ left: p.capacity * dayW }} />
+            {/* A full lane holds exactly `capacity` days of work; overflow continues as a hatch */}
+            <div className={`absolute inset-y-0 left-0 bg-black/[0.045] ${workEnd > laneEnd ? "rounded-l-full" : "rounded-full"}`} style={{ width: laneEnd }} />
+            {workEnd > laneEnd && <div className="absolute inset-y-0 rounded-r-full" style={{ left: laneEnd, width: workEnd - laneEnd, background: HATCH }} />}
+            <div className="absolute -inset-y-1 w-[1.5px] rounded-full bg-ink" style={{ left: laneEnd }} />
           </>
         ) : (
           <div className="absolute inset-0 rounded-full border border-dashed border-line-2" />
@@ -348,7 +352,7 @@ function Row({
               <motion.div
                 key={`in-${t.id}`}
                 className="t-body-s pointer-events-none absolute flex items-center gap-2 rounded-full border-[1.5px] border-dashed border-ink px-3.5 text-text"
-                style={{ left: at + 2, width: w - 4, top: (TRACK_H - SEG_H) / 2, height: SEG_H }}
+                style={{ left: PAD + at, width: w - GAP, top: PAD, height: SEG_H }}
                 initial={{ opacity: 0, filter: "blur(6px)" }}
                 animate={{ opacity: 1, filter: "blur(0px)" }}
                 exit={{ opacity: 0, transition: { duration: 0.2 } }}
@@ -393,19 +397,17 @@ function Segment({
       className={`${ink ? "tone-dark bg-ink text-on-ink" : "tone-light bg-white/90 text-text"} t-body-s absolute flex cursor-grab touch-none items-center gap-2 overflow-hidden px-3.5 shadow-[0_8px_22px_-14px_rgba(0,0,0,0.4)] select-none active:cursor-grabbing ${
         unsized || leaving ? "border-[1.5px] border-dashed border-text-3" : ""
       } ${selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""}`}
-      style={{ left: left + 2, width: width - 4, top: (TRACK_H - SEG_H) / 2, height: SEG_H, borderRadius: SEG_H / 2 }}
+      style={{ left: PAD + left, width: width - GAP, top: PAD, height: SEG_H, borderRadius: SEG_H / 2 }}
       animate={{ opacity: dragging ? 0.25 : leaving ? 0.4 : dim ? 0.5 : 1 }}
       transition={{ layout: move, opacity: { duration: 0.25 } }}
       title={`${task.title} · ${unsized ? "no estimate" : `${task.estimate}d`} · ${task.progress}%`}
     >
       {highlight && <span className="h-[6px] w-[6px] shrink-0 rounded-full bg-signal" />}
       <span className="min-w-0 truncate">{task.title}</span>
-      <span className={`t-data ml-auto shrink-0 ${ink ? "text-on-ink/60" : "text-text-3"}`}>{unsized ? "?d" : `${task.estimate}d`}</span>
-      {/* Progress, as a hairline along the bottom */}
-      <span
-        className={`absolute bottom-[5px] left-3.5 h-[2px] rounded-full ${ink ? "bg-white/70" : "bg-ink"}`}
-        style={{ width: `calc((100% - 28px) * ${task.progress / 100})` }}
-      />
+      <span className={`t-data ml-auto shrink-0 ${ink ? "text-on-ink/60" : "text-text-3"}`}>
+        {unsized ? "?d" : `${task.estimate}d`}
+        {task.progress > 0 && <span className="opacity-70"> · {task.progress}%</span>}
+      </span>
     </motion.div>
   );
 }
