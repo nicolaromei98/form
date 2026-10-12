@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { Fragment, useMemo } from "react";
 import { useForm } from "@/lib/store";
-import { move } from "@/lib/motion";
+import { ease, move } from "@/lib/motion";
 import { addDays, dayDiff, fmtDay, fmtDays, fmtShort, parseISODate, schedule, subtasksOf, taskNumber, toISODate, topLevel } from "@/lib/selectors";
 import { STATUS_LABEL, type Task } from "@/lib/schema";
 import { useWidth } from "@/lib/useWidth";
@@ -11,6 +11,12 @@ import { EditableText, EstimateControl, NumberBadge, StatusControl, StatusGlyph 
 import { useTaskSurface } from "./TaskCard";
 import { useReveal } from "./reveal";
 import { ShuffleText } from "../text/ShuffleText";
+
+/**
+ * The timeline doesn't morph out of cards (bars and cards share no geometry):
+ * it draws itself — panel, header, then each row's label and bar in workflow order.
+ */
+const BUILD = { header: 0.14, label: 0.18, bar: 0.26, step: 0.06 };
 
 /**
  * Representation: timeline. Dates are derived — start date + estimates in
@@ -43,6 +49,7 @@ export function TimelineView() {
 
   const rows = topLevel(doc).filter((t) => !(doc.view.hideDone && t.status === "done"));
   let spawn = 0;
+  let order = 0; // build order across task and step rows
 
   const ticks = Array.from({ length: days }, (_, i) => {
     const d = from + i;
@@ -92,7 +99,12 @@ export function TimelineView() {
             </motion.div>
 
             {/* Header: weeks above, days below */}
-            <div className="relative flex h-[56px] items-end pb-2.5">
+            <motion.div
+              className="relative flex h-[56px] items-end pb-2.5"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: BUILD.header, duration: 0.5, ease: ease.out }}
+            >
               <div className="flex shrink-0 flex-col gap-1 pl-2" style={{ width: labelW }}>
                 <span className="t-micro text-text-2">Task</span>
                 <span className="t-micro text-text-3">Workflow order</span>
@@ -118,7 +130,7 @@ export function TimelineView() {
                     </span>
                   ))}
               </div>
-            </div>
+            </motion.div>
 
             {/* Rows */}
             <div className="relative">
@@ -127,11 +139,21 @@ export function TimelineView() {
                 const subs = subtasksOf(doc, t.id);
                 const proposal = doc.proposal?.parentId === t.id ? doc.proposal : null;
                 const spawnIndex = slot && spawn < 6 ? spawn++ : null;
+                const at = order++;
                 return (
                   <Fragment key={t.id}>
-                    <Row height={rowH} labelW={labelW} label={<RowLabel task={t} number={taskNumber(doc, t.id)} compact={compact} />}>
+                    <Row height={rowH} labelW={labelW} enter={BUILD.label + at * BUILD.step} label={<RowLabel task={t} number={taskNumber(doc, t.id)} compact={compact} />}>
                       {slot ? (
-                        <Bar task={t} left={X(slot.start)} width={slot.days * dayW} top={(rowH - barH) / 2} height={barH} spawnIndex={spawnIndex} range={[addDays(start, slot.start), addDays(start, slot.start + slot.days - 1)]} />
+                        <Bar
+                          task={t}
+                          left={X(slot.start)}
+                          width={slot.days * dayW}
+                          top={(rowH - barH) / 2}
+                          height={barH}
+                          spawnIndex={spawnIndex}
+                          enter={BUILD.bar + at * BUILD.step}
+                          range={[addDays(start, slot.start), addDays(start, slot.start + slot.days - 1)]}
+                        />
                       ) : (
                         <div className="absolute flex items-center gap-2" style={{ left: X(sch.totalDays) + 8, top: (rowH - 26) / 2 }}>
                           <span className="t-data text-text-3">Needs a duration</span>
@@ -145,15 +167,16 @@ export function TimelineView() {
                     {/* Steps travel within the timeline only (proposal → accepted): a card keeps its steps in a clipped window */}
                     {subs.map((s) => {
                       const ss = sch.slots[s.id];
+                      const sat = order++;
                       return (
-                        <Row key={s.id} height={subH} labelW={labelW} label={<SubLabel task={s} />} layoutId={`tl-sub-${s.id}`}>
+                        <Row key={s.id} height={subH} labelW={labelW} enter={BUILD.label + sat * BUILD.step} label={<SubLabel task={s} />} layoutId={`tl-sub-${s.id}`}>
                           {ss && (
                             <motion.div
-                              className="absolute rounded-full"
-                              initial={{ opacity: 0, scaleX: 0.6 }}
-                              animate={{ opacity: 1, scaleX: 1, backgroundColor: s.status === "done" ? "#0a0a0a" : "rgba(10,10,10,0.1)" }}
-                              transition={move}
-                              style={{ left: X(ss.start) + 1, width: Math.max(10, ss.days * dayW - 2), top: (subH - 12) / 2, height: 12, transformOrigin: "left center" }}
+                              className="absolute"
+                              initial={{ clipPath: wipe(6, false) }}
+                              animate={{ clipPath: wipe(6, true), backgroundColor: s.status === "done" ? "#0a0a0a" : "rgba(10,10,10,0.1)", transitionEnd: { clipPath: "none" } }}
+                              transition={{ clipPath: { ...move, delay: BUILD.bar + sat * BUILD.step }, backgroundColor: { duration: 0.3 } }}
+                              style={{ left: X(ss.start) + 1, width: Math.max(10, ss.days * dayW - 2), top: (subH - 12) / 2, height: 12, borderRadius: 6 }}
                             />
                           )}
                         </Row>
@@ -259,12 +282,41 @@ function ShiftButton({ label, onClick, d }: { label: string; onClick: () => void
   );
 }
 
-function Row({ height, labelW, label, children, layoutId }: { height: number; labelW: number; label: React.ReactNode; children?: React.ReactNode; layoutId?: string }) {
+/** A clip that wipes a pill open from its left end, keeping its rounded ends intact */
+function wipe(radius: number, open: boolean) {
+  return `inset(0px ${open ? "0%" : "100%"} 0px 0px round ${radius}px)`;
+}
+
+function Row({
+  height,
+  labelW,
+  label,
+  children,
+  layoutId,
+  enter,
+}: {
+  height: number;
+  labelW: number;
+  label: React.ReactNode;
+  children?: React.ReactNode;
+  layoutId?: string;
+  /** Build-in delay (s): the label condenses out of a blur, like every text in FORM */
+  enter?: number;
+}) {
   return (
     <motion.div layout="position" layoutId={layoutId} transition={move} className="relative flex border-b border-line last:border-b-0" style={{ height }}>
-      <div className="flex min-w-0 shrink-0 items-center pr-3" style={{ width: labelW }}>
+      {/* The fade lives below the layout node, whose projection would override its opacity */}
+      <motion.div
+        className="flex min-w-0 shrink-0 items-center pr-3"
+        style={{ width: labelW }}
+        {...(enter != null && {
+          initial: { opacity: 0, filter: "blur(8px)" },
+          animate: { opacity: 1, filter: "blur(0px)", transitionEnd: { filter: "none" } },
+          transition: { delay: enter, duration: 0.6, ease: ease.out },
+        })}
+      >
         {label}
-      </div>
+      </motion.div>
       <div className="relative flex-1">{children}</div>
     </motion.div>
   );
@@ -318,6 +370,7 @@ function Bar({
   top,
   height,
   spawnIndex,
+  enter,
   range,
 }: {
   task: Task;
@@ -326,6 +379,8 @@ function Bar({
   top: number;
   height: number;
   spawnIndex: number | null;
+  /** Build-in delay (s) of the wipe */
+  enter: number;
   range: [Date, Date];
 }) {
   const { selected, dim, onClick, highlight } = useTaskSurface(task);
@@ -333,58 +388,68 @@ function Bar({
   const w = Math.max(height, width - 2);
   const fill = task.status === "done" ? w : Math.max(height, (task.progress / 100) * w);
   const inside = fill > 58;
+  const r = height / 2;
 
   return (
     <>
+      {/* Drawn, never scaled: a clip wipes the pill open from its start date, then it glides on schedule changes */}
       <motion.button
         type="button"
-        layoutId={`task-${task.id}`}
         data-task-id={task.id}
         data-spawn={spawnIndex ?? undefined}
         aria-label={`${task.title}: ${STATUS_LABEL[task.status]}, ${task.progress}%`}
         aria-pressed={selected}
         onClick={onClick}
-        initial={reveal != null ? { opacity: 0 } : false}
-        animate={{ opacity: reveal != null ? 1 : dim ? 0.5 : 1, backgroundColor: task.emphasis ? "rgba(10,10,10,0.2)" : "rgba(10,10,10,0.075)" }}
-        transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 } }}
+        initial={{ left: left + 1, width: w, ...(reveal != null ? { opacity: 0 } : { clipPath: wipe(r, false) }) }}
+        animate={{
+          left: left + 1,
+          width: w,
+          clipPath: wipe(r, true),
+          opacity: reveal != null ? 1 : dim ? 0.5 : 1,
+          backgroundColor: task.emphasis ? "rgba(10,10,10,0.2)" : "rgba(10,10,10,0.075)",
+          transitionEnd: { clipPath: "none" },
+        }}
+        transition={{
+          left: move,
+          width: move,
+          clipPath: { ...move, delay: enter },
+          opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 },
+        }}
         className={`focus-ring absolute cursor-pointer overflow-hidden ${selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""}`}
-        style={{ left: left + 1, width: w, top, height, borderRadius: height / 2 }}
+        style={{ top, height, borderRadius: r }}
       >
-        {/* Children are layout-aware so the bar's morph never stretches them (inverse-scale correction) */}
         <motion.span
-          layout
           className="absolute inset-y-0 left-0 flex items-center justify-end bg-ink pr-3"
-          style={{ width: fill, borderRadius: height / 2 }}
-          transition={{ layout: move }}
+          style={{ borderRadius: r }}
+          initial={false}
+          animate={{ width: fill }}
+          transition={move}
         >
           {task.status === "done" ? (
-            <motion.svg layout="position" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden className="text-on-ink">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden className="text-on-ink">
               <path d="M2.5 6.2l2.3 2.3 4.7-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-            </motion.svg>
+            </svg>
           ) : (
-            inside && (
-              <motion.span layout="position" className="t-data text-on-ink">
-                {task.progress}%
-              </motion.span>
-            )
+            inside && <span className="t-data text-on-ink">{task.progress}%</span>
           )}
         </motion.span>
         {!inside && task.status !== "done" && (
-          <motion.span layout="position" className="t-data absolute inset-y-0 flex items-center text-text-2" style={{ left: fill + 8 }}>
+          <motion.span className="t-data absolute inset-y-0 flex items-center text-text-2" initial={false} animate={{ left: fill + 8 }} transition={move}>
             {task.progress}%
           </motion.span>
         )}
         {highlight && (
-          <motion.span layout="position" className="absolute inset-y-0 right-2.5 flex items-center">
+          <span className="absolute inset-y-0 right-2.5 flex items-center">
             <span className="h-[7px] w-[7px] rounded-full bg-signal" />
-          </motion.span>
+          </span>
         )}
       </motion.button>
       <motion.span
         className="t-data pointer-events-none absolute whitespace-nowrap text-text-3"
-        style={{ left: left + w + 10, top: top + height / 2 - 6 }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1, transition: { delay: 0.3 } }}
+        style={{ top: top + height / 2 - 6 }}
+        initial={{ opacity: 0, left: left + w + 10 }}
+        animate={{ opacity: 1, left: left + w + 10 }}
+        transition={{ left: move, opacity: { delay: enter + 0.4, duration: 0.4 } }}
       >
         {fmtShort(range[0])}–{fmtShort(range[1])}
       </motion.span>

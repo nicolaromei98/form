@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { useMemo, useRef, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useGSAP } from "@gsap/react";
 import { DecodeText, RevealText, revealWords } from "../text/TextMotion";
 import { useForm } from "@/lib/store";
@@ -335,11 +335,31 @@ const REPRESENTATIONS: Record<Representation, () => ReactNode> = {
 export function CollectionBlock() {
   const rep = useForm((s) => s.doc.view.representation);
   const View = REPRESENTATIONS[rep];
+  // Cards, board and focus morph into each other through shared surfaces. The timeline is a
+  // different spatial model, so it hands over instead: it draws itself in, and a view leaving it
+  // rises in once the bars have faded. Each handover starts a new layout scope, so no surface
+  // resumes from a box it had before the timeline.
+  const [shown, setShown] = useState(rep);
+  const [handover, setHandover] = useState(false);
+  const [scope, setScope] = useState(0);
+  if (shown !== rep) {
+    setShown(rep);
+    setHandover(shown === "timeline");
+    if (shown === "timeline" || rep === "timeline") setScope(scope + 1);
+  }
   return (
     <motion.section layout="position" className="relative">
       <AnimatePresence mode="popLayout">
-        <motion.div key={rep} exit={{ opacity: 0, transition: { duration: 0.16 } }}>
-          <View />
+        <motion.div
+          key={rep}
+          initial={handover ? { opacity: 0, y: 16 } : false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...move, delay: 0.1 }}
+          exit={{ opacity: 0, transition: { duration: 0.16 } }}
+        >
+          <LayoutGroup id={`view-${scope}`}>
+            <View />
+          </LayoutGroup>
         </motion.div>
       </AnimatePresence>
     </motion.section>
