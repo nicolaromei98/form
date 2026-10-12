@@ -7,7 +7,7 @@ import { move } from "@/lib/motion";
 import { taskNumber, tasksByStatus } from "@/lib/selectors";
 import { STATUS_LABEL, STATUS_ORDER, type Status, type Task } from "@/lib/schema";
 import { CostTag, EditableText, EstimateControl, NumberBadge, PriorityControl, ProgressControl, ProposalBlock, StatusGlyph, SubtaskList } from "./parts";
-import { InkSkin, Reveal, useTaskSurface } from "./TaskCard";
+import { Clip, InkSkin, Reveal, useTaskSurface } from "./TaskCard";
 import { useReveal } from "./reveal";
 import { ShuffleText } from "../text/ShuffleText";
 
@@ -94,41 +94,43 @@ function BoardCard({ task, number, spawnIndex, ref }: { task: Task; number: stri
       animate={{ backgroundColor: task.emphasis ? "#0c0c0c" : "rgba(255,255,255,0.72)", opacity: reveal != null ? 1 : dim ? 0.55 : 1 }}
       exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.2 } }}
       transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
-      className={`${task.emphasis ? "tone-dark" : "tone-light"} group relative cursor-pointer ${compact ? "p-3" : "p-3.5"} ${
+      className={`${task.emphasis ? "tone-dark" : "tone-light"} group relative cursor-pointer ${
         selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""
       }`}
       style={{ borderRadius: 22, boxShadow: "0 1px 0 rgba(255,255,255,0.9) inset, 0 10px 24px -18px rgba(0,0,0,0.3)" }}
     >
       <InkSkin reveal={reveal} />
       <NumberBadge task={task} number={number} />
-      <Reveal reveal={reveal} className="flex items-start gap-2 pr-4">
-        {highlight && <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-signal" aria-label="Urgent" />}
-        <EditableText
-          value={task.title}
-          label="Task title"
-          layoutId={`title-${task.id}`}
-          onCommit={(v) => update(task.id, { title: v })}
-          className={compact ? "t-body" : "t-body-l"}
-        />
-      </Reveal>
-      <Reveal reveal={reveal} className={`flex flex-col gap-1.5 ${compact ? "mt-2" : "mt-5"}`}>
-        {(f.priority || f.estimate) && (
-          <div className="flex items-center justify-between">
-            {f.priority ? <PriorityControl task={task} /> : <span />}
-            <div className="flex items-center gap-1">
-              <CostTag task={task} />
-              {f.estimate && <EstimateControl task={task} />}
+      <Clip className={compact ? "p-3" : "p-3.5"}>
+        <Reveal reveal={reveal} className="flex items-start gap-2 pr-4">
+          {highlight && <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-signal" aria-label="Urgent" />}
+          <EditableText
+            value={task.title}
+            label="Task title"
+            layoutId={`title-${task.id}`}
+            onCommit={(v) => update(task.id, { title: v })}
+            className={compact ? "t-body" : "t-body-l"}
+          />
+        </Reveal>
+        <Reveal reveal={reveal} className={`flex flex-col gap-1.5 ${compact ? "mt-2" : "mt-5"}`}>
+          {(f.priority || f.estimate) && (
+            <div className="flex items-center justify-between">
+              {f.priority ? <PriorityControl task={task} /> : <span />}
+              <div className="flex items-center gap-1">
+                <CostTag task={task} />
+                {f.estimate && <EstimateControl task={task} />}
+              </div>
             </div>
+          )}
+          {f.progress && <ProgressControl task={task} size="s" />}
+          <div className="flex items-center justify-between">
+            <LaneButton dir={-1} disabled={i === 0} onClick={() => update(task.id, { status: STATUS_ORDER[i - 1] })} label={i > 0 ? STATUS_LABEL[STATUS_ORDER[i - 1]] : ""} />
+            <LaneButton dir={1} disabled={i === STATUS_ORDER.length - 1} onClick={() => update(task.id, { status: STATUS_ORDER[i + 1] })} label={i < 3 ? STATUS_LABEL[STATUS_ORDER[i + 1]] : ""} />
           </div>
-        )}
-        {f.progress && <ProgressControl task={task} size="s" />}
-        <div className="flex items-center justify-between">
-          <LaneButton dir={-1} disabled={i === 0} onClick={() => update(task.id, { status: STATUS_ORDER[i - 1] })} label={i > 0 ? STATUS_LABEL[STATUS_ORDER[i - 1]] : ""} />
-          <LaneButton dir={1} disabled={i === STATUS_ORDER.length - 1} onClick={() => update(task.id, { status: STATUS_ORDER[i + 1] })} label={i < 3 ? STATUS_LABEL[STATUS_ORDER[i + 1]] : ""} />
-        </div>
-      </Reveal>
-      <SubtaskList parentId={task.id} />
-      <ProposalBlock parentId={task.id} />
+        </Reveal>
+        <SubtaskList parentId={task.id} />
+        <ProposalBlock parentId={task.id} />
+      </Clip>
     </motion.article>
   );
 }

@@ -66,6 +66,15 @@ export function Reveal({ reveal, children, className = "" }: { reveal: number | 
   );
 }
 
+/**
+ * Content window of a morphing surface. During shared-layout morphs the surface
+ * is scaled and its content scale-corrected; this clips that content to the
+ * surface's live shape, so nothing spills out or stretches while it settles.
+ */
+export function Clip({ className = "", children }: { className?: string; children: ReactNode }) {
+  return <div className={`overflow-hidden rounded-[inherit] ${className}`}>{children}</div>;
+}
+
 export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props) {
   const { selected, view, hasProposal, dim, onClick, highlight } = useTaskSurface(task);
   const hasSubs = useForm((s) => Object.values(s.doc.tasks).some((t) => t.parentId === task.id));
@@ -92,7 +101,7 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
         initial={reveal != null ? { opacity: 0 } : false}
         animate={{ ...surface, opacity: reveal != null ? 1 : surface.opacity }}
         transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
-        className={`${emphasis ? "tone-dark" : "tone-light"} relative cursor-pointer p-2 backdrop-blur-[22px] ${selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""}`}
+        className={`${emphasis ? "tone-dark" : "tone-light"} relative cursor-pointer backdrop-blur-[22px] ${selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""}`}
         style={{
           borderRadius: tall ? 28 : 31,
           boxShadow: emphasis ? "0 24px 48px -26px rgba(0,0,0,0.55)" : "var(--shadow-card)",
@@ -100,38 +109,40 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
         }}
       >
         <InkSkin reveal={reveal} />
-        <Reveal reveal={reveal} className="flex h-[46px] items-center gap-3">
-          <StatusControl task={task} variant="glyph" />
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            {highlight && <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-signal" aria-label="Urgent" />}
-            <EditableText
-              value={task.title}
-              label="Task title"
-              layoutId={`title-${task.id}`}
-              onCommit={(v) => useForm.getState().updateTask(task.id, { title: v })}
-              className="t-body min-w-0 truncate"
-            />
-          </div>
-          {f.priority && (
-            <div className="hidden sm:block">
-              <PriorityControl task={task} />
+        <Clip className="p-2">
+          <Reveal reveal={reveal} className="flex h-[46px] items-center gap-3">
+            <StatusControl task={task} variant="glyph" />
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              {highlight && <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-signal" aria-label="Urgent" />}
+              <EditableText
+                value={task.title}
+                label="Task title"
+                layoutId={`title-${task.id}`}
+                onCommit={(v) => useForm.getState().updateTask(task.id, { title: v })}
+                className="t-body min-w-0 truncate"
+              />
+            </div>
+            {f.priority && (
+              <div className="hidden sm:block">
+                <PriorityControl task={task} />
+              </div>
+            )}
+            {f.estimate && (
+              <div className="hidden lg:block">
+                <EstimateControl task={task} />
+              </div>
+            )}
+            <CostTag task={task} />
+            {f.progress && <ProgressControl task={task} size="s" className="hidden w-[96px] sm:flex" />}
+            <NumberBadge task={task} number={number} inline />
+          </Reveal>
+          {tall && (
+            <div className="px-1">
+              <SubtaskList parentId={task.id} dense />
+              <ProposalBlock parentId={task.id} dense />
             </div>
           )}
-          {f.estimate && (
-            <div className="hidden lg:block">
-              <EstimateControl task={task} />
-            </div>
-          )}
-          <CostTag task={task} />
-          {f.progress && <ProgressControl task={task} size="s" className="hidden w-[96px] sm:flex" />}
-          <NumberBadge task={task} number={number} inline />
-        </Reveal>
-        {tall && (
-          <div className="px-1">
-            <SubtaskList parentId={task.id} dense />
-            <ProposalBlock parentId={task.id} dense />
-          </div>
-        )}
+        </Clip>
       </motion.article>
     );
   }
@@ -148,7 +159,7 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
       initial={reveal != null ? { opacity: 0 } : false}
       animate={{ ...surface, opacity: reveal != null ? 1 : surface.opacity }}
       transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
-      className={`${emphasis ? "tone-dark" : "tone-light"} relative flex cursor-pointer flex-col p-[18px] backdrop-blur-[22px] ${
+      className={`${emphasis ? "tone-dark" : "tone-light"} relative flex cursor-pointer flex-col backdrop-blur-[22px] ${
         selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""
       }`}
       style={{
@@ -161,53 +172,55 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
       <InkSkin reveal={reveal} />
       <NumberBadge task={task} number={number} />
 
-      <Reveal reveal={reveal} className="flex items-center justify-between gap-2 pr-4">
-        <StatusControl task={task} />
-        {highlight && (
-          <span className="t-micro flex items-center gap-1.5 text-signal">
-            <span className="h-[6px] w-[6px] rounded-full bg-signal" />
-            Urgent
-          </span>
-        )}
-      </Reveal>
+      <Clip className="flex flex-1 flex-col p-[18px]">
+        <Reveal reveal={reveal} className="flex items-center justify-between gap-2 pr-4">
+          <StatusControl task={task} />
+          {highlight && (
+            <span className="t-micro flex items-center gap-1.5 text-signal">
+              <span className="h-[6px] w-[6px] rounded-full bg-signal" />
+              Urgent
+            </span>
+          )}
+        </Reveal>
 
-      <Reveal reveal={reveal} className="mt-7">
-        <EditableText
-          value={task.title}
-          label="Task title"
-          layoutId={`title-${task.id}`}
-          onCommit={(v) => useForm.getState().updateTask(task.id, { title: v })}
-          className={emphasis ? "t-display-m" : "t-title"}
-        />
-      </Reveal>
+        <Reveal reveal={reveal} className="mt-7">
+          <EditableText
+            value={task.title}
+            label="Task title"
+            layoutId={`title-${task.id}`}
+            onCommit={(v) => useForm.getState().updateTask(task.id, { title: v })}
+            className={emphasis ? "t-display-m" : "t-title"}
+          />
+        </Reveal>
 
-      <div className="min-h-6 flex-1" />
+        <div className="min-h-6 flex-1" />
 
-      <Reveal reveal={reveal} className="flex flex-col gap-3">
-        {(f.progress || f.estimate) && (
-          <div className="flex items-end justify-between gap-2">
-            {f.progress ? (
-              <span className="t-num text-[44px] leading-[0.8] text-[var(--c-fg)]" aria-hidden>
-                {task.progress}
-                <span className="ml-0.5 align-top text-[18px] leading-none text-[var(--c-fg-2)]">%</span>
-              </span>
-            ) : (
-              <span />
-            )}
-            {f.estimate && <EstimateControl task={task} />}
-          </div>
-        )}
-        {f.progress && <ProgressControl task={task} showLabel={false} />}
-        {(f.priority || task.cost != null) && (
-          <div className="flex items-center justify-between gap-2">
-            {f.priority ? <PriorityControl task={task} label /> : <span />}
-            <CostTag task={task} />
-          </div>
-        )}
-      </Reveal>
+        <Reveal reveal={reveal} className="flex flex-col gap-3">
+          {(f.progress || f.estimate) && (
+            <div className="flex items-end justify-between gap-2">
+              {f.progress ? (
+                <span className="t-num text-[44px] leading-[0.8] text-[var(--c-fg)]" aria-hidden>
+                  {task.progress}
+                  <span className="ml-0.5 align-top text-[18px] leading-none text-[var(--c-fg-2)]">%</span>
+                </span>
+              ) : (
+                <span />
+              )}
+              {f.estimate && <EstimateControl task={task} />}
+            </div>
+          )}
+          {f.progress && <ProgressControl task={task} showLabel={false} />}
+          {(f.priority || task.cost != null) && (
+            <div className="flex items-center justify-between gap-2">
+              {f.priority ? <PriorityControl task={task} label /> : <span />}
+              <CostTag task={task} />
+            </div>
+          )}
+        </Reveal>
 
-      <SubtaskList parentId={task.id} />
-      <ProposalBlock parentId={task.id} />
+        <SubtaskList parentId={task.id} />
+        <ProposalBlock parentId={task.id} />
+      </Clip>
     </motion.article>
   );
 }

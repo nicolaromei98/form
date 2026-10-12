@@ -142,10 +142,11 @@ export function TimelineView() {
                       )}
                     </Row>
 
+                    {/* Steps travel within the timeline only (proposal → accepted): a card keeps its steps in a clipped window */}
                     {subs.map((s) => {
                       const ss = sch.slots[s.id];
                       return (
-                        <Row key={s.id} height={subH} labelW={labelW} label={<SubLabel task={s} />} layoutId={`sub-${s.id}`}>
+                        <Row key={s.id} height={subH} labelW={labelW} label={<SubLabel task={s} />} layoutId={`tl-sub-${s.id}`}>
                           {ss && (
                             <motion.div
                               className="absolute rounded-full"
@@ -180,7 +181,7 @@ export function TimelineView() {
                                   key={item.id}
                                   height={subH}
                                   labelW={labelW}
-                                  layoutId={`sub-${item.id}`}
+                                  layoutId={`tl-sub-${item.id}`}
                                   label={
                                     <div className="flex min-w-0 items-center gap-2 pl-9 text-text-3">
                                       <StatusGlyph status="todo" size={12} />
@@ -280,7 +281,6 @@ function RowLabel({ task, number, compact }: { task: Task; number: string; compa
       <EditableText
         value={task.title}
         label="Task title"
-        layoutId={`title-${task.id}`}
         onCommit={(v) => update(task.id, { title: v })}
         className={`${compact ? "t-body" : task.emphasis ? "t-body-l" : "t-body"} min-w-0 truncate`}
       />
@@ -350,26 +350,35 @@ function Bar({
         className={`focus-ring absolute cursor-pointer overflow-hidden ${selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""}`}
         style={{ left: left + 1, width: w, top, height, borderRadius: height / 2 }}
       >
+        {/* Children are layout-aware so the bar's morph never stretches them (inverse-scale correction) */}
         <motion.span
+          layout
           className="absolute inset-y-0 left-0 flex items-center justify-end bg-ink pr-3"
-          style={{ borderRadius: height / 2 }}
-          initial={{ width: height }}
-          animate={{ width: fill, transition: { ...move, delay: reveal != null ? reveal : 0.12 } }}
+          style={{ width: fill, borderRadius: height / 2 }}
+          transition={{ layout: move }}
         >
           {task.status === "done" ? (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden className="text-on-ink">
+            <motion.svg layout="position" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden className="text-on-ink">
               <path d="M2.5 6.2l2.3 2.3 4.7-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            </motion.svg>
           ) : (
-            inside && <span className="t-data text-on-ink">{task.progress}%</span>
+            inside && (
+              <motion.span layout="position" className="t-data text-on-ink">
+                {task.progress}%
+              </motion.span>
+            )
           )}
         </motion.span>
         {!inside && task.status !== "done" && (
-          <span className="t-data absolute top-1/2 -translate-y-1/2 text-text-2" style={{ left: fill + 8 }}>
+          <motion.span layout="position" className="t-data absolute inset-y-0 flex items-center text-text-2" style={{ left: fill + 8 }}>
             {task.progress}%
-          </span>
+          </motion.span>
         )}
-        {highlight && <span className="absolute top-1/2 right-2.5 h-[7px] w-[7px] -translate-y-1/2 rounded-full bg-signal" />}
+        {highlight && (
+          <motion.span layout="position" className="absolute inset-y-0 right-2.5 flex items-center">
+            <span className="h-[7px] w-[7px] rounded-full bg-signal" />
+          </motion.span>
+        )}
       </motion.button>
       <motion.span
         className="t-data pointer-events-none absolute whitespace-nowrap text-text-3"

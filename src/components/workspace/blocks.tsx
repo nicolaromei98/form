@@ -224,7 +224,7 @@ export function MetricsBlock() {
   // A single slim instrument strip: eyebrow + figure per segment, hairlines between
   return (
     <BlockShell order={1} className="no-scrollbar -mx-4 mb-8 overflow-x-auto px-4 py-1 md:mx-0 md:overflow-visible md:px-0">
-      <motion.div layout className="glass inline-flex h-[48px] shrink-0 items-center rounded-full pr-1.5 pl-1.5" transition={move}>
+      <motion.div layout className="glass inline-flex h-[48px] shrink-0 items-center pr-1.5 pl-1.5" style={{ borderRadius: 999 }} transition={move}>
         <Stat label="Complete" lead={<MiniRing value={m.progress} />}>
           {m.progress}
           <span className="text-text-3">%</span>
@@ -249,11 +249,11 @@ export function MetricsBlock() {
 
 function Stat({ label, lead, children }: { label: string; lead?: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex h-full items-center gap-2.5 border-l border-line px-4 whitespace-nowrap first:border-l-0 first:pl-1.5">
+    <motion.div layout="position" className="flex h-full items-center gap-2.5 border-l border-line px-4 whitespace-nowrap first:border-l-0 first:pl-1.5">
       {lead}
       <span className="t-micro text-text-3">{label}</span>
       <span className="t-num text-[17px] tracking-[-0.025em]">{children}</span>
-    </div>
+    </motion.div>
   );
 }
 

@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useForm } from "@/lib/store";
-import { springs, move } from "@/lib/motion";
+import { ease, springs, move } from "@/lib/motion";
 import { fmtDays, fmtEuro } from "@/lib/selectors";
 import { PRIORITY_LABEL, PRIORITY_ORDER, STATUS_LABEL, STATUS_ORDER, type Priority, type Status, type Task } from "@/lib/schema";
 import { ShuffleText } from "../text/ShuffleText";
@@ -128,7 +128,8 @@ export function StatusControl({ task, variant = "chip" }: { task: Task; variant?
         }}
         className={`focus-ring flex shrink-0 cursor-pointer items-center text-[var(--c-fg)] transition-colors ${cls}`}
       >
-        <motion.span layoutId={`status-${task.id}`} layout="position" className="flex">
+        {/* The timeline's bare glyph sits outside its bar, so it doesn't travel: it would cross the clipped card window */}
+        <motion.span layoutId={variant === "bare" ? undefined : `status-${task.id}`} layout="position" className="flex">
           <StatusGlyph status={task.status} />
         </motion.span>
         {variant === "chip" && <ShuffleText text={STATUS_LABEL[task.status]} className="t-body-s whitespace-nowrap" />}
@@ -409,22 +410,31 @@ export function NumberBadge({ task, number, inline = false }: { task: Task; numb
   const select = useForm((s) => s.select);
   const urgent = useForm((s) => s.doc.view.highlightUrgent && task.priority === "urgent" && task.status !== "done");
   return (
-    <button
-      type="button"
-      data-interactive
-      aria-pressed={selected}
-      aria-label={selected ? `Deselect ${task.title}` : `Select ${task.title} to ask FORM about it`}
-      onClick={(e) => {
-        e.stopPropagation();
-        select(selected ? null : task.id);
-      }}
-      className={`focus-ring t-micro grid h-[30px] w-[30px] shrink-0 cursor-pointer place-items-center rounded-full tabular-nums transition-[background-color,color,transform] duration-200 hover:scale-105 ${
-        inline ? "relative" : "absolute -top-[9px] -right-[9px] z-10"
-      } ${selected ? "bg-ink text-on-ink" : "bg-[#f6f6f4] text-text-2 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_4px_12px_-6px_rgba(0,0,0,0.25)]"}`}
-    >
-      {number}
-      {urgent && <span className="absolute -top-0.5 -right-0.5 h-[8px] w-[8px] rounded-full bg-signal ring-2 ring-[#f6f6f4]" />}
-    </button>
+    // The wrapper rides the layout (position only, so it stays round while the card morphs).
+    // A new badge can't track a morphing corner (it has no previous box), so the button
+    // arrives once the surface has settled. Its fade lives below the projection node,
+    // which would otherwise override it with its own layout opacity.
+    <motion.span layout="position" className={`flex shrink-0 ${inline ? "relative" : "absolute -top-[9px] -right-[9px] z-10"}`}>
+      <motion.button
+        initial={{ opacity: 0, scale: 0.6 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.5, duration: 0.35, ease: ease.out }}
+        type="button"
+        data-interactive
+        aria-pressed={selected}
+        aria-label={selected ? `Deselect ${task.title}` : `Select ${task.title} to ask FORM about it`}
+        onClick={(e) => {
+          e.stopPropagation();
+          select(selected ? null : task.id);
+        }}
+        className={`focus-ring t-micro relative grid h-[30px] w-[30px] cursor-pointer place-items-center rounded-full tabular-nums transition-[background-color,color,scale] duration-200 hover:scale-105 ${
+          selected ? "bg-ink text-on-ink" : "bg-[#f6f6f4] text-text-2 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_4px_12px_-6px_rgba(0,0,0,0.25)]"
+        }`}
+      >
+        {number}
+        {urgent && <span className="absolute -top-0.5 -right-0.5 h-[8px] w-[8px] rounded-full bg-signal ring-2 ring-[#f6f6f4]" />}
+      </motion.button>
+    </motion.span>
   );
 }
 
@@ -452,6 +462,8 @@ export function SubtaskList({ parentId, dense = false }: { parentId: string; den
           <motion.li
             key={s.id}
             layoutId={`sub-${s.id}`}
+            // Position only: a step travelling to a full-width timeline row must not stretch
+            layout="position"
             className="group flex min-h-[30px] items-center gap-2 rounded-full"
             transition={move}
           >
@@ -532,6 +544,7 @@ export function ProposalBlock({ parentId, dense = false }: { parentId: string; d
                 <motion.li
                   key={item.id}
                   layoutId={`sub-${item.id}`}
+                  layout="position"
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0, transition: { delay: 0.12 + i * 0.06, ...move } }}
                   className="flex h-[32px] items-center gap-2 rounded-full bg-[var(--c-chip)] pr-3 pl-2"
