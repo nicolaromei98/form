@@ -176,16 +176,28 @@ function TeamBoard() {
           </div>
         </motion.div>
 
-        {/* On resolve the card leaves the flow at once and dissolves in place, so the rows and the
-            handed-over task all glide to their final places on one curve, measured once */}
-        <AnimatePresence mode="popLayout">
+        {/* Resolving runs in two beats, so nothing moves under anything else: first the card dissolves
+            in place while the handed-over task travels between rows that stand still; then its empty
+            space closes on the move curve, and rows, panel and page follow it up without a jump */}
+        <AnimatePresence>
           {plan && (
             <motion.div
               key="plan"
-              className="tone-dark mb-4 overflow-hidden rounded-[26px] bg-ink text-on-ink"
-              initial={{ opacity: 0, height: 0, filter: "blur(8px)" }}
-              animate={{ opacity: 1, height: "auto", filter: "blur(0px)" }}
-              exit={{ opacity: 0, filter: "blur(10px)", transition: { duration: 0.3, ease: ease.out } }}
+              className="tone-dark overflow-hidden rounded-[26px] bg-ink text-on-ink"
+              initial={{ opacity: 0, height: 0, marginBottom: 0, filter: "blur(8px)" }}
+              animate={{ opacity: 1, height: "auto", marginBottom: 16, filter: "blur(0px)" }}
+              exit={{
+                opacity: 0,
+                filter: "blur(10px)",
+                height: 0,
+                marginBottom: 0,
+                transition: {
+                  opacity: { duration: 0.3, ease: ease.out },
+                  filter: { duration: 0.3, ease: ease.out },
+                  height: { ...move, delay: 0.65 },
+                  marginBottom: { ...move, delay: 0.65 },
+                },
+              }}
               transition={move}
             >
               <PlanCard doc={doc} plan={plan} loads={loads} onAccept={() => resolvePlan(true)} onDiscard={() => resolvePlan(false)} />
