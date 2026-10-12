@@ -32,7 +32,7 @@ export const RepresentationSchema = z.enum(["cards", "board", "timeline", "focus
 export const DensitySchema = z.enum(["comfortable", "compact"]);
 export const LayoutSchema = z.enum(["grid", "list"]);
 export const SortSchema = z.enum(["manual", "priority", "progress", "status", "title", "estimate"]);
-export const BlockTypeSchema = z.enum(["header", "metrics", "progress", "collection"]);
+export const BlockTypeSchema = z.enum(["header", "metrics", "progress", "collection", "moodboard"]);
 
 export const FieldsSchema = z.object({
   priority: z.boolean(),
@@ -67,6 +67,35 @@ export const ToolSchema = z.object({
   blocks: z.array(BlockTypeSchema),
 });
 
+/* ------------------------------------------------------------------
+   Moodboard — a free canvas of references kept with the project.
+   Geometry is in board-width units (1 = the board's width), so the
+   arrangement scales with the viewport and survives resizes.
+   ------------------------------------------------------------------ */
+
+export const MoodKindSchema = z.enum(["image", "color", "note"]);
+export const MoodLayoutSchema = z.enum(["masonry", "grid", "collage"]);
+
+export const MoodItemSchema = z.object({
+  id: z.string(),
+  kind: MoodKindSchema,
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(20),
+  w: z.number().min(0.04).max(1),
+  h: z.number().min(0.03).max(3),
+  /** Rotation in degrees (collage) */
+  r: z.number().min(-15).max(15),
+  /** Image: id of the downscaled file in this browser's asset store (IndexedDB) */
+  asset: z.string().nullable(),
+  /** Color: #rrggbb */
+  hex: z.string().regex(/^#[0-9a-f]{6}$/i).nullable(),
+  /** Note text, or a color's name */
+  text: z.string().max(400).nullable(),
+});
+
+/** What a command (or a drop) adds; the reducer assigns ids, defaults and a free spot. */
+export const MoodInputSchema = MoodItemSchema.omit({ id: true, r: true }).partial().extend({ kind: MoodKindSchema });
+
 export const ProposalItemSchema = z.object({
   id: z.string(),
   title: z.string().max(140),
@@ -85,6 +114,8 @@ export const DocSchema = z.object({
   order: z.array(z.string()),
   view: ViewSchema,
   proposal: ProposalSchema.nullable(),
+  /** Moodboard items, in stacking order (last on top). Kept when the block is hidden. */
+  mood: z.array(MoodItemSchema).max(200).default([]),
 });
 
 /* ------------------------------------------------------------------
@@ -125,6 +156,17 @@ export const OperationSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("addBlock"), block: BlockTypeSchema }),
   z.object({ op: z.literal("removeBlock"), block: BlockTypeSchema }),
   z.object({ op: z.literal("setStartDate"), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }),
+  z.object({ op: z.literal("addMoodItems"), items: z.array(MoodInputSchema).min(1).max(24) }),
+  z.object({
+    op: z.literal("updateMoodItem"),
+    id: z.string(),
+    patch: MoodItemSchema.pick({ x: true, y: true, w: true, h: true, r: true, hex: true, text: true }).partial(),
+    /** Bring it to the top of the stack */
+    raise: z.boolean().optional(),
+  }),
+  z.object({ op: z.literal("removeMoodItem"), id: z.string() }),
+  z.object({ op: z.literal("arrangeMood"), layout: MoodLayoutSchema }),
+  z.object({ op: z.literal("clearMood") }),
 ]);
 
 export const OperationListSchema = z.array(OperationSchema).max(12);
@@ -152,6 +194,10 @@ export type View = z.infer<typeof ViewSchema>;
 export type Tool = z.infer<typeof ToolSchema>;
 export type ProposalItem = z.infer<typeof ProposalItemSchema>;
 export type Proposal = z.infer<typeof ProposalSchema>;
+export type MoodKind = z.infer<typeof MoodKindSchema>;
+export type MoodLayout = z.infer<typeof MoodLayoutSchema>;
+export type MoodItem = z.infer<typeof MoodItemSchema>;
+export type MoodInput = z.infer<typeof MoodInputSchema>;
 export type Doc = z.infer<typeof DocSchema>;
 export type Operation = z.infer<typeof OperationSchema>;
 export type Interpretation = z.infer<typeof InterpretationSchema>;

@@ -13,7 +13,9 @@ export function claudeConfigured() {
 
 const SYSTEM = `You are the interpretation layer of FORM, an adaptive workspace. The user describes intent and the interface itself changes. You never chat: you translate one command into operations from a fixed vocabulary, which FORM validates and applies to the workspace you receive as JSON.
 
-The workspace holds one project tracker. Its tasks can be shown as four representations of the same data: "cards" (the tracker), "board" (status lanes), "timeline" (a schedule derived from the start date plus each task's estimate, in workflow order) and "focus" (the one task that matters now, chosen by FORM from priority, schedule pressure and what it unblocks — or pinned by setting view.focusId). Density "compact" renders tasks as capsule rows; "comfortable" as cards. Blocks are registry components composing the tool: header, metrics, progress (overall progress indicator), collection.
+The workspace holds one project tracker. Its tasks can be shown as four representations of the same data: "cards" (the tracker), "board" (status lanes), "timeline" (a schedule derived from the start date plus each task's estimate, in workflow order) and "focus" (the one task that matters now, chosen by FORM from priority, schedule pressure and what it unblocks — or pinned by setting view.focusId). Density "compact" renders tasks as capsule rows; "comfortable" as cards. Blocks are registry components composing the tool: header, metrics, progress (overall progress indicator), collection, moodboard.
+
+The moodboard is a free canvas of references kept with the project (block "moodboard"; items in "mood"). Geometry is in board-width units: x, y, w, h where 1 = the board's width; items are stacked in array order. Kinds: "image" (only the user can add these, by dropping, pasting or browsing files — never create image items), "color" (hex "#rrggbb", optional name in text) and "note" (text). Use addMoodItems for colours and notes (omit x/y to let FORM find a free spot; adding items shows the block), updateMoodItem to move, resize, rotate or edit one, removeMoodItem, arrangeMood ("masonry", "grid" or "collage") to re-lay it out, clearMood to empty it, and addBlock/removeBlock "moodboard" to show or hide it. If the user wants images added by text, explain how to drop, paste or browse them.
 
 Rules:
 - Use only task ids that exist in the workspace. "this", "it" or "that" refers to the selected task when selectedId is set.
@@ -31,6 +33,7 @@ function workspaceContext(doc: Doc, selectedId: string | null) {
     tool: doc.tool && { title: doc.tool.title, blocks: doc.tool.blocks, startDate: doc.tool.startDate, startDateIsSample: doc.tool.startDateIsSample },
     view: doc.view,
     proposal: doc.proposal,
+    mood: doc.mood.map(({ id, kind, x, y, w, h, hex, text }) => ({ id, kind, x: +x.toFixed(3), y: +y.toFixed(3), w: +w.toFixed(3), h: +h.toFixed(3), hex, text })),
     tasks: doc.order
       .map((id) => doc.tasks[id])
       .concat(Object.values(doc.tasks).filter((t) => t.parentId))
@@ -52,6 +55,14 @@ function sanitise(ops: Operation[], doc: Doc): Operation[] {
         return op.parentId && !exists(op.parentId) ? [] : [op];
       case "proposeSubtasks":
         return exists(op.parentId) ? [{ ...op, items: op.items.map((i) => ({ ...i, id: uid("p") })) }] : [];
+      case "updateMoodItem":
+      case "removeMoodItem":
+        return doc.mood.some((m) => m.id === op.id) ? [op] : [];
+      case "addMoodItems": {
+        // Images only enter through the user's files; the model can't reference assets
+        const items = op.items.filter((i) => i.kind !== "image").map((i) => ({ ...i, asset: null }));
+        return items.length ? [{ ...op, items }] : [];
+      }
       default:
         return [op];
     }

@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { BlockType } from "@/lib/schema";
 import { CollectionBlock, HeaderBlock, MetricsBlock, ProgressBlock } from "./blocks";
+import { MoodboardBlock } from "./Moodboard";
 import { CostTag, EditableText, EstimateControl, NumberBadge, PriorityControl, ProgressControl, ProposalBlock, StatusControl, SubtaskList } from "./parts";
 import { TaskCard } from "./TaskCard";
 import { CardsView } from "./CardsView";
@@ -18,6 +19,7 @@ export const BLOCKS: Record<BlockType, ComponentType> = {
   metrics: MetricsBlock,
   progress: ProgressBlock,
   collection: CollectionBlock,
+  moodboard: MoodboardBlock,
 };
 
 export const REPRESENTATIONS = {

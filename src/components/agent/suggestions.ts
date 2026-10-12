@@ -28,6 +28,9 @@ export function suggestionsFor(doc: Doc, selectedId: string | null): string[] {
     out.push("Show this project as a timeline");
     out.push("Change back to the original project tracker");
   }
+  const moodboard = doc.tool.blocks.includes("moodboard");
+  if (!moodboard) out.push("Add a moodboard for the project");
+  else if (doc.mood.length >= 3) out.push("Arrange the moodboard as a collage");
   if (!doc.tool.blocks.includes("progress")) out.push("Add a progress indicator");
   if (!v.highlightUrgent) out.push("Highlight the urgent ones");
   return out.slice(0, 4);
@@ -52,6 +55,19 @@ export const CAPABILITIES: { group: string; needs: Requirement; items: string[] 
     group: "Layout",
     needs: "tool",
     items: ["Make the cards more compact", "Show the tasks in two columns", "Sort them by priority", "Hide completed tasks", "Highlight the urgent ones", "Add a progress indicator"],
+  },
+  {
+    group: "Moodboard",
+    needs: "tool",
+    items: [
+      "Add a moodboard for the project",
+      "Add the colours #0C0C0C, off-white and terracotta",
+      "Add a note: warm, tactile, editorial",
+      "Tidy up the moodboard",
+      "Arrange the moodboard in a grid",
+      "Arrange the moodboard as a collage",
+      "Hide the moodboard",
+    ],
   },
   {
     group: "Selected task",

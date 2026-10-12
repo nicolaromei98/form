@@ -18,6 +18,7 @@ npm run dev -- --port 3417
 7. Click the **UI Design** bar (or its number badge) → the composer shows it as context → `Break this task into smaller steps` → accept the proposal.
 8. `Change back to the original project tracker` → compact layout, sort, edits and accepted steps are all still there. Refresh the page: they persist.
 9. `What should I work on now?` → **Focus**. The task that matters most grows into an ink card with the reasons it was chosen (priority, lag against the sample schedule, what waits on it) and its next concrete step. Everything else melts back into the agent's material as fused volumes; click one to bring it into focus.
+10. `Show me everything again`, then `Add a moodboard for the project` → a free canvas of references opens below the tasks. Drop images from the desktop (or paste them, or **Add images**), drag them anywhere, resize from the corner, `Backspace` removes the selected one. `Add the colours #0C0C0C, off-white and terracotta` and `Add a note: warm, tactile, editorial` pin swatches and notes; `Tidy up the moodboard`, `Arrange the moodboard in a grid` or `… as a collage` re-lay it out, with colours gathered into a palette strip.
 
 `⌘Z` / `⇧⌘Z` undo/redo · `Esc` closes the composer, then clears the selection · **Reset demo** (top right) is undoable.
 
@@ -33,6 +34,7 @@ command ─► Interpreter (demo parser | Claude) ─► Zod-validated Operation
 - **`src/lib/interpret/demo.ts`**: deterministic, rule-based parser for the flagship commands and sensible variations. It is not a language model. Anything it doesn't recognise is reported as unsupported.
 - **`src/lib/interpret/claude.server.ts`** + **`src/app/api/interpret/route.ts`**: optional server-side interpreter. It sends the workspace and the command to Claude (`claude-opus-5-5`, low effort, structured output against the same Zod schema, server-side refusal fallback enabled), then drops unknown ids before anything reaches the client.
 - **`src/components/workspace/registry.ts`**: component registry (blocks, representations, field components).
+- **`src/components/workspace/Moodboard.tsx`** + **`src/lib/mood.ts`** + **`src/lib/assets.ts`**: the moodboard block. Items live in the document in board-width units (so the arrangement scales with the viewport and undo/redo/persistence work as everywhere else); image files are downscaled and kept in this browser's IndexedDB, and the document only holds their ids.
 - **`src/components/agent/`**: the agent. Circles and capsules are fused by one SVG goo filter, and every state (idle, hover, input, processing, emit, compact) is just a different geometry for the same volumes.
 
 ## Honesty rules built in
@@ -40,6 +42,7 @@ command ─► Interpreter (demo parser | Claude) ─► Zod-validated Operation
 - Timeline dates are **derived** from a start date plus estimates in workflow order, and labelled as a sample until you set the start date. Tasks without an estimate stay unscheduled and say so.
 - Costs are never invented: "add an estimated cost" asks for an amount.
 - Proposed sub-steps are scaled to the parent's estimate and need explicit acceptance.
+- Moodboard images only enter through the user's own files; neither parser invents them, and the board says they're stored in this browser.
 - The top-right status shows which interpreter is active.
 
 ## Using Claude instead of the demo parser

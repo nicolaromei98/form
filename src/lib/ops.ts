@@ -1,7 +1,14 @@
 import { DEFAULT_VIEW, uid, websiteTemplate } from "./seed";
+import { addMoodItems, arrangeMood, patchMoodItem } from "./mood";
 import type { BlockType, Doc, Operation, Task } from "./schema";
 
-const BLOCK_ORDER: BlockType[] = ["header", "metrics", "progress", "collection"];
+const BLOCK_ORDER: BlockType[] = ["header", "metrics", "progress", "collection", "moodboard"];
+
+function withBlock(doc: Doc, block: BlockType): Doc {
+  if (!doc.tool || doc.tool.blocks.includes(block)) return doc;
+  const blocks = BLOCK_ORDER.filter((b) => b === block || doc.tool!.blocks.includes(b));
+  return { ...doc, tool: { ...doc.tool, blocks } };
+}
 
 /** Pure reducer: applies one validated operation to the document. */
 export function applyOperation(doc: Doc, op: Operation): Doc {
@@ -14,6 +21,7 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
         order: t.order,
         view: { ...DEFAULT_VIEW, fields: { ...DEFAULT_VIEW.fields } },
         proposal: null,
+        mood: [],
       };
     }
 
@@ -124,11 +132,8 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
     case "discardProposal":
       return { ...doc, proposal: null };
 
-    case "addBlock": {
-      if (!doc.tool || doc.tool.blocks.includes(op.block)) return doc;
-      const blocks = BLOCK_ORDER.filter((b) => b === op.block || doc.tool!.blocks.includes(b));
-      return { ...doc, tool: { ...doc.tool, blocks } };
-    }
+    case "addBlock":
+      return withBlock(doc, op.block);
 
     case "removeBlock": {
       if (!doc.tool || op.block === "header" || op.block === "collection") return doc;
@@ -138,6 +143,31 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
     case "setStartDate":
       if (!doc.tool) return doc;
       return { ...doc, tool: { ...doc.tool, startDate: op.date, startDateIsSample: false } };
+
+    case "addMoodItems": {
+      const mood = addMoodItems(doc.mood, op.items);
+      // Adding references brings the board back if it was hidden
+      return mood.length === doc.mood.length ? doc : withBlock({ ...doc, mood }, "moodboard");
+    }
+
+    case "updateMoodItem": {
+      const i = doc.mood.findIndex((m) => m.id === op.id);
+      if (i < 0) return doc;
+      const item = patchMoodItem(doc.mood[i], op.patch);
+      const mood = doc.mood.filter((m) => m.id !== op.id);
+      if (op.raise) mood.push(item);
+      else mood.splice(i, 0, item);
+      return { ...doc, mood };
+    }
+
+    case "removeMoodItem":
+      return doc.mood.some((m) => m.id === op.id) ? { ...doc, mood: doc.mood.filter((m) => m.id !== op.id) } : doc;
+
+    case "arrangeMood":
+      return doc.mood.length ? { ...doc, mood: arrangeMood(doc.mood, op.layout) } : doc;
+
+    case "clearMood":
+      return doc.mood.length ? { ...doc, mood: [] } : doc;
   }
 }
 

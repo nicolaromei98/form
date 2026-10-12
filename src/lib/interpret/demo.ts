@@ -7,6 +7,8 @@ import {
   STATUS_LABEL,
   type Doc,
   type Interpretation,
+  type MoodInput,
+  type MoodLayout,
   type Operation,
   type Priority,
   type Representation,
@@ -29,7 +31,15 @@ export interface InterpretContext {
  */
 export function interpretDemo(raw: string, ctx: InterpretContext): Interpretation {
   // `clean` keeps case for titles; `s` is the matching form. Same length → shared indices.
-  const clean = raw.replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim().replace(/[.!?]+$/, "");
+  // "mood board" → "moodboard " keeps the length, so `clean` and `s` still share indices
+  const clean = raw
+    .replace(/[’‘]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[.!?]+$/, "")
+    .replace(/\b(mood)[ -](boards?)\b/gi, "$1$2 ")
+    .trimEnd();
   const s = clean.toLowerCase();
   const { doc, selectedId } = ctx;
 
@@ -55,20 +65,27 @@ export function interpretDemo(raw: string, ctx: InterpretContext): Interpretatio
     /\b(create|build|generate|set ?up|spin up)\b.*\b(project|tracker|planner|workspace)\b/.test(s) || /\bnew (project|tracker)\b/.test(s);
   const organise = /\b(help me )?(organi[sz]e|track|plan)\b.*\b(tasks?|work|project|website|site|launch)\b/.test(s);
 
-  if ((!doc.tool && ((createVerb && createNoun) || organise)) || (doc.tool && explicitCreate)) {
+  const wantsMood = /\bmoodboards?\b/.test(s);
+  if ((!doc.tool && ((createVerb && (createNoun || wantsMood)) || organise)) || (doc.tool && explicitCreate)) {
     const isWeb = /\b(web ?site|site|landing page|web)\b/.test(s);
     const subject = clean.match(/\bfor (?:my|our|the|a|an)?\s*(?:new\s+)?(.+)$/i)?.[1];
     const title = isWeb || !subject ? "New website" : capitalise(subject).slice(0, 60);
     const ops: Operation[] = [{ op: "createProject", title, template: "website" }];
     const rep = representationIn(s, true)?.rep;
     if (rep && rep !== "cards") ops.push({ op: "setRepresentation", representation: rep });
-    const note = isWeb || !subject ? "" : " · Demo mode ships one template (website) — rename anything";
-    return { ops, tone: "done", message: `Project tracker created · 4 tasks${note}`, target: null };
+    // A moodboard lives inside a project: asking for one creates the project around it
+    if (wantsMood) ops.push({ op: "addBlock", block: "moodboard" });
+    const note = isWeb || !subject || wantsMood ? "" : " · Demo mode ships one template (website) — rename anything";
+    return { ops, tone: "done", message: `Project tracker created · 4 tasks${wantsMood ? " · moodboard below, drop images onto it" : ""}${note}`, target: null };
   }
 
   if (!doc.tool) {
     return clarify("Nothing to shape yet. Start with: 'Create a project tracker for my new website'.");
   }
+
+  /* ---------- moodboard ---------- */
+  const mood = moodboardIntent(clean, s, doc);
+  if (mood) return mood;
 
   /* ---------- proposal follow-ups ---------- */
   if (doc.proposal) {
@@ -362,6 +379,113 @@ export function interpretDemo(raw: string, ctx: InterpretContext): Interpretatio
   }
 
   return { ops, tone: "done", message: notes.join(" · "), target: target?.id ?? null };
+}
+
+/* ------------------------------------------------------------------
+   Moodboard
+   ------------------------------------------------------------------ */
+
+const NAMED_COLOURS: [string, string][] = [
+  ["off white", "#f2efe8"],
+  ["off-white", "#f2efe8"],
+  ["terracotta", "#c65d3b"],
+  ["burgundy", "#7a1f2b"],
+  ["charcoal", "#36393d"],
+  ["mustard", "#d4a017"],
+  ["chocolate", "#4e342e"],
+  ["ivory", "#f6f1e3"],
+  ["cream", "#f1e6cf"],
+  ["beige", "#e3d5bd"],
+  ["sand", "#d8c3a5"],
+  ["olive", "#6f7a3a"],
+  ["sage", "#9caf88"],
+  ["teal", "#2a8c86"],
+  ["navy", "#1f2a44"],
+  ["lilac", "#c3aed6"],
+  ["blush", "#efc9c2"],
+  ["rust", "#a9461f"],
+  ["gold", "#c9a227"],
+  ["silver", "#c0c0c0"],
+  ["black", "#0c0c0c"],
+  ["white", "#ffffff"],
+  ["grey", "#8a8a8a"],
+  ["gray", "#8a8a8a"],
+  ["blue", "#2f5bea"],
+  ["green", "#2e7d4f"],
+  ["yellow", "#f2c94c"],
+  ["orange", "#f2994a"],
+  ["red", "#d64545"],
+  ["pink", "#f4a6b7"],
+  ["purple", "#6b4fa0"],
+  ["brown", "#7b5544"],
+];
+
+/** Colours named in a sentence, in reading order: hex codes and a small set of plain names. */
+function coloursIn(s: string): MoodInput[] {
+  const found: { at: number; hex: string; name: string | null }[] = [];
+  for (const m of s.matchAll(/#([0-9a-f]{6}|[0-9a-f]{3})\b/gi)) found.push({ at: m.index ?? 0, hex: `#${m[1]}`, name: null });
+  let rest = s;
+  for (const [name, hex] of NAMED_COLOURS) {
+    const re = new RegExp(`\\b${name}\\b`);
+    const m = re.exec(rest);
+    if (!m) continue;
+    found.push({ at: m.index, hex, name: capitalise(name.replace("-", " ")) });
+    // Blank it out so "off white" isn't counted again as "white"
+    rest = rest.slice(0, m.index) + " ".repeat(name.length) + rest.slice(m.index + name.length);
+  }
+  return found.sort((a, b) => a.at - b.at).slice(0, 12).map((c) => ({ kind: "color", hex: c.hex, text: c.name }));
+}
+
+function moodboardIntent(clean: string, s: string, doc: Doc): Interpretation | null {
+  const named = /\bmoodboards?\b/.test(s);
+  const has = doc.tool!.blocks.includes("moodboard");
+  const n = doc.mood.length;
+  const refs = /\b(references?|inspiration|images?|pictures?|photos?|swatch(es)?|palette)\b/.test(s);
+  const colourWord = /\b(colou?rs?|swatch(es)?|palette|hex)\b/.test(s) || /#[0-9a-f]{3,6}\b/.test(s);
+  const note = clean.match(/\b(?:add|write|put|pin|leave) (?:a |an |another )?(?:sticky )?note\b(?:\s+(?:saying|that says|with|about))?\s*[:,-]?\s*"?([^"]*)"?$/i);
+  if (!named && !note && !(colourWord && /\b(add|put|include|pin|use)\b/.test(s)) && !(has && refs)) return null;
+  const show: Operation[] = has ? [] : [{ op: "addBlock", block: "moodboard" }];
+
+  if (named && /\b(remove|hide|close|drop|get rid of)\b/.test(s) && !/\b(note|colou?r|image|reference)s?\b/.test(s)) {
+    if (!has) return { ops: [], tone: "done", message: "The moodboard is already hidden", target: null };
+    return { ops: [{ op: "removeBlock", block: "moodboard" }], tone: "done", message: `Moodboard hidden${n ? ` · its ${n} references are kept` : ""}`, target: null };
+  }
+  if (named && /\b(clear|empty|wipe|delete everything)\b/.test(s)) {
+    if (!n) return { ops: show, tone: "done", message: "The moodboard is already empty", target: null };
+    return { ops: [...show, { op: "clearMood" }], tone: "done", message: `Moodboard cleared · ${n} references removed`, target: null };
+  }
+  if (/\b(tidy|arrange|organi[sz]e|lay ?out|clean up|align|sort out|rearrange|grid|masonry|collage|scatter)\b/.test(s) && (named || refs)) {
+    if (n < 2) return clarify("Add a few references first — drop images onto the moodboard, or add notes and colours.");
+    const layout: MoodLayout = /\b(collage|scatter\w*|loose|messy|table|overlap\w*)\b/.test(s)
+      ? "collage"
+      : /\b(grid|contact sheet|align\w*|uniform|even\w*|rows?)\b/.test(s)
+        ? "grid"
+        : "masonry";
+    return { ops: [...show, { op: "arrangeMood", layout }], tone: "done", message: `Moodboard arranged as a ${layout}`, target: null };
+  }
+  if (note) {
+    const text = note[1].trim();
+    return { ops: [{ op: "addMoodItems", items: [{ kind: "note", text: text ? capitalise(text) : "" }] }], tone: "done", message: text ? "Note pinned to the moodboard" : "Empty note added · double-click it to write", target: null };
+  }
+  if (colourWord) {
+    const items = coloursIn(s);
+    if (!items.length) return clarify("Which colours? A hex code or a name — e.g. 'add #E4572E and off-white to the moodboard'.");
+    return { ops: [{ op: "addMoodItems", items }], tone: "done", message: `${items.length} colour${items.length > 1 ? "s" : ""} added to the moodboard`, target: null };
+  }
+  if (refs && /\b(add|upload|import|drop|insert|bring in)\b/.test(s)) {
+    // Text can't carry image files: say how they get in, and open the board for them
+    return { ops: show, tone: show.length ? "done" : "clarify", message: "Drop images onto the moodboard, paste them, or use Add images", target: null };
+  }
+  if (named) {
+    if (!has) return { ops: show, tone: "done", message: n ? `Moodboard back · ${n} references` : "Moodboard added · drop, paste or browse images", target: null };
+    return {
+      ops: [],
+      tone: "unsupported",
+      message: "On the moodboard I can add notes and colours, arrange it (masonry, grid, collage), clear or hide it. Images: drop, paste or browse.",
+      target: null,
+    };
+  }
+  return null;
 }
 
 /* ------------------------------------------------------------------ */

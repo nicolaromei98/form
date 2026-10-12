@@ -18,6 +18,7 @@ export function emptyDoc(): Doc {
     order: [],
     view: { ...DEFAULT_VIEW, fields: { ...DEFAULT_VIEW.fields } },
     proposal: null,
+    mood: [],
   };
 }
 

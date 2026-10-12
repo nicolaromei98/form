@@ -20,7 +20,7 @@ import { ShuffleText } from "../text/ShuffleText";
    Block shell — every registry block enters the same way
    ------------------------------------------------------------------ */
 
-function BlockShell({ children, className = "", order = 0 }: { children: ReactNode; className?: string; order?: number }) {
+export function BlockShell({ children, className = "", order = 0 }: { children: ReactNode; className?: string; order?: number }) {
   const reveal = useBlockReveal();
   // Same motion as text everywhere: condense out of a blur, no travel
   return (
