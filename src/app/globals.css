@@ -1,26 +1,313 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------
+   FORM — design tokens
+   Source of truth: the reference set (PXDX light dotted ground, black
+   metaball agent, Ask AI dark capsule, Giza capsule rows, frosted cards).
+   ------------------------------------------------------------------ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Ground */
+  --paper: #e9e9e6;
+  --paper-hi: #f2f2ef;
+  --paper-lo: #dcdcd8;
+  --dot: rgba(10, 10, 10, 0.075);
+
+  /* Ink — the agent's material */
+  --ink: #0a0a0a;
+  --ink-2: #161616;
+  --ink-3: #242424;
+
+  /* Text on paper */
+  --text: #0a0a0a;
+  --text-2: rgba(10, 10, 10, 0.58);
+  --text-3: rgba(10, 10, 10, 0.38);
+  --text-4: rgba(10, 10, 10, 0.2);
+
+  /* Text on ink */
+  --on-ink: #f4f4f2;
+  --on-ink-2: rgba(244, 244, 242, 0.6);
+  --on-ink-3: rgba(244, 244, 242, 0.34);
+
+  /* Lines */
+  --line: rgba(10, 10, 10, 0.08);
+  --line-2: rgba(10, 10, 10, 0.14);
+
+  /* Frosted surfaces */
+  --glass: rgba(255, 255, 255, 0.52);
+  --glass-hi: rgba(250, 250, 248, 0.92);
+  --glass-edge: rgba(255, 255, 255, 0.85);
+
+  /* The only decorative colour: a functional alert red (battery reference) */
+  --signal: #ff3b2f;
+
+  /* Radii — circles and capsules are the only primitives */
+  --r-card: 28px;
+  --r-panel: 36px;
+  --r-pill: 999px;
+
+  /* Elevation */
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 0 0 1px rgba(10, 10, 10, 0.025),
+    0 18px 40px -28px rgba(10, 10, 10, 0.22);
+  --shadow-float: 0 1px 0 rgba(255, 255, 255, 0.95) inset, 0 0 0 1px rgba(10, 10, 10, 0.04),
+    0 10px 24px -16px rgba(10, 10, 10, 0.2);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-text-4: var(--text-4);
+  --color-on-ink: var(--on-ink);
+  --color-on-ink-2: var(--on-ink-2);
+  --color-on-ink-3: var(--on-ink-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-signal: var(--signal);
+
+  /* Typography roles (client-specified):
+     Aeonik Pro for titles, paragraphs, UI and numbers · Aeonik Mono only for eyebrows */
+  --font-display: var(--font-aeonik), ui-sans-serif;
+  --font-body: var(--font-aeonik), ui-sans-serif;
+  --font-meta: var(--font-aeonik-mono), ui-monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ------------------------------------------------------------------
+   Type scale — one place for every role
+   ------------------------------------------------------------------ */
+/* Focus stage title */
+.t-display-xl {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(52px, 6.2vw, 96px);
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+}
+.t-display-l {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(36px, 3.6vw, 52px);
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+}
+.t-display-m {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+}
+/* Large figures: proportional, so a "1" never grows a tabular foot */
+.t-num {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+}
+.t-title {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+}
+.t-body-l {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+.t-body {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+.t-body-s {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+/* Small figures in running UI (12d, 30%, dates) — Aeonik Pro, tabular */
+.t-data {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  font-feature-settings: "tnum" 1;
+}
+/* Eyebrows — the only place Aeonik Mono appears */
+.t-meta {
+  font-family: var(--font-meta);
+  font-weight: 400;
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.t-micro {
+  font-family: var(--font-meta);
+  font-weight: 400;
+  font-size: 9.5px;
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------
+   Base
+   ------------------------------------------------------------------ */
+html,
+body {
+  background: var(--paper);
+  color: var(--text);
+  /* Clip, don't scroll: the fluid's filter layers extend past the viewport on purpose */
+  overflow-x: clip;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+/* Ground: light falloff + barely-there micro dot grid (PXDX) */
+.ground {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at center, var(--dot) 0.7px, transparent 0.9px) 0 0 / 11px 11px,
+    radial-gradient(120% 90% at 50% 38%, var(--paper-hi) 0%, var(--paper) 52%, var(--paper-lo) 100%);
+}
+
+/* Frosted card material (Mint NFT / festival panels) */
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(1.1);
+  backdrop-filter: blur(22px) saturate(1.1);
+  box-shadow: var(--shadow-card);
+}
+.glass-hi {
+  background: var(--glass-hi);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-float);
+}
+
+/* Ask AI material: near-black capsule, centre light, hairline rim brighter on top */
+.ink-material {
+  background:
+    radial-gradient(60% 120% at 50% 70%, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0) 70%),
+    linear-gradient(180deg, #161616 0%, #0b0b0b 55%, #090909 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* Surface tones: registry components read these, so the same component
+   works on a glass card and on an ink (emphasised) card. */
+.tone-light {
+  --c-fg: var(--text);
+  --c-fg-2: var(--text-2);
+  --c-fg-3: var(--text-3);
+  --c-track: rgba(10, 10, 10, 0.08);
+  --c-fill: var(--ink);
+  --c-on-fill: var(--on-ink);
+  --c-chip: rgba(255, 255, 255, 0.66);
+  --c-chip-hover: rgba(255, 255, 255, 0.92);
+  --c-line: rgba(10, 10, 10, 0.14);
+  --c-dot-off: rgba(10, 10, 10, 0.15);
+  --c-hover: rgba(10, 10, 10, 0.045);
+  color: var(--c-fg);
+}
+.tone-dark {
+  --c-fg: var(--on-ink);
+  --c-fg-2: var(--on-ink-2);
+  --c-fg-3: var(--on-ink-3);
+  --c-track: rgba(255, 255, 255, 0.14);
+  --c-fill: var(--on-ink);
+  --c-on-fill: var(--ink);
+  --c-chip: rgba(255, 255, 255, 0.09);
+  --c-chip-hover: rgba(255, 255, 255, 0.16);
+  --c-line: rgba(255, 255, 255, 0.2);
+  --c-dot-off: rgba(255, 255, 255, 0.22);
+  --c-hover: rgba(255, 255, 255, 0.07);
+  color: var(--c-fg);
+}
+.tone-light,
+.tone-dark {
+  transition: color 0.3s ease;
+}
+
+.editable {
+  border-radius: 8px;
+  margin: -2px -6px;
+  padding: 2px 6px;
+  cursor: text;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
+}
+.editable:hover {
+  background: var(--c-hover);
+}
+.editable:focus {
+  background: var(--c-chip-hover);
+  box-shadow: 0 0 0 1px var(--c-line);
+}
+
+/* Remove default focus outline; every control defines its own visible state */
+:focus {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--ink);
+}
+.focus-ring-ink:focus-visible {
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+}
+
+[contenteditable] {
+  outline: none;
+  -webkit-user-modify: read-write-plaintext-only;
+}
+[contenteditable]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-3);
+}
+
+input::placeholder {
+  color: var(--on-ink-3);
+}
+
+/* Hide scrollbars on horizontal scrollers (timeline, board on mobile) */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
 }

@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // The dev indicator sat on top of FORM's corner metadata; errors still surface without it
+  devIndicators: false,
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

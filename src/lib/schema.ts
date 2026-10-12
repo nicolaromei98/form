@@ -1,0 +1,190 @@
+import { z } from "zod";
+
+/* ------------------------------------------------------------------
+   Semantic entities
+   ------------------------------------------------------------------ */
+
+export const StatusSchema = z.enum(["todo", "active", "review", "done"]);
+export const PrioritySchema = z.enum(["low", "medium", "high", "urgent"]);
+
+export const TaskSchema = z.object({
+  id: z.string(),
+  title: z.string().max(140),
+  status: StatusSchema,
+  priority: PrioritySchema,
+  progress: z.number().min(0).max(100),
+  /** Duration in days. `null` = unknown — never invented. */
+  estimate: z.number().min(0.5).max(90).nullable(),
+  /** Cost in EUR. `null` = unknown — never invented. */
+  cost: z.number().min(0).nullable(),
+  /** Relationship: subtasks point at their parent. */
+  parentId: z.string().nullable(),
+  /** "Make this more prominent" */
+  emphasis: z.boolean(),
+  origin: z.enum(["template", "user", "agent"]),
+});
+
+/* ------------------------------------------------------------------
+   UI representation + layout preferences (structured config, not code)
+   ------------------------------------------------------------------ */
+
+export const RepresentationSchema = z.enum(["cards", "board", "timeline", "focus"]);
+export const DensitySchema = z.enum(["comfortable", "compact"]);
+export const LayoutSchema = z.enum(["grid", "list"]);
+export const SortSchema = z.enum(["manual", "priority", "progress", "status", "title", "estimate"]);
+export const BlockTypeSchema = z.enum(["header", "metrics", "progress", "collection"]);
+
+export const FieldsSchema = z.object({
+  priority: z.boolean(),
+  estimate: z.boolean(),
+  progress: z.boolean(),
+});
+
+export const ViewSchema = z.object({
+  representation: RepresentationSchema,
+  density: DensitySchema,
+  layout: LayoutSchema,
+  /** `null` = automatic */
+  columns: z.number().int().min(1).max(4).nullable(),
+  sort: SortSchema,
+  hideDone: z.boolean(),
+  highlightUrgent: z.boolean(),
+  fields: FieldsSchema,
+  /** Focus representation: task the user pinned; null = FORM decides */
+  focusId: z.string().nullable().optional(),
+});
+
+export const ToolSchema = z.object({
+  id: z.string(),
+  kind: z.literal("project"),
+  template: z.literal("website"),
+  title: z.string().max(80),
+  /** ISO date (yyyy-mm-dd) the schedule starts from */
+  startDate: z.string(),
+  /** True while the start date is the demo's labelled sample date */
+  startDateIsSample: z.boolean(),
+  /** Registry blocks composing this tool, in render order */
+  blocks: z.array(BlockTypeSchema),
+});
+
+export const ProposalItemSchema = z.object({
+  id: z.string(),
+  title: z.string().max(140),
+  estimate: z.number().min(0.5).max(90).nullable(),
+});
+
+export const ProposalSchema = z.object({
+  parentId: z.string(),
+  items: z.array(ProposalItemSchema).min(1).max(8),
+});
+
+export const DocSchema = z.object({
+  tool: ToolSchema.nullable(),
+  tasks: z.record(z.string(), TaskSchema),
+  /** Manual (workflow) order of top-level tasks */
+  order: z.array(z.string()),
+  view: ViewSchema,
+  proposal: ProposalSchema.nullable(),
+});
+
+/* ------------------------------------------------------------------
+   Operations — the only way the intelligence layer can change the UI
+   ------------------------------------------------------------------ */
+
+const TaskPatchSchema = TaskSchema.pick({
+  title: true,
+  status: true,
+  priority: true,
+  progress: true,
+  estimate: true,
+  cost: true,
+  emphasis: true,
+}).partial();
+
+const ViewPatchSchema = ViewSchema.omit({ representation: true, fields: true }).partial();
+
+export const OperationSchema = z.discriminatedUnion("op", [
+  z.object({ op: z.literal("createProject"), title: z.string().min(1).max(80), template: z.literal("website") }),
+  z.object({ op: z.literal("renameTool"), title: z.string().min(1).max(80) }),
+  z.object({ op: z.literal("setRepresentation"), representation: RepresentationSchema }),
+  z.object({ op: z.literal("setView"), patch: ViewPatchSchema }),
+  z.object({ op: z.literal("setFields"), patch: FieldsSchema.partial() }),
+  z.object({ op: z.literal("updateTask"), id: z.string(), patch: TaskPatchSchema }),
+  z.object({
+    op: z.literal("addTask"),
+    title: z.string().min(1).max(140),
+    parentId: z.string().nullable(),
+    estimate: z.number().min(0.5).max(90).nullable(),
+    priority: PrioritySchema.optional(),
+  }),
+  z.object({ op: z.literal("removeTask"), id: z.string() }),
+  z.object({ op: z.literal("moveTask"), id: z.string(), toIndex: z.number().int().min(0) }),
+  z.object({ op: z.literal("proposeSubtasks"), parentId: z.string(), items: z.array(ProposalItemSchema).min(1).max(8) }),
+  z.object({ op: z.literal("acceptProposal") }),
+  z.object({ op: z.literal("discardProposal") }),
+  z.object({ op: z.literal("addBlock"), block: BlockTypeSchema }),
+  z.object({ op: z.literal("removeBlock"), block: BlockTypeSchema }),
+  z.object({ op: z.literal("setStartDate"), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }),
+]);
+
+export const OperationListSchema = z.array(OperationSchema).max(12);
+
+export const InterpretationSchema = z.object({
+  ops: OperationListSchema,
+  /** Short caption describing what changed. Not a chat reply. */
+  message: z.string().max(280),
+  tone: z.enum(["done", "proposal", "unsupported", "clarify"]),
+  control: z.enum(["undo", "redo", "reset"]).optional(),
+  /** Entity the command was resolved against, if any */
+  target: z.string().nullable().optional(),
+});
+
+export type Status = z.infer<typeof StatusSchema>;
+export type Priority = z.infer<typeof PrioritySchema>;
+export type Task = z.infer<typeof TaskSchema>;
+export type Representation = z.infer<typeof RepresentationSchema>;
+export type Density = z.infer<typeof DensitySchema>;
+export type Layout = z.infer<typeof LayoutSchema>;
+export type Sort = z.infer<typeof SortSchema>;
+export type BlockType = z.infer<typeof BlockTypeSchema>;
+export type Fields = z.infer<typeof FieldsSchema>;
+export type View = z.infer<typeof ViewSchema>;
+export type Tool = z.infer<typeof ToolSchema>;
+export type ProposalItem = z.infer<typeof ProposalItemSchema>;
+export type Proposal = z.infer<typeof ProposalSchema>;
+export type Doc = z.infer<typeof DocSchema>;
+export type Operation = z.infer<typeof OperationSchema>;
+export type Interpretation = z.infer<typeof InterpretationSchema>;
+
+export const STATUS_LABEL: Record<Status, string> = {
+  todo: "To do",
+  active: "In progress",
+  review: "In review",
+  done: "Done",
+};
+export const STATUS_ORDER: Status[] = ["todo", "active", "review", "done"];
+
+export const PRIORITY_LABEL: Record<Priority, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  urgent: "Urgent",
+};
+export const PRIORITY_ORDER: Priority[] = ["low", "medium", "high", "urgent"];
+export const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+
+export const REPRESENTATION_LABEL: Record<Representation, string> = {
+  cards: "Tracker",
+  board: "Board",
+  timeline: "Timeline",
+  focus: "Focus",
+};
+
+export const SORT_LABEL: Record<Sort, string> = {
+  manual: "Workflow",
+  priority: "Priority",
+  progress: "Progress",
+  status: "Status",
+  title: "Name",
+  estimate: "Duration",
+};

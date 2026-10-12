@@ -1,0 +1,86 @@
+import "server-only";
+import Anthropic from "@anthropic-ai/sdk";
+import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { uid } from "../seed";
+import { InterpretationSchema, type Doc, type Interpretation, type Operation } from "../schema";
+
+const MODEL = "claude-opus-5-5";
+
+export function claudeConfigured() {
+  if (process.env.FORM_ENGINE === "demo") return false;
+  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+}
+
+const SYSTEM = `You are the interpretation layer of FORM, an adaptive workspace. The user describes intent and the interface itself changes. You never chat: you translate one command into operations from a fixed vocabulary, which FORM validates and applies to the workspace you receive as JSON.
+
+The workspace holds one project tracker. Its tasks can be shown as four representations of the same data: "cards" (the tracker), "board" (status lanes), "timeline" (a schedule derived from the start date plus each task's estimate, in workflow order) and "focus" (the one task that matters now, chosen by FORM from priority, schedule pressure and what it unblocks — or pinned by setting view.focusId). Density "compact" renders tasks as capsule rows; "comfortable" as cards. Blocks are registry components composing the tool: header, metrics, progress (overall progress indicator), collection.
+
+Rules:
+- Use only task ids that exist in the workspace. "this", "it" or "that" refers to the selected task when selectedId is set.
+- Never invent facts. No costs, dates or durations unless the user states them. When breaking a task down, use proposeSubtasks with 3–5 short steps; step estimates must sum to the parent's estimate, or be null when the parent has none. The user accepts proposals in the UI.
+- createProject only when there is no tool yet, or the user explicitly asks for a new project. The template is always "website".
+- If the request is outside this vocabulary (comparisons, budgets, anything else), return no operations, tone "unsupported", and say briefly what FORM can do instead.
+- If something essential is missing (which task, an amount), return no operations, tone "clarify", and ask for exactly that.
+- Use control only for undo, redo or reset requests.
+- message is a caption of what changed, at most about twelve words, e.g. "Compact · Sorted by priority". target is the task id you resolved the command against, or null.`;
+
+/** Only what the model needs to resolve the command — no history, no log. */
+function workspaceContext(doc: Doc, selectedId: string | null) {
+  return {
+    selectedId,
+    tool: doc.tool && { title: doc.tool.title, blocks: doc.tool.blocks, startDate: doc.tool.startDate, startDateIsSample: doc.tool.startDateIsSample },
+    view: doc.view,
+    proposal: doc.proposal,
+    tasks: doc.order
+      .map((id) => doc.tasks[id])
+      .concat(Object.values(doc.tasks).filter((t) => t.parentId))
+      .filter(Boolean)
+      .map(({ id, title, status, priority, progress, estimate, cost, parentId, emphasis }) => ({ id, title, status, priority, progress, estimate, cost, parentId, emphasis })),
+  };
+}
+
+/** Defensive pass: unknown ids are dropped, proposal ids are always server-generated. */
+function sanitise(ops: Operation[], doc: Doc): Operation[] {
+  const exists = (id: string) => Boolean(doc.tasks[id]);
+  return ops.flatMap((op): Operation[] => {
+    switch (op.op) {
+      case "updateTask":
+      case "removeTask":
+      case "moveTask":
+        return exists(op.id) ? [op] : [];
+      case "addTask":
+        return op.parentId && !exists(op.parentId) ? [] : [op];
+      case "proposeSubtasks":
+        return exists(op.parentId) ? [{ ...op, items: op.items.map((i) => ({ ...i, id: uid("p") })) }] : [];
+      default:
+        return [op];
+    }
+  });
+}
+
+export async function interpretWithClaude(command: string, doc: Doc, selectedId: string | null): Promise<Interpretation> {
+  const client = new Anthropic();
+  const response = await client.beta.messages.parse({
+    model: MODEL,
+    max_tokens: 8000,
+    // Command interpretation is latency-sensitive and narrow: low effort is enough
+    output_config: { effort: "low", format: betaZodOutputFormat(InterpretationSchema) },
+    // Server-side fallback on a classifier decline, routed by refusal category
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
+    system: SYSTEM,
+    messages: [
+      {
+        role: "user",
+        content: `Workspace:\n${JSON.stringify(workspaceContext(doc, selectedId))}\n\nCommand: ${command}`,
+      },
+    ],
+  });
+
+  if (response.stop_reason === "refusal") {
+    return { ops: [], tone: "unsupported", message: "That request was declined. Try a workspace change instead.", target: null };
+  }
+  const out = response.parsed_output;
+  if (!out) throw new Error(`Unparseable model output (stop_reason: ${response.stop_reason})`);
+  return { ...out, ops: sanitise(out.ops, doc) };
+}
