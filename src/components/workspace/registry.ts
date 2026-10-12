@@ -8,6 +8,7 @@ import { CardsView } from "./CardsView";
 import { BoardView } from "./BoardView";
 import { TimelineView } from "./TimelineView";
 import { FocusView } from "./FocusView";
+import { TeamView } from "./TeamView";
 
 /**
  * Component registry. The intelligence layer never emits JSX — it emits
@@ -27,6 +28,7 @@ export const REPRESENTATIONS = {
   board: BoardView,
   timeline: TimelineView,
   focus: FocusView,
+  team: TeamView,
 } as const;
 
 export const COMPONENTS = {

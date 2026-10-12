@@ -1,8 +1,18 @@
-import { DEFAULT_VIEW, uid, websiteTemplate } from "./seed";
+import { DEFAULT_VIEW, SAMPLE_OWNERS, sampleTeam, uid, websiteTemplate } from "./seed";
 import { addMoodItems, arrangeMood, patchMoodItem } from "./mood";
-import type { BlockType, Doc, Operation, Task } from "./schema";
+import type { BlockType, Doc, Operation, ReassignPlan, Task } from "./schema";
 
 const BLOCK_ORDER: BlockType[] = ["header", "metrics", "progress", "collection", "moodboard"];
+
+/** Keeps only moves that still make sense: open top-level tasks going to someone who exists, and somewhere new */
+function validPlan(doc: Doc, plan: ReassignPlan | null): ReassignPlan | null {
+  if (!plan) return null;
+  const moves = plan.moves.filter((m) => {
+    const t = doc.tasks[m.taskId];
+    return t && !t.parentId && t.status !== "done" && (m.to === null || doc.people.some((p) => p.id === m.to)) && m.to !== t.owner;
+  });
+  return moves.length ? { moves } : null;
+}
 
 function withBlock(doc: Doc, block: BlockType): Doc {
   if (!doc.tool || doc.tool.blocks.includes(block)) return doc;
@@ -22,6 +32,8 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
         view: { ...DEFAULT_VIEW, fields: { ...DEFAULT_VIEW.fields } },
         proposal: null,
         mood: [],
+        people: t.people,
+        plan: null,
       };
     }
 
@@ -72,6 +84,7 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
         parentId: op.parentId,
         emphasis: false,
         origin: "user",
+        owner: null,
       };
       return {
         ...doc,
@@ -85,12 +98,8 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
       const tasks = { ...doc.tasks };
       delete tasks[op.id];
       for (const t of Object.values(tasks)) if (t.parentId === op.id) delete tasks[t.id];
-      return {
-        ...doc,
-        tasks,
-        order: doc.order.filter((id) => id !== op.id),
-        proposal: doc.proposal?.parentId === op.id ? null : doc.proposal,
-      };
+      const next = { ...doc, tasks, order: doc.order.filter((id) => id !== op.id), proposal: doc.proposal?.parentId === op.id ? null : doc.proposal };
+      return { ...next, plan: validPlan(next, doc.plan) };
     }
 
     case "moveTask": {
@@ -124,6 +133,7 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
           parentId: parent.id,
           emphasis: false,
           origin: "agent",
+          owner: null,
         };
       }
       return { ...doc, tasks, proposal: null };
@@ -168,6 +178,60 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
 
     case "clearMood":
       return doc.mood.length ? { ...doc, mood: [] } : doc;
+
+    case "addPerson": {
+      const name = op.name.trim();
+      if (!name || doc.people.some((p) => p.name.toLowerCase() === name.toLowerCase())) return doc;
+      const person = { id: uid("p"), name: name[0].toUpperCase() + name.slice(1), role: op.role?.trim() || null, capacity: op.capacity ?? 10 };
+      return { ...doc, people: [...doc.people, person] };
+    }
+
+    case "updatePerson": {
+      if (!doc.people.some((p) => p.id === op.id)) return doc;
+      const people = doc.people.map((p) => (p.id === op.id ? { ...p, ...op.patch, name: op.patch.name?.trim() || p.name } : p));
+      return { ...doc, people };
+    }
+
+    case "removePerson": {
+      if (!doc.people.some((p) => p.id === op.id)) return doc;
+      // Their work stays in the project, unassigned
+      const tasks = Object.fromEntries(Object.entries(doc.tasks).map(([id, t]) => [id, t.owner === op.id ? { ...t, owner: null } : t]));
+      const next = { ...doc, tasks, people: doc.people.filter((p) => p.id !== op.id) };
+      return { ...next, plan: validPlan(next, doc.plan) };
+    }
+
+    case "assignTask": {
+      const t = doc.tasks[op.taskId];
+      if (!t || t.parentId || t.owner === op.personId) return doc;
+      if (op.personId && !doc.people.some((p) => p.id === op.personId)) return doc;
+      const next = { ...doc, tasks: { ...doc.tasks, [t.id]: { ...t, owner: op.personId } } };
+      return { ...next, plan: validPlan(next, doc.plan) };
+    }
+
+    case "addSampleTeam": {
+      const people = [...doc.people, ...sampleTeam().filter((s) => !doc.people.some((p) => p.id === s.id || p.name === s.name))];
+      const ids = new Set(people.map((p) => p.id));
+      const tasks = Object.fromEntries(
+        Object.entries(doc.tasks).map(([id, t]) => [id, !t.owner && SAMPLE_OWNERS[id] && ids.has(SAMPLE_OWNERS[id]) ? { ...t, owner: SAMPLE_OWNERS[id] } : t]),
+      );
+      return { ...doc, people, tasks };
+    }
+
+    case "proposeReassign": {
+      const plan = validPlan(doc, { moves: op.moves });
+      return plan ? { ...doc, plan } : doc;
+    }
+
+    case "acceptReassign": {
+      const plan = validPlan(doc, doc.plan);
+      if (!plan) return { ...doc, plan: null };
+      const tasks = { ...doc.tasks };
+      for (const m of plan.moves) tasks[m.taskId] = { ...tasks[m.taskId], owner: m.to };
+      return { ...doc, tasks, plan: null };
+    }
+
+    case "discardReassign":
+      return doc.plan ? { ...doc, plan: null } : doc;
   }
 }
 

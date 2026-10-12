@@ -24,7 +24,7 @@ const remember = () => {
   }
 };
 
-const WORKS = ["Project tracker", "Tracker · Board · Timeline · Focus", "Breaking a task into steps", "Moodboard"];
+const WORKS = ["Project tracker", "Tracker · Board · Timeline · Team · Focus", "Team workload", "Breaking a task into steps", "Moodboard"];
 
 /** Same text motion as the rest of FORM: blocks condense out of a blur, one after another */
 const block = (i: number) => ({

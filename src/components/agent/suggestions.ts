@@ -6,6 +6,7 @@ export function suggestionsFor(doc: Doc, selectedId: string | null): string[] {
 
   const sel = selectedId ? doc.tasks[selectedId] : null;
   if (doc.proposal) return ["Accept them", "Discard"];
+  if (doc.plan) return ["Accept the plan", "Discard"];
   if (sel) {
     if (sel.parentId) return ["Mark it done", "Make it urgent"];
     const out = ["Break this task into smaller steps", "Make this more prominent"];
@@ -16,11 +17,15 @@ export function suggestionsFor(doc: Doc, selectedId: string | null): string[] {
   const v = doc.view;
   const out: string[] = [];
   if (v.representation === "focus") return ["Show me everything again", "Show this project as a timeline", "Highlight the urgent ones"];
+  if (v.representation === "team") {
+    if (!doc.people.length) return ["Add a sample team", "Add Giulia and Paolo to the team", "Change back to the original project tracker"];
+    return ["Balance the workload", "Who's overloaded?", "Assign Development to Sara", "Change back to the original project tracker"];
+  }
   out.push("What should I work on now?");
   if (v.representation === "cards") {
     if (v.density === "comfortable" || v.sort !== "priority") out.push("Make the cards more compact and sort them by priority");
+    out.push("Show the team workload");
     out.push("Show this project as a timeline");
-    out.push("Show it as a board");
   } else if (v.representation === "timeline") {
     out.push("Change back to the original project tracker");
     out.push("Show it as a board");
@@ -55,6 +60,19 @@ export const CAPABILITIES: { group: string; needs: Requirement; items: string[] 
     group: "Layout",
     needs: "tool",
     items: ["Make the cards more compact", "Show the tasks in two columns", "Sort them by priority", "Hide completed tasks", "Highlight the urgent ones", "Add a progress indicator"],
+  },
+  {
+    group: "Team",
+    needs: "tool",
+    items: [
+      "Show the team workload",
+      "Who's overloaded?",
+      "Balance the workload",
+      "Assign Development to Sara",
+      "Add Giulia and Paolo to the team",
+      "Set Marta's capacity to 10 days",
+      "Add a sample team",
+    ],
   },
   {
     group: "Moodboard",

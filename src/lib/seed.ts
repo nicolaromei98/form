@@ -1,4 +1,4 @@
-import type { Doc, Task, Tool, View } from "./schema";
+import type { Doc, Person, Task, Tool, View } from "./schema";
 
 export const DEFAULT_VIEW: View = {
   representation: "cards",
@@ -19,6 +19,8 @@ export function emptyDoc(): Doc {
     view: { ...DEFAULT_VIEW, fields: { ...DEFAULT_VIEW.fields } },
     proposal: null,
     mood: [],
+    people: [],
+    plan: null,
   };
 }
 
@@ -39,17 +41,18 @@ function task(partial: Partial<Task> & Pick<Task, "id" | "title">): Task {
     parentId: null,
     emphasis: false,
     origin: "template",
+    owner: null,
     ...partial,
   };
 }
 
 /** The flagship fictional project: a studio building its new website. */
-export function websiteTemplate(title: string): { tool: Tool; tasks: Record<string, Task>; order: string[] } {
+export function websiteTemplate(title: string): { tool: Tool; tasks: Record<string, Task>; order: string[]; people: Person[] } {
   const list: Task[] = [
-    task({ id: "t-research", title: "Research", status: "done", priority: "low", progress: 100, estimate: 3 }),
-    task({ id: "t-visual", title: "Visual Direction", status: "review", priority: "high", progress: 85, estimate: 4 }),
-    task({ id: "t-ui", title: "UI Design", status: "active", priority: "urgent", progress: 30, estimate: 6 }),
-    task({ id: "t-dev", title: "Development", status: "todo", priority: "medium", progress: 0, estimate: 8 }),
+    task({ id: "t-research", title: "Research", status: "done", priority: "low", progress: 100, estimate: 3, owner: "p-sara" }),
+    task({ id: "t-visual", title: "Visual Direction", status: "review", priority: "high", progress: 85, estimate: 4, owner: "p-marta" }),
+    task({ id: "t-ui", title: "UI Design", status: "active", priority: "urgent", progress: 30, estimate: 6, owner: "p-marta" }),
+    task({ id: "t-dev", title: "Development", status: "todo", priority: "medium", progress: 0, estimate: 8, owner: "p-luca" }),
   ];
   return {
     tool: {
@@ -63,5 +66,21 @@ export function websiteTemplate(title: string): { tool: Tool; tasks: Record<stri
     },
     tasks: Object.fromEntries(list.map((t) => [t.id, t])),
     order: list.map((t) => t.id),
+    people: sampleTeam(),
   };
 }
+
+/**
+ * The demo's fictional studio team, labelled as a sample in the UI. Marta starts
+ * over capacity on purpose, so "balance the workload" has something real to solve.
+ */
+export function sampleTeam(): Person[] {
+  return [
+    { id: "p-marta", name: "Marta", role: "Art director", capacity: 7 },
+    { id: "p-sara", name: "Sara", role: "Designer", capacity: 8 },
+    { id: "p-luca", name: "Luca", role: "Developer", capacity: 10 },
+  ];
+}
+
+/** Template task → sample owner, used to staff a project created before teams existed */
+export const SAMPLE_OWNERS: Record<string, string> = { "t-research": "p-sara", "t-visual": "p-marta", "t-ui": "p-marta", "t-dev": "p-luca" };

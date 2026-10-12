@@ -78,6 +78,7 @@ interface FormState {
   updateTask: (id: string, patch: Partial<Task>, opts?: { history?: boolean }) => void;
   setRepresentation: (r: Representation) => void;
   resolveProposal: (accept: boolean) => void;
+  resolvePlan: (accept: boolean) => void;
   select: (id: string | null) => void;
   openComposer: () => void;
   closeComposer: () => void;
@@ -228,6 +229,20 @@ export const useForm = create<FormState>()(
           caption: {
             id: ++captionId,
             text: accept ? `${p.items.length} steps added to ${parent?.title ?? "the task"}` : "Proposal discarded",
+            tone: "done",
+            undoable: true,
+          },
+        });
+      },
+
+      resolvePlan(accept) {
+        const plan = get().doc.plan;
+        if (!plan) return;
+        const n = plan.moves.length;
+        get().commit([{ op: accept ? "acceptReassign" : "discardReassign" }], accept ? "rebalance team" : "discard plan", "direct", {
+          caption: {
+            id: ++captionId,
+            text: accept ? `${n} task${n > 1 ? "s" : ""} reassigned` : "Plan discarded · nothing moved",
             tone: "done",
             undoable: true,
           },

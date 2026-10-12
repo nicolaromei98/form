@@ -1,6 +1,7 @@
 import { breakdownFor } from "./library";
 import { schedule } from "../selectors";
 import { focusPick } from "../focus";
+import { balancePlan, fmtLoad, loadsOf } from "../team";
 import {
   REPRESENTATION_LABEL,
   SORT_LABEL,
@@ -10,6 +11,7 @@ import {
   type MoodInput,
   type MoodLayout,
   type Operation,
+  type Person,
   type Priority,
   type Representation,
   type Sort,
@@ -83,9 +85,24 @@ export function interpretDemo(raw: string, ctx: InterpretContext): Interpretatio
     return clarify("Nothing to shape yet. Start with: 'Create a project tracker for my new website'.");
   }
 
+  /* ---------- workload plan follow-ups ---------- */
+  if (doc.plan) {
+    const n = doc.plan.moves.length;
+    if (/^(yes|ok|okay|sure|accept( (it|them|all|the plan))?|apply|do it|confirm|looks good|go ahead)\b/.test(s)) {
+      return { ops: [{ op: "acceptReassign" }], tone: "done", message: `${n} task${n > 1 ? "s" : ""} reassigned`, target: null };
+    }
+    if (/^(no|discard|reject|cancel|dismiss|never ?mind|keep it as it is)\b/.test(s)) {
+      return { ops: [{ op: "discardReassign" }], tone: "done", message: "Plan discarded · nothing moved", target: null };
+    }
+  }
+
   /* ---------- moodboard ---------- */
   const mood = moodboardIntent(clean, s, doc);
   if (mood) return mood;
+
+  /* ---------- team ---------- */
+  const team = teamIntent(clean, s, doc, selectedId);
+  if (team) return team;
 
   /* ---------- proposal follow-ups ---------- */
   if (doc.proposal) {
@@ -485,6 +502,141 @@ function moodboardIntent(clean: string, s: string, doc: Doc): Interpretation | n
       target: null,
     };
   }
+  return null;
+}
+
+/* ------------------------------------------------------------------
+   Team
+   ------------------------------------------------------------------ */
+
+const escapeRe = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Longest team member name mentioned in the sentence. */
+function personIn(s: string, doc: Doc): Person | null {
+  let best: Person | null = null;
+  for (const p of doc.people) {
+    if (new RegExp(`\\b${escapeRe(p.name.toLowerCase())}\\b`).test(s) && (!best || p.name.length > best.name.length)) best = p;
+  }
+  return best;
+}
+
+function teamIntent(clean: string, s: string, doc: Doc, selectedId: string | null): Interpretation | null {
+  const person = personIn(s, doc);
+  const teamWord =
+    /\b(team|teammates?|people|workload|work load|capacity|overload\w*|over capacity|busiest|assign\w*|reassign\w*|unassign\w*|hand (it |this |that )?over|balance|rebalanc\w*|even out|redistribut\w*)\b/.test(s) ||
+    /\bwho('s| is)? doing what\b|\bwho does what\b/.test(s);
+  if (!teamWord && !person) return null;
+  const toTeam: Operation[] = doc.view.representation !== "team" ? [{ op: "setRepresentation", representation: "team" }] : [];
+  const loads = loadsOf(doc).filter((l) => l.person);
+  const noTeam = clarify("There's no team yet. Say 'add a sample team', or 'add Giulia and Paolo to the team'.");
+  const wantsShow =
+    /\b(show|open|see|switch to|go to|view|display)\b.*\b(team|workload|work load|people|capacity)\b/.test(s) || /\bwho('s| is)? doing what\b|\bwho does what\b|\bteam (view|workload)\b/.test(s);
+
+  // Sample team
+  if (/\b(sample|demo|example) team\b/.test(s)) {
+    return { ops: [...toTeam, { op: "addSampleTeam" }], tone: "done", message: "Sample team added · Marta, Sara and Luca", target: null };
+  }
+
+  // Add people: "add Giulia and Paolo to the team (as designers) (with 5 days)"
+  const add = clean.match(/\badd (.+?) (?:to|into|on) (?:the |my |our )?team\b(.*)$/i);
+  if (add) {
+    const names = add[1].split(/,|\band\b|&/i).map((n) => n.trim().replace(/^(a|an|the) /i, "")).filter(Boolean).slice(0, 6);
+    const role = (add[2].match(/\bas (?:a |an |the )?([\p{L} ]+?)(?: with\b|$)/iu)?.[1] ?? "").trim().replace(/s$/, "") || null;
+    const days = Number(add[2].match(/(\d+(?:\.\d+)?)\s*(?:days?|d)\b/)?.[1]) || undefined;
+    const fresh = names.filter((n) => !doc.people.some((p) => p.name.toLowerCase() === n.toLowerCase()));
+    if (!fresh.length) return clarify(names.length ? `${names.join(" and ")} ${names.length > 1 ? "are" : "is"} already on the team.` : "Who should join the team?");
+    return {
+      ops: [...toTeam, ...fresh.map((name): Operation => ({ op: "addPerson", name: capitalise(name), role: role ? capitalise(role) : null, capacity: days }))],
+      tone: "done",
+      message: `${fresh.map(capitalise).join(" and ")} added to the team · ${days ?? 10}d${fresh.length > 1 ? " each" : ""}${days ? "" : " by default"}`,
+      target: null,
+    };
+  }
+
+  if (!doc.people.length) {
+    // The view itself offers the sample team, so showing it is still useful
+    if (wantsShow) return { ops: toTeam, tone: "done", message: "Team · no one yet. Use the sample team, or say 'add Giulia to the team'", target: null };
+    return teamWord ? noTeam : null;
+  }
+
+  // Remove someone: their work stays, unassigned
+  if (person && /\b(remove|delete|drop|take)\b/.test(s) && /\bteam\b/.test(s)) {
+    const owned = loadsOf(doc).find((l) => l.person?.id === person.id)?.tasks.length ?? 0;
+    return { ops: [...toTeam, { op: "removePerson", id: person.id }], tone: "done", message: `${person.name} removed${owned ? ` · ${owned} task${owned > 1 ? "s" : ""} now unassigned` : ""}`, target: null };
+  }
+
+  // Capacity: "set Marta's capacity to 10 days", "Marta has 10 days"
+  const cap = s.match(/(\d+(?:\.\d+)?)\s*(?:working )?(?:days?|d)\b/);
+  if (person && cap && /\b(capacity|available|availability|has|have|gets?|can (do|work))\b/.test(s)) {
+    const capacity = Math.min(90, Math.max(0.5, Number(cap[1])));
+    return { ops: [...toTeam, { op: "updatePerson", id: person.id, patch: { capacity } }], tone: "done", message: `${person.name} · ${fmtLoad(capacity)}d of capacity`, target: null };
+  }
+
+  // Balance
+  if (/\b(balance|rebalanc\w*|even out|redistribut\w*|spread (out )?the (work|load))\b/.test(s)) {
+    const moves = balancePlan(doc);
+    const worst = [...loads].sort((a, b) => b.over - a.over)[0];
+    if (!moves.length) {
+      return {
+        ops: toTeam,
+        tone: "done",
+        message: worst && worst.over > 0 ? `${worst.person!.name} is ${fmtLoad(worst.over)}d over, but no handover fits anyone's capacity` : "Nobody is over capacity · nothing to move",
+        target: null,
+      };
+    }
+    const why = worst && worst.over > 0 ? `${worst.person!.name} is ${fmtLoad(worst.over)}d over` : "Unassigned work gets an owner";
+    return {
+      ops: [...toTeam, { op: "proposeReassign", moves }],
+      tone: "proposal",
+      message: `${why} · ${moves.length} handover${moves.length > 1 ? "s" : ""} proposed. Review it on the team.`,
+      target: null,
+    };
+  }
+
+  // Who's overloaded?
+  if (/\b(overload\w*|over capacity|too busy|busiest|too much (work|on))\b/.test(s)) {
+    const over = loads.filter((l) => l.over > 0).sort((a, b) => b.over - a.over);
+    const roomy = [...loads].sort((a, b) => b.free - a.free)[0];
+    const message = over.length
+      ? `${over.map((l) => `${l.person!.name} is ${fmtLoad(l.over)}d over`).join(" · ")} · most room: ${roomy.person!.name} (${fmtLoad(roomy.free)}d free)`
+      : `Nobody is over capacity · most room: ${roomy.person!.name} (${fmtLoad(roomy.free)}d free)`;
+    return { ops: toTeam, tone: "done", message, target: null };
+  }
+
+  // Assign: "assign UI Design to Sara", "give this to Luca", "Sara takes Research", "unassign Development"
+  const named = findNamedTask(s, doc);
+  const selected = selectedId ? (doc.tasks[selectedId] ?? null) : null;
+  const task = named ?? (selected && /\b(this|it|that)\b/.test(s) ? selected : null);
+  const unassign = /\bunassign\w*\b|\b(remove|take) .*\bowner\b/.test(s);
+  if (task && (unassign || (person && /\b(assign|give|hand|move|reassign|transfer|takes?|owns?|will do|is doing|to)\b/.test(s)))) {
+    if (task.parentId) return clarify(`Steps follow their task — assign ${doc.tasks[task.parentId]?.title ?? "the parent task"} instead.`);
+    const to = unassign ? null : person!;
+    if ((task.owner ?? null) === (to?.id ?? null)) return { ops: toTeam, tone: "done", message: `${task.title} is already ${to ? `with ${to.name}` : "unassigned"}`, target: task.id };
+    let note = "";
+    if (to) {
+      const after = loadsOf({ ...doc, tasks: { ...doc.tasks, [task.id]: { ...task, owner: to.id } } }).find((l) => l.person?.id === to.id)!;
+      note = after.over > 0 ? ` · ${to.name} is now ${fmtLoad(after.over)}d over` : ` · ${to.name} ${fmtLoad(after.days)}/${fmtLoad(to.capacity)}d`;
+    }
+    return {
+      ops: [...toTeam, { op: "assignTask", taskId: task.id, personId: to?.id ?? null }],
+      tone: "done",
+      message: to ? `${task.title} → ${to.name}${note}` : `${task.title} unassigned`,
+      target: task.id,
+    };
+  }
+  if (person && !task && /\b(assign|give|hand|reassign|transfer)\b/.test(s)) return clarify(`Which task should go to ${person.name}? Name it, or select it first.`);
+
+  // Show the team
+  if (wantsShow) {
+    const over = loads.filter((l) => l.over > 0);
+    return {
+      ops: toTeam,
+      tone: "done",
+      message: `Team · ${over.length ? `${over.map((l) => l.person!.name).join(" and ")} over capacity` : "everyone within capacity"}`,
+      target: null,
+    };
+  }
+
   return null;
 }
 

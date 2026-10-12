@@ -14,6 +14,7 @@ import { CardsView } from "./CardsView";
 import { BoardView } from "./BoardView";
 import { TimelineView } from "./TimelineView";
 import { FocusView } from "./FocusView";
+import { TeamView } from "./TeamView";
 import { ShuffleText } from "../text/ShuffleText";
 
 /* ------------------------------------------------------------------
@@ -104,7 +105,7 @@ function TitleReveal({ delay, children }: { delay: number; children: ReactNode }
 function RepresentationSwitch() {
   const rep = useForm((s) => s.doc.view.representation);
   const setRep = useForm((s) => s.setRepresentation);
-  const reps: Representation[] = ["cards", "board", "timeline", "focus"];
+  const reps: Representation[] = ["cards", "board", "timeline", "team", "focus"];
   return (
     <LayoutGroup id="rep-switch">
       <div role="tablist" aria-label="Representation" className="glass flex h-[44px] items-center rounded-full p-1">
@@ -330,22 +331,26 @@ const REPRESENTATIONS: Record<Representation, () => ReactNode> = {
   board: BoardView,
   timeline: TimelineView,
   focus: FocusView,
+  team: TeamView,
 };
+
+/** Views with their own spatial model: they build themselves instead of morphing task surfaces */
+const HANDOVER: Representation[] = ["timeline", "team"];
 
 export function CollectionBlock() {
   const rep = useForm((s) => s.doc.view.representation);
   const View = REPRESENTATIONS[rep];
-  // Cards, board and focus morph into each other through shared surfaces. The timeline is a
-  // different spatial model, so it hands over instead: it draws itself in, and a view leaving it
-  // rises in once the bars have faded. Each handover starts a new layout scope, so no surface
-  // resumes from a box it had before the timeline.
+  // Cards, board and focus morph into each other through shared surfaces. Timeline and team are
+  // different spatial models, so they hand over instead: they draw themselves in, and a view
+  // leaving them rises in once they've faded. Each handover starts a new layout scope, so no
+  // surface resumes from a box it had before.
   const [shown, setShown] = useState(rep);
   const [handover, setHandover] = useState(false);
   const [scope, setScope] = useState(0);
   if (shown !== rep) {
     setShown(rep);
-    setHandover(shown === "timeline");
-    if (shown === "timeline" || rep === "timeline") setScope(scope + 1);
+    setHandover(HANDOVER.includes(shown));
+    if (HANDOVER.includes(shown) || HANDOVER.includes(rep)) setScope(scope + 1);
   }
   return (
     <motion.section layout="position" className="relative">

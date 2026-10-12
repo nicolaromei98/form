@@ -15,6 +15,8 @@ const SYSTEM = `You are the interpretation layer of FORM, an adaptive workspace.
 
 The workspace holds one project tracker. Its tasks can be shown as four representations of the same data: "cards" (the tracker), "board" (status lanes), "timeline" (a schedule derived from the start date plus each task's estimate, in workflow order) and "focus" (the one task that matters now, chosen by FORM from priority, schedule pressure and what it unblocks — or pinned by setting view.focusId). Density "compact" renders tasks as capsule rows; "comfortable" as cards. Blocks are registry components composing the tool: header, metrics, progress (overall progress indicator), collection, moodboard.
 
+The team: people have a name, a role and a capacity (working days available for the project). Top-level tasks have an owner (a person id, or null); steps follow their parent. A person's load is the sum of estimates of the open (not done) tasks they own; over capacity means load > capacity. Representation "team" shows each person's load against their capacity. Use assignTask to hand a task to someone (personId null to unassign), addPerson/updatePerson/removePerson to change the team, addSampleTeam for the demo's sample team, and proposeReassign to propose a set of moves that balance the workload (moves must fit the receiver's capacity; prefer tasks least under way). The user accepts or discards the plan in the UI (acceptReassign/discardReassign when they say so). Never invent people's capacity — ask.
+
 The moodboard is a free canvas of references kept with the project (block "moodboard"; items in "mood"). Geometry is in board-width units: x, y, w, h where 1 = the board's width; items are stacked in array order. Kinds: "image" (only the user can add these, by dropping, pasting or browsing files — never create image items), "color" (hex "#rrggbb", optional name in text) and "note" (text). Use addMoodItems for colours and notes (omit x/y to let FORM find a free spot; adding items shows the block), updateMoodItem to move, resize, rotate or edit one, removeMoodItem, arrangeMood ("masonry", "grid" or "collage") to re-lay it out, clearMood to empty it, and addBlock/removeBlock "moodboard" to show or hide it. If the user wants images added by text, explain how to drop, paste or browse them.
 
 Rules:
@@ -33,12 +35,34 @@ function workspaceContext(doc: Doc, selectedId: string | null) {
     tool: doc.tool && { title: doc.tool.title, blocks: doc.tool.blocks, startDate: doc.tool.startDate, startDateIsSample: doc.tool.startDateIsSample },
     view: doc.view,
     proposal: doc.proposal,
-    mood: doc.mood.map(({ id, kind, x, y, w, h, hex, text }) => ({ id, kind, x: +x.toFixed(3), y: +y.toFixed(3), w: +w.toFixed(3), h: +h.toFixed(3), hex, text })),
+    people: doc.people,
+    plan: doc.plan,
+    mood: doc.mood.map(({ id, kind, x, y, w, h, hex, text }) => ({
+      id,
+      kind,
+      x: +x.toFixed(3),
+      y: +y.toFixed(3),
+      w: +w.toFixed(3),
+      h: +h.toFixed(3),
+      hex,
+      text,
+    })),
     tasks: doc.order
       .map((id) => doc.tasks[id])
       .concat(Object.values(doc.tasks).filter((t) => t.parentId))
       .filter(Boolean)
-      .map(({ id, title, status, priority, progress, estimate, cost, parentId, emphasis }) => ({ id, title, status, priority, progress, estimate, cost, parentId, emphasis })),
+      .map(({ id, title, status, priority, progress, estimate, cost, parentId, emphasis, owner }) => ({
+        id,
+        title,
+        status,
+        priority,
+        progress,
+        estimate,
+        cost,
+        parentId,
+        emphasis,
+        owner,
+      })),
   };
 }
 
@@ -55,6 +79,15 @@ function sanitise(ops: Operation[], doc: Doc): Operation[] {
         return op.parentId && !exists(op.parentId) ? [] : [op];
       case "proposeSubtasks":
         return exists(op.parentId) ? [{ ...op, items: op.items.map((i) => ({ ...i, id: uid("p") })) }] : [];
+      case "assignTask":
+        return exists(op.taskId) && (op.personId === null || doc.people.some((p) => p.id === op.personId)) ? [op] : [];
+      case "updatePerson":
+      case "removePerson":
+        return doc.people.some((p) => p.id === op.id) ? [op] : [];
+      case "proposeReassign": {
+        const moves = op.moves.filter((m) => exists(m.taskId) && (m.to === null || doc.people.some((p) => p.id === m.to)));
+        return moves.length ? [{ ...op, moves }] : [];
+      }
       case "updateMoodItem":
       case "removeMoodItem":
         return doc.mood.some((m) => m.id === op.id) ? [op] : [];

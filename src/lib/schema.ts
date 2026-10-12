@@ -22,13 +22,31 @@ export const TaskSchema = z.object({
   /** "Make this more prominent" */
   emphasis: z.boolean(),
   origin: z.enum(["template", "user", "agent"]),
+  /** Person responsible (Team view). Steps follow their parent. */
+  owner: z.string().nullable().default(null),
 });
+
+/* ------------------------------------------------------------------
+   Team — who does the work, and how many days they have for it
+   ------------------------------------------------------------------ */
+
+export const PersonSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1).max(40),
+  role: z.string().max(40).nullable(),
+  /** Working days available for this project */
+  capacity: z.number().min(0.5).max(90),
+});
+
+export const ReassignMoveSchema = z.object({ taskId: z.string(), to: z.string().nullable() });
+/** A workload plan FORM proposes; nothing moves until it's accepted */
+export const ReassignPlanSchema = z.object({ moves: z.array(ReassignMoveSchema).min(1).max(8) });
 
 /* ------------------------------------------------------------------
    UI representation + layout preferences (structured config, not code)
    ------------------------------------------------------------------ */
 
-export const RepresentationSchema = z.enum(["cards", "board", "timeline", "focus"]);
+export const RepresentationSchema = z.enum(["cards", "board", "timeline", "focus", "team"]);
 export const DensitySchema = z.enum(["comfortable", "compact"]);
 export const LayoutSchema = z.enum(["grid", "list"]);
 export const SortSchema = z.enum(["manual", "priority", "progress", "status", "title", "estimate"]);
@@ -116,6 +134,9 @@ export const DocSchema = z.object({
   proposal: ProposalSchema.nullable(),
   /** Moodboard items, in stacking order (last on top). Kept when the block is hidden. */
   mood: z.array(MoodItemSchema).max(200).default([]),
+  people: z.array(PersonSchema).max(20).default([]),
+  /** Proposed reassignments, shown as a preview on the Team view */
+  plan: ReassignPlanSchema.nullable().default(null),
 });
 
 /* ------------------------------------------------------------------
@@ -167,6 +188,15 @@ export const OperationSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("removeMoodItem"), id: z.string() }),
   z.object({ op: z.literal("arrangeMood"), layout: MoodLayoutSchema }),
   z.object({ op: z.literal("clearMood") }),
+  z.object({ op: z.literal("addPerson"), name: z.string().min(1).max(40), role: z.string().max(40).nullable().optional(), capacity: z.number().min(0.5).max(90).optional() }),
+  z.object({ op: z.literal("updatePerson"), id: z.string(), patch: PersonSchema.pick({ name: true, role: true, capacity: true }).partial() }),
+  z.object({ op: z.literal("removePerson"), id: z.string() }),
+  /** Steps can't be assigned on their own: they follow their parent */
+  z.object({ op: z.literal("assignTask"), taskId: z.string(), personId: z.string().nullable() }),
+  z.object({ op: z.literal("addSampleTeam") }),
+  z.object({ op: z.literal("proposeReassign"), moves: z.array(ReassignMoveSchema).min(1).max(8) }),
+  z.object({ op: z.literal("acceptReassign") }),
+  z.object({ op: z.literal("discardReassign") }),
 ]);
 
 export const OperationListSchema = z.array(OperationSchema).max(12);
@@ -194,6 +224,9 @@ export type View = z.infer<typeof ViewSchema>;
 export type Tool = z.infer<typeof ToolSchema>;
 export type ProposalItem = z.infer<typeof ProposalItemSchema>;
 export type Proposal = z.infer<typeof ProposalSchema>;
+export type Person = z.infer<typeof PersonSchema>;
+export type ReassignMove = z.infer<typeof ReassignMoveSchema>;
+export type ReassignPlan = z.infer<typeof ReassignPlanSchema>;
 export type MoodKind = z.infer<typeof MoodKindSchema>;
 export type MoodLayout = z.infer<typeof MoodLayoutSchema>;
 export type MoodItem = z.infer<typeof MoodItemSchema>;
@@ -224,6 +257,7 @@ export const REPRESENTATION_LABEL: Record<Representation, string> = {
   board: "Board",
   timeline: "Timeline",
   focus: "Focus",
+  team: "Team",
 };
 
 export const SORT_LABEL: Record<Sort, string> = {
