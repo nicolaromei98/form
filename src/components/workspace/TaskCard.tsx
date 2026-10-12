@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutGroup, motion } from "motion/react";
+import { AnimatePresence, LayoutGroup, motion, useIsPresent } from "motion/react";
 import type { MouseEvent, ReactNode, Ref } from "react";
 import { useForm } from "@/lib/store";
 import { CREATE, ease, move } from "@/lib/motion";
@@ -70,17 +70,22 @@ export function Reveal({ reveal, children, className = "" }: { reveal: number | 
  * Content window of a morphing surface. During shared-layout morphs the surface
  * is scaled and its content scale-corrected; this clips that content to the
  * surface's live shape, so nothing spills out or stretches while it settles.
- * Content stays anchored to the window, and a fresh layout (card ↔ row) fades in.
+ * Content stays anchored to the window. When the layout changes (card ↔ row) the
+ * old window steps out of flow and dissolves in place over the new one, which
+ * condenses in — the same blur + opacity as every text in FORM.
  * Steps travel only within one kind of surface (proposal → accepted): across
  * card, row and board they'd cut through the new layout, so each kind is its own scope.
  */
 export function Clip({ scope, className = "", children }: { scope: "card" | "row" | "board"; className?: string; children: ReactNode }) {
+  const present = useIsPresent();
   return (
     <motion.div
-      className={`overflow-hidden rounded-[inherit] ${className}`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.35, ease: ease.out }}
+      aria-hidden={present ? undefined : true}
+      className={`overflow-hidden rounded-[inherit] ${present ? "" : "pointer-events-none absolute inset-0"} ${className}`}
+      initial={{ opacity: 0, filter: "blur(8px)" }}
+      animate={{ opacity: 1, filter: "blur(0px)", transitionEnd: { filter: "none" } }}
+      exit={{ opacity: 0, filter: "blur(8px)", transition: { duration: 0.3, ease: ease.out } }}
+      transition={{ duration: 0.55, ease: ease.out, delay: 0.08 }}
     >
       <LayoutGroup id={scope}>{children}</LayoutGroup>
     </motion.div>
@@ -99,65 +104,10 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
     opacity: dim ? 0.55 : 1,
   };
 
-  if (variant === "row") {
-    const tall = hasSubs || hasProposal;
-    return (
-      <motion.article
-        layout
-        ref={ref}
-        layoutId={`task-${task.id}`}
-        exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.2 } }}
-        data-task-id={task.id}
-        data-spawn={spawnIndex ?? undefined}
-        onClick={onClick}
-        initial={reveal != null ? { opacity: 0 } : false}
-        animate={{ ...surface, opacity: reveal != null ? 1 : surface.opacity }}
-        transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
-        className={`${emphasis ? "tone-dark" : "tone-light"} relative cursor-pointer backdrop-blur-[22px] ${selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""}`}
-        style={{
-          borderRadius: tall ? 28 : 31,
-          boxShadow: emphasis ? "0 24px 48px -26px rgba(0,0,0,0.55)" : "var(--shadow-card)",
-          gridColumn: emphasis && cols > 1 ? "1 / -1" : undefined,
-        }}
-      >
-        <InkSkin reveal={reveal} />
-        <Clip scope="row" className="p-2">
-          <Reveal reveal={reveal} className="flex h-[46px] items-center gap-3">
-            <StatusControl task={task} variant="glyph" />
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              {highlight && <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-signal" aria-label="Urgent" />}
-              <EditableText
-                value={task.title}
-                label="Task title"
-                onCommit={(v) => useForm.getState().updateTask(task.id, { title: v })}
-                className="t-body min-w-0 truncate"
-              />
-            </div>
-            {f.priority && (
-              <div className="hidden sm:block">
-                <PriorityControl task={task} />
-              </div>
-            )}
-            {f.estimate && (
-              <div className="hidden lg:block">
-                <EstimateControl task={task} />
-              </div>
-            )}
-            <CostTag task={task} />
-            {f.progress && <ProgressControl task={task} size="s" className="hidden w-[96px] sm:flex" />}
-            <NumberBadge task={task} number={number} inline />
-          </Reveal>
-          {tall && (
-            <div className="px-1">
-              <SubtaskList parentId={task.id} dense />
-              <ProposalBlock parentId={task.id} dense />
-            </div>
-          )}
-        </Clip>
-      </motion.article>
-    );
-  }
+  const row = variant === "row";
+  const tall = hasSubs || hasProposal;
 
+  // One surface for both densities: it morphs between card and row while its content cross-dissolves
   return (
     <motion.article
       layout
@@ -170,67 +120,112 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
       initial={reveal != null ? { opacity: 0 } : false}
       animate={{ ...surface, opacity: reveal != null ? 1 : surface.opacity }}
       transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
-      className={`${emphasis ? "tone-dark" : "tone-light"} relative flex cursor-pointer flex-col backdrop-blur-[22px] ${
+      className={`${emphasis ? "tone-dark" : "tone-light"} relative cursor-pointer backdrop-blur-[22px] ${row ? "" : "flex flex-col"} ${
         selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""
       }`}
-      style={{
-        borderRadius: 28,
-        minHeight: 272,
-        boxShadow: emphasis ? "0 30px 60px -30px rgba(0,0,0,0.6)" : "var(--shadow-card)",
-        gridColumn: emphasis && cols > 1 ? `span ${Math.min(2, cols)}` : undefined,
-      }}
+      style={
+        row
+          ? {
+              borderRadius: tall ? 28 : 31,
+              boxShadow: emphasis ? "0 24px 48px -26px rgba(0,0,0,0.55)" : "var(--shadow-card)",
+              gridColumn: emphasis && cols > 1 ? "1 / -1" : undefined,
+            }
+          : {
+              borderRadius: 28,
+              minHeight: 272,
+              boxShadow: emphasis ? "0 30px 60px -30px rgba(0,0,0,0.6)" : "var(--shadow-card)",
+              gridColumn: emphasis && cols > 1 ? `span ${Math.min(2, cols)}` : undefined,
+            }
+      }
     >
-      <InkSkin reveal={reveal} />
-      <NumberBadge task={task} number={number} />
-
-      <Clip scope="card" className="flex flex-1 flex-col p-[18px]">
-        <Reveal reveal={reveal} className="flex items-center justify-between gap-2 pr-4">
-          <StatusControl task={task} />
-          {highlight && (
-            <span className="t-micro flex items-center gap-1.5 text-signal">
-              <span className="h-[6px] w-[6px] rounded-full bg-signal" />
-              Urgent
-            </span>
-          )}
-        </Reveal>
-
-        <Reveal reveal={reveal} className="mt-7">
-          <EditableText
-            value={task.title}
-            label="Task title"
-            onCommit={(v) => useForm.getState().updateTask(task.id, { title: v })}
-            className={emphasis ? "t-display-m" : "t-title"}
-          />
-        </Reveal>
-
-        <div className="min-h-6 flex-1" />
-
-        <Reveal reveal={reveal} className="flex flex-col gap-3">
-          {(f.progress || f.estimate) && (
-            <div className="flex items-end justify-between gap-2">
-              {f.progress ? (
-                <span className="t-num text-[44px] leading-[0.8] text-[var(--c-fg)]" aria-hidden>
-                  {task.progress}
-                  <span className="ml-0.5 align-top text-[18px] leading-none text-[var(--c-fg-2)]">%</span>
-                </span>
-              ) : (
-                <span />
+      <InkSkin key="skin" reveal={reveal} />
+      <AnimatePresence key="badge">{!row && <NumberBadge key="corner" task={task} number={number} />}</AnimatePresence>
+      <AnimatePresence key="content">
+        {row ? (
+          <Clip key="row" scope="row" className="p-2">
+            <Reveal reveal={reveal} className="flex h-[46px] items-center gap-3">
+              <StatusControl task={task} variant="glyph" />
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                {highlight && <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-signal" aria-label="Urgent" />}
+                <EditableText
+                  value={task.title}
+                  label="Task title"
+                  onCommit={(v) => useForm.getState().updateTask(task.id, { title: v })}
+                  className="t-body min-w-0 truncate"
+                />
+              </div>
+              {f.priority && (
+                <div className="hidden sm:block">
+                  <PriorityControl task={task} />
+                </div>
               )}
-              {f.estimate && <EstimateControl task={task} />}
-            </div>
-          )}
-          {f.progress && <ProgressControl task={task} showLabel={false} />}
-          {(f.priority || task.cost != null) && (
-            <div className="flex items-center justify-between gap-2">
-              {f.priority ? <PriorityControl task={task} label /> : <span />}
+              {f.estimate && (
+                <div className="hidden lg:block">
+                  <EstimateControl task={task} />
+                </div>
+              )}
               <CostTag task={task} />
-            </div>
-          )}
-        </Reveal>
+              {f.progress && <ProgressControl task={task} size="s" className="hidden w-[96px] sm:flex" />}
+              <NumberBadge task={task} number={number} inline />
+            </Reveal>
+            {tall && (
+              <div className="px-1">
+                <SubtaskList parentId={task.id} dense />
+                <ProposalBlock parentId={task.id} dense />
+              </div>
+            )}
+          </Clip>
+        ) : (
+          <Clip key="card" scope="card" className="flex flex-1 flex-col p-[18px]">
+            <Reveal reveal={reveal} className="flex items-center justify-between gap-2 pr-4">
+              <StatusControl task={task} />
+              {highlight && (
+                <span className="t-micro flex items-center gap-1.5 text-signal">
+                  <span className="h-[6px] w-[6px] rounded-full bg-signal" />
+                  Urgent
+                </span>
+              )}
+            </Reveal>
 
-        <SubtaskList parentId={task.id} />
-        <ProposalBlock parentId={task.id} />
-      </Clip>
+            <Reveal reveal={reveal} className="mt-7">
+              <EditableText
+                value={task.title}
+                label="Task title"
+                onCommit={(v) => useForm.getState().updateTask(task.id, { title: v })}
+                className={emphasis ? "t-display-m" : "t-title"}
+              />
+            </Reveal>
+
+            <div className="min-h-6 flex-1" />
+
+            <Reveal reveal={reveal} className="flex flex-col gap-3">
+              {(f.progress || f.estimate) && (
+                <div className="flex items-end justify-between gap-2">
+                  {f.progress ? (
+                    <span className="t-num text-[44px] leading-[0.8] text-[var(--c-fg)]" aria-hidden>
+                      {task.progress}
+                      <span className="ml-0.5 align-top text-[18px] leading-none text-[var(--c-fg-2)]">%</span>
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+                  {f.estimate && <EstimateControl task={task} />}
+                </div>
+              )}
+              {f.progress && <ProgressControl task={task} showLabel={false} />}
+              {(f.priority || task.cost != null) && (
+                <div className="flex items-center justify-between gap-2">
+                  {f.priority ? <PriorityControl task={task} label /> : <span />}
+                  <CostTag task={task} />
+                </div>
+              )}
+            </Reveal>
+
+            <SubtaskList parentId={task.id} />
+            <ProposalBlock parentId={task.id} />
+          </Clip>
+        )}
+      </AnimatePresence>
     </motion.article>
   );
 }

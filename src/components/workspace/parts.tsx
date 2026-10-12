@@ -414,6 +414,7 @@ export function NumberBadge({ task, number, inline = false }: { task: Task; numb
       <motion.button
         initial={{ opacity: 0, scale: 0.6 }}
         animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.6, transition: { duration: 0.2, ease: ease.out } }}
         transition={{ delay: 0.5, duration: 0.35, ease: ease.out }}
         type="button"
         data-interactive
