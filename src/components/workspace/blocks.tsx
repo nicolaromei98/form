@@ -5,7 +5,7 @@ import { useMemo, useRef, type ReactNode } from "react";
 import { useGSAP } from "@gsap/react";
 import { DecodeText, RevealText, revealWords } from "../text/TextMotion";
 import { useForm } from "@/lib/store";
-import { ease, springs } from "@/lib/motion";
+import { ease, move } from "@/lib/motion";
 import { fmtEuro, metrics, parseISODate, topLevel } from "@/lib/selectors";
 import { REPRESENTATION_LABEL, SORT_LABEL, type Representation, type Sort } from "@/lib/schema";
 import { EditableText, Popover, usePopover } from "./parts";
@@ -116,7 +116,7 @@ function RepresentationSwitch() {
             onClick={() => setRep(r)}
             className={`focus-ring t-body-s relative h-full cursor-pointer rounded-full px-3 transition-colors duration-300 sm:px-4 ${rep === r ? "text-on-ink" : "text-text-2 hover:text-text"}`}
           >
-            {rep === r && <motion.span layoutId="rep-active" className="absolute inset-0 rounded-full bg-ink" transition={springs.snappy} />}
+            {rep === r && <motion.span layoutId="rep-active" className="absolute inset-0 rounded-full bg-ink" transition={move} />}
             <span className="relative">{REPRESENTATION_LABEL[r]}</span>
           </button>
         ))}
@@ -202,7 +202,7 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
           className="absolute top-[2px] h-[11px] w-[11px] rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.18)]"
           initial={false}
           animate={{ left: on ? 13 : 2 }}
-          transition={springs.snappy}
+          transition={move}
         />
       </span>
       <span className={on ? "text-text" : ""}>{label}</span>
@@ -223,7 +223,7 @@ export function MetricsBlock() {
   // A single slim instrument strip: eyebrow + figure per segment, hairlines between
   return (
     <BlockShell order={1} className="no-scrollbar -mx-4 mb-8 overflow-x-auto px-4 py-1 md:mx-0 md:overflow-visible md:px-0">
-      <motion.div layout className="glass inline-flex h-[48px] shrink-0 items-center rounded-full pr-1.5 pl-1.5" transition={springs.layout}>
+      <motion.div layout className="glass inline-flex h-[48px] shrink-0 items-center rounded-full pr-1.5 pl-1.5" transition={move}>
         <Stat label="Complete" lead={<MiniRing value={m.progress} />}>
           {m.progress}
           <span className="text-text-3">%</span>
@@ -274,7 +274,7 @@ function MiniRing({ value }: { value: number }) {
         strokeDasharray={c}
         initial={{ strokeDashoffset: c }}
         animate={{ strokeDashoffset: c * (1 - value / 100) }}
-        transition={{ ...springs.soft, delay: 0.2 }}
+        transition={{ ...move, delay: 0.2 }}
       />
     </svg>
   );
@@ -307,7 +307,7 @@ export function ProgressBlock() {
                 className="absolute inset-y-0 left-0 overflow-hidden rounded-full bg-ink"
                 initial={{ width: 0 }}
                 animate={{ width: `${t.progress}%` }}
-                transition={{ ...springs.soft, delay: 0.15 }}
+                transition={{ ...move, delay: 0.15 }}
               >
                 <span className="t-data absolute top-1/2 left-4 hidden -translate-y-1/2 whitespace-nowrap text-on-ink sm:block">{t.title}</span>
               </motion.div>

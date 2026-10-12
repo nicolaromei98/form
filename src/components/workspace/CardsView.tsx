@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo } from "react";
 import { useForm } from "@/lib/store";
-import { springs } from "@/lib/motion";
+import { move } from "@/lib/motion";
 import { taskNumber, visibleTasks } from "@/lib/selectors";
 import { useWidth } from "@/lib/useWidth";
 import { TaskCard } from "./TaskCard";
@@ -28,7 +28,7 @@ export function CardsView() {
         layout
         className="grid items-start"
         style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: variant === "row" ? 10 : 14 }}
-        transition={springs.layout}
+        transition={move}
       >
         <AnimatePresence mode="popLayout">
           {tasks.map((t, i) => (

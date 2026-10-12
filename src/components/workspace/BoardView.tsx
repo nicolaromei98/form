@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, type Ref } from "react";
 import { useForm } from "@/lib/store";
-import { springs } from "@/lib/motion";
+import { move } from "@/lib/motion";
 import { taskNumber, tasksByStatus } from "@/lib/selectors";
 import { STATUS_LABEL, STATUS_ORDER, type Status, type Task } from "@/lib/schema";
 import { CostTag, EditableText, EstimateControl, NumberBadge, PriorityControl, ProgressControl, ProposalBlock, StatusGlyph, SubtaskList } from "./parts";
@@ -44,7 +44,7 @@ function Lane({ status, index, count, children }: { status: Status; index: numbe
         className="glass absolute inset-0"
         style={{ borderRadius: 32 }}
         initial={{ opacity: 0, scale: 0.97 }}
-        animate={{ opacity: 1, scale: 1, transition: { delay: 0.05 + index * 0.04, ...springs.soft } }}
+        animate={{ opacity: 1, scale: 1, transition: { delay: 0.05 + index * 0.04, ...move } }}
       />
       <motion.header
         className="relative flex items-center justify-between px-2.5 pt-1.5 pb-3"
@@ -92,7 +92,7 @@ function BoardCard({ task, number, spawnIndex, ref }: { task: Task; number: stri
       initial={reveal != null ? { opacity: 0 } : false}
       animate={{ backgroundColor: task.emphasis ? "#0c0c0c" : "rgba(255,255,255,0.72)", opacity: reveal != null ? 1 : dim ? 0.55 : 1 }}
       exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.2 } }}
-      transition={{ layout: springs.layout, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
+      transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
       className={`${task.emphasis ? "tone-dark" : "tone-light"} group relative cursor-pointer ${compact ? "p-3" : "p-3.5"} ${
         selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""
       }`}

@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { Fragment, useMemo } from "react";
 import { useForm } from "@/lib/store";
-import { springs } from "@/lib/motion";
+import { move } from "@/lib/motion";
 import { addDays, dayDiff, fmtDay, fmtDays, fmtShort, parseISODate, schedule, subtasksOf, taskNumber, toISODate, topLevel } from "@/lib/selectors";
 import { STATUS_LABEL, type Task } from "@/lib/schema";
 import { useWidth } from "@/lib/useWidth";
@@ -56,7 +56,7 @@ export function TimelineView() {
         className="glass absolute inset-0"
         style={{ borderRadius: 36 }}
         initial={{ opacity: 0, scale: 0.985 }}
-        animate={{ opacity: 1, scale: 1, transition: springs.soft }}
+        animate={{ opacity: 1, scale: 1, transition: move }}
       />
       <div className="relative p-3 md:p-5">
         <div ref={ref} className="no-scrollbar overflow-x-auto">
@@ -150,7 +150,7 @@ export function TimelineView() {
                               className="absolute rounded-full"
                               initial={{ opacity: 0, scaleX: 0.6 }}
                               animate={{ opacity: 1, scaleX: 1, backgroundColor: s.status === "done" ? "#0a0a0a" : "rgba(10,10,10,0.1)" }}
-                              transition={springs.soft}
+                              transition={move}
                               style={{ left: X(ss.start) + 1, width: Math.max(10, ss.days * dayW - 2), top: (subH - 12) / 2, height: 12, transformOrigin: "left center" }}
                             />
                           )}
@@ -165,7 +165,7 @@ export function TimelineView() {
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0, transition: { duration: 0.18 } }}
-                          transition={springs.soft}
+                          transition={move}
                           className="overflow-hidden"
                         >
                           {(() => {
@@ -191,7 +191,7 @@ export function TimelineView() {
                                     <motion.div
                                       className="absolute rounded-full border border-dashed border-text-3"
                                       initial={{ opacity: 0, x: -8 }}
-                                      animate={{ opacity: 1, x: 0, transition: { delay: 0.1 + i * 0.06, ...springs.soft } }}
+                                      animate={{ opacity: 1, x: 0, transition: { delay: 0.1 + i * 0.06, ...move } }}
                                       style={{ left: left + 1, width: Math.max(10, w - 2), top: (subH - 14) / 2, height: 14 }}
                                     />
                                   )}
@@ -259,7 +259,7 @@ function ShiftButton({ label, onClick, d }: { label: string; onClick: () => void
 
 function Row({ height, labelW, label, children, layoutId }: { height: number; labelW: number; label: React.ReactNode; children?: React.ReactNode; layoutId?: string }) {
   return (
-    <motion.div layout="position" layoutId={layoutId} transition={springs.layout} className="relative flex border-b border-line last:border-b-0" style={{ height }}>
+    <motion.div layout="position" layoutId={layoutId} transition={move} className="relative flex border-b border-line last:border-b-0" style={{ height }}>
       <div className="flex min-w-0 shrink-0 items-center pr-3" style={{ width: labelW }}>
         {label}
       </div>
@@ -345,7 +345,7 @@ function Bar({
         onClick={onClick}
         initial={reveal != null ? { opacity: 0 } : false}
         animate={{ opacity: reveal != null ? 1 : dim ? 0.5 : 1, backgroundColor: task.emphasis ? "rgba(10,10,10,0.2)" : "rgba(10,10,10,0.075)" }}
-        transition={{ layout: springs.layout, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 } }}
+        transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 } }}
         className={`focus-ring absolute cursor-pointer overflow-hidden ${selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""}`}
         style={{ left: left + 1, width: w, top, height, borderRadius: height / 2 }}
       >
@@ -353,7 +353,7 @@ function Bar({
           className="absolute inset-y-0 left-0 flex items-center justify-end bg-ink pr-3"
           style={{ borderRadius: height / 2 }}
           initial={{ width: height }}
-          animate={{ width: fill, transition: { ...springs.soft, delay: reveal != null ? reveal : 0.12 } }}
+          animate={{ width: fill, transition: { ...move, delay: reveal != null ? reveal : 0.12 } }}
         >
           {task.status === "done" ? (
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden className="text-on-ink">

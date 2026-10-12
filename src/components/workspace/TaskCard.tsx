@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import type { MouseEvent, ReactNode, Ref } from "react";
 import { useForm } from "@/lib/store";
-import { CREATE, ease, springs } from "@/lib/motion";
+import { CREATE, ease, move } from "@/lib/motion";
 import type { Task } from "@/lib/schema";
 import { CostTag, EditableText, EstimateControl, NumberBadge, PriorityControl, ProgressControl, ProposalBlock, StatusControl, SubtaskList } from "./parts";
 import { useReveal } from "./reveal";
@@ -59,7 +59,7 @@ export function Reveal({ reveal, children, className = "" }: { reveal: number | 
       className={className}
       initial={reveal != null ? { opacity: 0, filter: "blur(12px)", scale: 1.03 } : false}
       animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
-      transition={reveal != null ? { delay: reveal + 0.16, duration: 0.9, ease: ease.out } : springs.layout}
+      transition={reveal != null ? { delay: reveal + 0.16, duration: 0.9, ease: ease.out } : move}
     >
       {children}
     </motion.div>
@@ -91,7 +91,7 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
         onClick={onClick}
         initial={reveal != null ? { opacity: 0 } : false}
         animate={{ ...surface, opacity: reveal != null ? 1 : surface.opacity }}
-        transition={{ layout: springs.layout, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
+        transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
         className={`${emphasis ? "tone-dark" : "tone-light"} relative cursor-pointer p-2 backdrop-blur-[22px] ${selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""}`}
         style={{
           borderRadius: tall ? 28 : 31,
@@ -147,7 +147,7 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
       onClick={onClick}
       initial={reveal != null ? { opacity: 0 } : false}
       animate={{ ...surface, opacity: reveal != null ? 1 : surface.opacity }}
-      transition={{ layout: springs.layout, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
+      transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
       className={`${emphasis ? "tone-dark" : "tone-light"} relative flex cursor-pointer flex-col p-[18px] backdrop-blur-[22px] ${
         selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""
       }`}

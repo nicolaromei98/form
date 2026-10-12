@@ -14,7 +14,12 @@ export const springs = {
 export const ease = {
   out: [0.22, 1, 0.36, 1] as const,
   inOut: [0.65, 0, 0.35, 1] as const,
+  /** Client-specified movement curve: M0,0 C0.625,0.05 0,1 1,1 */
+  move: [0.625, 0.05, 0, 1] as const,
 };
+
+/** Every panel or element that moves or resizes uses this one curve. */
+export const move = { type: "tween", duration: 0.68, ease: ease.move } satisfies Transition;
 
 /** Creation choreography timing (seconds). Shared by agent + workspace. */
 export const CREATE = {

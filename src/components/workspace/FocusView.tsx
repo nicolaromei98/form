@@ -6,7 +6,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { DecodeText, TEXT, revealBlocks, revealWords } from "../text/TextMotion";
 import { useForm } from "@/lib/store";
-import { springs } from "@/lib/motion";
+import { move } from "@/lib/motion";
 import { focusPick, pickFor, summaryOf, type FocusPick } from "@/lib/focus";
 import { fmtDays, taskNumber, topLevel } from "@/lib/selectors";
 import { STATUS_LABEL, type Doc, type Task } from "@/lib/schema";
@@ -231,7 +231,7 @@ function Fluid({ pick, volumes, doc }: { pick: FocusPick; volumes: Task[]; doc: 
                 style={{ width: l.d * D, height: l.d * D, left: l.x * D - (l.d * D) / 2, top: l.y * D - (l.d * D) / 2 }}
                 initial={{ scale: 0.2, x: -l.x * D * 0.6, y: -l.y * D * 0.6 }}
                 animate={{ scale: 1, x: 0, y: 0 }}
-                transition={{ ...springs.fluid, delay: 0.25 + i * 0.12 }}
+                transition={{ ...move, delay: 0.25 + i * 0.12 }}
               >
                 <motion.div
                   className="h-full w-full bg-ink"
@@ -269,7 +269,7 @@ function Fluid({ pick, volumes, doc }: { pick: FocusPick; volumes: Task[]; doc: 
                     commit([{ op: "setView", patch: { focusId: t.id } }], `focus ${t.title}`);
                   }}
                   animate={focus ? { x: 0, y: 0 } : { x: FLOAT_X, y: FLOAT_Y }}
-                  transition={{ layout: springs.fluid, ...(focus ? { x: springs.soft, y: springs.soft } : floatT(g.slot)) }}
+                  transition={{ layout: move, ...(focus ? { x: move, y: move } : floatT(g.slot)) }}
                   className="pointer-events-auto absolute cursor-pointer bg-ink"
                   style={{ width: g.d, height: g.d, left: g.x - g.d / 2, top: g.y - g.d / 2, borderRadius: 999 }}
                 />
@@ -278,7 +278,7 @@ function Fluid({ pick, volumes, doc }: { pick: FocusPick; volumes: Task[]; doc: 
           </div>
         </div>
 
-        {/* Crisp layer above the goo: the nucleus readout and the volume numbers ride the same springs */}
+        {/* Crisp layer above the goo: the nucleus readout and the volume numbers ride the same curve */}
         <div className="pointer-events-none absolute left-1/2" style={{ top: cy }}>
           <Readout task={task} size={D} doc={doc} />
           {volumes.map((t) => {
@@ -291,7 +291,7 @@ function Fluid({ pick, volumes, doc }: { pick: FocusPick; volumes: Task[]; doc: 
                 style={{ left: -20, top: -10 }}
                 initial={false}
                 animate={{ x: g.x, y: g.y, opacity: focus ? 0 : 1, scale: focus ? 0.6 : 1 }}
-                transition={{ x: springs.fluid, y: springs.fluid, opacity: { duration: focus ? 0.12 : 0.3, delay: focus ? 0 : 0.25 }, scale: springs.fluid }}
+                transition={{ x: move, y: move, opacity: { duration: focus ? 0.12 : 0.3, delay: focus ? 0 : 0.25 }, scale: move }}
               >
                 <motion.span
                   className="t-micro grid h-[20px] w-[40px] place-items-center text-on-ink"

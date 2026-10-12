@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { springs } from "@/lib/motion";
+import { move } from "@/lib/motion";
 import { CAPABILITIES, REQUIREMENT_HINT, type Requirement } from "./suggestions";
 
 interface Props {
@@ -30,7 +30,7 @@ export function CommandSheet({ query, hasTool, hasSelection, origin, maxHeight, 
       initial={{ opacity: 0, scale: 0.96, y: origin === "top" ? -10 : 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97, y: origin === "top" ? -6 : 6, transition: { duration: 0.14 } }}
-      transition={springs.soft}
+      transition={move}
       className="glass-hi flex w-full flex-col overflow-hidden rounded-[24px]"
       style={{ transformOrigin: origin === "top" ? "top left" : "bottom left", maxHeight }}
     >

@@ -3,7 +3,7 @@
 import { MotionConfig, useReducedMotion } from "motion/react";
 import { useEffect, useSyncExternalStore } from "react";
 import { useForm } from "@/lib/store";
-import { springs } from "@/lib/motion";
+import { move } from "@/lib/motion";
 import { AgentLayer } from "./agent/AgentLayer";
 import { Workspace } from "./workspace/Workspace";
 import { Chrome } from "./Chrome";
@@ -61,7 +61,7 @@ export function FormApp() {
   }, []);
 
   return (
-    <MotionConfig reducedMotion="user" transition={springs.layout}>
+    <MotionConfig reducedMotion="user" transition={move}>
       <div className="ground" aria-hidden />
       <Chrome />
       <main

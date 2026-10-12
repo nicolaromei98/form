@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useForm } from "@/lib/store";
-import { springs } from "@/lib/motion";
+import { springs, move } from "@/lib/motion";
 import { fmtDays, fmtEuro } from "@/lib/selectors";
 import { PRIORITY_LABEL, PRIORITY_ORDER, STATUS_LABEL, STATUS_ORDER, type Priority, type Status, type Task } from "@/lib/schema";
 
@@ -91,7 +91,7 @@ export function Popover({
           initial={{ opacity: 0, scale: 0.94, y: -4 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.1 } }}
-          transition={springs.snappy}
+          transition={move}
         >
           {children}
         </motion.div>
@@ -452,7 +452,7 @@ export function SubtaskList({ parentId, dense = false }: { parentId: string; den
             key={s.id}
             layoutId={`sub-${s.id}`}
             className="group flex min-h-[30px] items-center gap-2 rounded-full"
-            transition={springs.layout}
+            transition={move}
           >
             <button
               type="button"
@@ -513,7 +513,7 @@ export function ProposalBlock({ parentId, dense = false }: { parentId: string; d
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0, transition: { duration: 0.2 } }}
-          transition={springs.soft}
+          transition={move}
           className={`overflow-hidden ${dense ? "px-2" : ""}`}
           data-interactive
           onClick={(e) => e.stopPropagation()}
@@ -532,7 +532,7 @@ export function ProposalBlock({ parentId, dense = false }: { parentId: string; d
                   key={item.id}
                   layoutId={`sub-${item.id}`}
                   initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0, transition: { delay: 0.12 + i * 0.06, ...springs.soft } }}
+                  animate={{ opacity: 1, y: 0, transition: { delay: 0.12 + i * 0.06, ...move } }}
                   className="flex h-[32px] items-center gap-2 rounded-full bg-[var(--c-chip)] pr-3 pl-2"
                 >
                   <span className="grid h-[22px] w-[22px] place-items-center text-[var(--c-fg-3)]">
