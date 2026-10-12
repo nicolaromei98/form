@@ -101,13 +101,12 @@ function BoardCard({ task, number, spawnIndex, ref }: { task: Task; number: stri
     >
       <InkSkin reveal={reveal} />
       <NumberBadge task={task} number={number} />
-      <Clip className={compact ? "p-3" : "p-3.5"}>
+      <Clip scope="board" className={compact ? "p-3" : "p-3.5"}>
         <Reveal reveal={reveal} className="flex items-start gap-2 pr-4">
           {highlight && <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-signal" aria-label="Urgent" />}
           <EditableText
             value={task.title}
             label="Task title"
-            layoutId={`title-${task.id}`}
             onCommit={(v) => update(task.id, { title: v })}
             className={compact ? "t-body" : "t-body-l"}
           />

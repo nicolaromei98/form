@@ -128,8 +128,7 @@ export function StatusControl({ task, variant = "chip" }: { task: Task; variant?
         }}
         className={`focus-ring flex shrink-0 cursor-pointer items-center text-[var(--c-fg)] transition-colors ${cls}`}
       >
-        {/* The timeline's bare glyph sits outside its bar, so it doesn't travel: it would cross the clipped card window */}
-        <motion.span layoutId={variant === "bare" ? undefined : `status-${task.id}`} layout="position" className="flex">
+        <motion.span layout="position" className="flex">
           <StatusGlyph status={task.status} />
         </motion.span>
         {variant === "chip" && <ShuffleText text={STATUS_LABEL[task.status]} className="t-body-s whitespace-nowrap" />}
@@ -354,13 +353,11 @@ export function EditableText({
   onCommit,
   className = "",
   label,
-  layoutId,
 }: {
   value: string;
   onCommit: (v: string) => void;
   className?: string;
   label: string;
-  layoutId?: string;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -372,7 +369,6 @@ export function EditableText({
   return (
     <motion.span
       ref={ref}
-      layoutId={layoutId}
       layout="position"
       role="textbox"
       aria-label={label}

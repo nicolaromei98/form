@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "motion/react";
+import { LayoutGroup, motion } from "motion/react";
 import type { MouseEvent, ReactNode, Ref } from "react";
 import { useForm } from "@/lib/store";
 import { CREATE, ease, move } from "@/lib/motion";
@@ -70,9 +70,21 @@ export function Reveal({ reveal, children, className = "" }: { reveal: number | 
  * Content window of a morphing surface. During shared-layout morphs the surface
  * is scaled and its content scale-corrected; this clips that content to the
  * surface's live shape, so nothing spills out or stretches while it settles.
+ * Content stays anchored to the window, and a fresh layout (card ↔ row) fades in.
+ * Steps travel only within one kind of surface (proposal → accepted): across
+ * card, row and board they'd cut through the new layout, so each kind is its own scope.
  */
-export function Clip({ className = "", children }: { className?: string; children: ReactNode }) {
-  return <div className={`overflow-hidden rounded-[inherit] ${className}`}>{children}</div>;
+export function Clip({ scope, className = "", children }: { scope: "card" | "row" | "board"; className?: string; children: ReactNode }) {
+  return (
+    <motion.div
+      className={`overflow-hidden rounded-[inherit] ${className}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.35, ease: ease.out }}
+    >
+      <LayoutGroup id={scope}>{children}</LayoutGroup>
+    </motion.div>
+  );
 }
 
 export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props) {
@@ -109,7 +121,7 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
         }}
       >
         <InkSkin reveal={reveal} />
-        <Clip className="p-2">
+        <Clip scope="row" className="p-2">
           <Reveal reveal={reveal} className="flex h-[46px] items-center gap-3">
             <StatusControl task={task} variant="glyph" />
             <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -117,7 +129,6 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
               <EditableText
                 value={task.title}
                 label="Task title"
-                layoutId={`title-${task.id}`}
                 onCommit={(v) => useForm.getState().updateTask(task.id, { title: v })}
                 className="t-body min-w-0 truncate"
               />
@@ -172,7 +183,7 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
       <InkSkin reveal={reveal} />
       <NumberBadge task={task} number={number} />
 
-      <Clip className="flex flex-1 flex-col p-[18px]">
+      <Clip scope="card" className="flex flex-1 flex-col p-[18px]">
         <Reveal reveal={reveal} className="flex items-center justify-between gap-2 pr-4">
           <StatusControl task={task} />
           {highlight && (
@@ -187,7 +198,6 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
           <EditableText
             value={task.title}
             label="Task title"
-            layoutId={`title-${task.id}`}
             onCommit={(v) => useForm.getState().updateTask(task.id, { title: v })}
             className={emphasis ? "t-display-m" : "t-title"}
           />
