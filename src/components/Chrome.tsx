@@ -23,12 +23,10 @@ export function Chrome() {
       {/* A short veil keeps the fixed header legible over scrolled content; nothing at the bottom */}
       <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-20 h-[72px] bg-gradient-to-b from-[var(--paper)] to-transparent" />
       <header className="pointer-events-none fixed inset-x-0 top-0 z-30 flex items-start justify-between px-4 pt-4 md:px-7 md:pt-6">
-        <div className="pointer-events-auto flex items-center gap-2.5">
+        {/* The lockup sits in a glass capsule like the controls opposite, so content scrolling under it never mixes with it */}
+        <div className="glass pointer-events-auto flex h-[36px] items-center gap-2 rounded-full pr-4 pl-2">
           <AgentMark size={22} tone="dark" />
-          <div className="flex flex-col">
-            <span className="font-display text-[17px] leading-none font-medium tracking-[-0.02em]">FORM</span>
-            <span className="t-micro mt-1 hidden text-text-3 sm:block">The living interface</span>
-          </div>
+          <span className="font-display text-[15px] leading-none font-medium tracking-[-0.03em]">FORM</span>
         </div>
 
         <div className="pointer-events-auto flex items-center gap-1.5">
