@@ -1,6 +1,7 @@
 "use client";
 
 import { useForm } from "@/lib/store";
+import { ShuffleText } from "../text/ShuffleText";
 
 export function EmptyFilter() {
   const hideDone = useForm((s) => s.doc.view.hideDone);
@@ -15,7 +16,7 @@ export function EmptyFilter() {
           onClick={() => commit([{ op: "setView", patch: { hideDone: false } }], "show done")}
           className="focus-ring t-body-s h-[34px] cursor-pointer rounded-full bg-ink px-4 text-on-ink"
         >
-          Show completed tasks
+          <ShuffleText text="Show completed tasks" />
         </button>
       ) : (
         <button
@@ -23,7 +24,7 @@ export function EmptyFilter() {
           onClick={() => commit([{ op: "addTask", title: "New task", parentId: null, estimate: null }], "add task")}
           className="focus-ring t-body-s h-[34px] cursor-pointer rounded-full bg-ink px-4 text-on-ink"
         >
-          Add a task
+          <ShuffleText text="Add a task" />
         </button>
       )}
     </div>

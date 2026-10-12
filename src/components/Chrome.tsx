@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 import { useForm } from "@/lib/store";
 import { AgentMark } from "./agent/AgentMark";
+import { ShuffleText } from "./text/ShuffleText";
 
 /** Minimal, contextual chrome: wordmark, history controls, engine status, metadata. */
 export function Chrome() {
@@ -58,7 +59,7 @@ export function Chrome() {
                     onClick={reset}
                     className="focus-ring glass t-body-s ml-1 h-[36px] cursor-pointer rounded-full px-4 text-text-2 transition-colors hover:text-text"
                   >
-                    Reset demo
+                    <ShuffleText text="Reset demo" />
                   </button>
                 )}
               </motion.div>

@@ -14,6 +14,7 @@ import { CardsView } from "./CardsView";
 import { BoardView } from "./BoardView";
 import { TimelineView } from "./TimelineView";
 import { FocusView } from "./FocusView";
+import { ShuffleText } from "../text/ShuffleText";
 
 /* ------------------------------------------------------------------
    Block shell — every registry block enters the same way
@@ -117,7 +118,7 @@ function RepresentationSwitch() {
             className={`focus-ring t-body-s relative h-full cursor-pointer rounded-full px-3 transition-colors duration-300 sm:px-4 ${rep === r ? "text-on-ink" : "text-text-2 hover:text-text"}`}
           >
             {rep === r && <motion.span layoutId="rep-active" className="absolute inset-0 rounded-full bg-ink" transition={move} />}
-            <span className="relative">{REPRESENTATION_LABEL[r]}</span>
+            <ShuffleText text={REPRESENTATION_LABEL[r]} className="relative" />
           </button>
         ))}
       </div>
@@ -145,11 +146,11 @@ function ViewControls() {
         title={timeline ? "Sorting applies to the tracker and the board" : undefined}
         className="focus-ring t-body-s flex h-[30px] cursor-pointer items-center gap-1.5 rounded-full px-2 text-text-3 transition-colors hover:text-text disabled:cursor-default disabled:opacity-40"
       >
-        Sort
+        <ShuffleText text="Sort" />
         <span className="text-text">
           <AnimatePresence mode="wait" initial={false}>
             <motion.span key={view.sort} className="inline-block" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.16 }}>
-              {SORT_LABEL[view.sort]}
+              <ShuffleText text={SORT_LABEL[view.sort]} />
             </motion.span>
           </AnimatePresence>
         </span>
@@ -205,7 +206,7 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
           transition={move}
         />
       </span>
-      <span className={on ? "text-text" : ""}>{label}</span>
+      <ShuffleText text={label} className={on ? "text-text" : ""} />
     </button>
   );
 }

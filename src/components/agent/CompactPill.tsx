@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useForm } from "@/lib/store";
 import type { Capsule, Circle } from "./geometry";
 import { AgentMark } from "./AgentMark";
+import { ShuffleText } from "../text/ShuffleText";
 
 interface Props {
   visible: boolean;
@@ -52,7 +53,7 @@ export function CompactPill({ visible, frame }: Props) {
                     <span className="truncate">{selected.title}</span>
                   </>
                 ) : (
-                  <span className="text-on-ink-2 transition-colors group-hover:text-on-ink">Ask FORM</span>
+                  <ShuffleText text="Ask FORM" className="text-on-ink-2 transition-colors group-hover:text-on-ink" />
                 )}
               </motion.span>
             </AnimatePresence>

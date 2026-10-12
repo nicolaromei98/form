@@ -8,6 +8,7 @@ import { useViewport } from "@/lib/useViewport";
 import type { Capsule, Circle } from "./geometry";
 import { suggestionsFor } from "./suggestions";
 import { CommandSheet } from "./CommandSheet";
+import { ShuffleText } from "../text/ShuffleText";
 
 /** Clicks on these never dismiss the composer: they are the workspace being used. */
 const WORKSPACE_TARGET = "button, a, input, [contenteditable], [data-interactive], [data-task-id], [role=menu], [role=switch], [role=tab]";
@@ -202,7 +203,7 @@ export function Composer({ open, frame, placement }: Props) {
                     }}
                     className="focus-ring-ink t-body-s shrink-0 cursor-pointer rounded-full px-3 py-2 text-on-ink-3 transition-colors hover:text-on-ink-2"
                   >
-                    Clear
+                    <ShuffleText text="Clear" />
                   </motion.button>
                 )}
               </AnimatePresence>
@@ -278,7 +279,7 @@ export function Composer({ open, frame, placement }: Props) {
                       animate={{ opacity: 1, filter: "blur(0px)", scale: 1, transition: { delay: 0.46 + i * 0.07, duration: 0.9, ease: ease.out } }}
                       className="focus-ring t-body-s h-[32px] cursor-pointer rounded-full bg-white/60 px-3.5 text-text-2 shadow-[0_0_0_1px_rgba(10,10,10,0.05)] backdrop-blur-md transition-colors hover:bg-white/90 hover:text-text"
                     >
-                      {s}
+                      <ShuffleText text={s} />
                     </motion.button>
                   ))}
                 </motion.div>

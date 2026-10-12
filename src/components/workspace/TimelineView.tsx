@@ -10,6 +10,7 @@ import { useWidth } from "@/lib/useWidth";
 import { EditableText, EstimateControl, NumberBadge, StatusControl, StatusGlyph } from "./parts";
 import { useTaskSurface } from "./TaskCard";
 import { useReveal } from "./reveal";
+import { ShuffleText } from "../text/ShuffleText";
 
 /**
  * Representation: timeline. Dates are derived — start date + estimates in
@@ -206,14 +207,14 @@ export function TimelineView() {
                               onClick={() => resolve(true)}
                               className="focus-ring t-body-s h-[32px] cursor-pointer rounded-full bg-ink px-4 text-on-ink transition-transform hover:scale-[1.02]"
                             >
-                              Accept {proposal.items.length} steps
+                              <ShuffleText text={`Accept ${proposal.items.length} steps`} />
                             </button>
                             <button
                               type="button"
                               onClick={() => resolve(false)}
                               className="focus-ring t-body-s h-[32px] cursor-pointer rounded-full px-4 text-text-2 transition-colors hover:bg-black/[0.05] hover:text-text"
                             >
-                              Discard
+                              <ShuffleText text="Discard" />
                             </button>
                           </div>
                         </motion.div>

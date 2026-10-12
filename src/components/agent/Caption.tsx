@@ -7,6 +7,7 @@ import { ease } from "@/lib/motion";
 import { RevealText } from "../text/TextMotion";
 import { useViewport } from "@/lib/useViewport";
 import type { Vec } from "./geometry";
+import { ShuffleText } from "../text/ShuffleText";
 
 interface Props {
   anchor: Vec;
@@ -62,7 +63,7 @@ export function Caption({ anchor, placement, composerOpen }: Props) {
                 }}
                 className="focus-ring t-body-s shrink-0 cursor-pointer rounded-full bg-ink px-3.5 py-[6px] text-on-ink transition-transform hover:scale-[1.03]"
               >
-                Undo
+                <ShuffleText text="Undo" />
               </button>
             )}
             <button

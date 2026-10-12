@@ -9,6 +9,7 @@ import { STATUS_LABEL, STATUS_ORDER, type Status, type Task } from "@/lib/schema
 import { CostTag, EditableText, EstimateControl, NumberBadge, PriorityControl, ProgressControl, ProposalBlock, StatusGlyph, SubtaskList } from "./parts";
 import { InkSkin, Reveal, useTaskSurface } from "./TaskCard";
 import { useReveal } from "./reveal";
+import { ShuffleText } from "../text/ShuffleText";
 
 /** Representation: board — the same tasks, grouped into status lanes. */
 export function BoardView() {
@@ -150,7 +151,7 @@ function LaneButton({ dir, disabled, onClick, label }: { dir: 1 | -1; disabled: 
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden style={{ transform: dir > 0 ? "none" : "scaleX(-1)" }}>
         <path d="M2 5h6M5.5 2.5L8 5 5.5 7.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      {label}
+      <ShuffleText text={label} />
     </button>
   );
 }

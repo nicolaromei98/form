@@ -13,6 +13,7 @@ import { STATUS_LABEL, type Doc, type Task } from "@/lib/schema";
 import { useViewport } from "@/lib/useViewport";
 import { EditableText, ProposalBlock } from "./parts";
 import { useTaskSurface } from "./TaskCard";
+import { ShuffleText } from "../text/ShuffleText";
 
 /**
  * Representation: focus — a full-viewport stage, readable in one glance.
@@ -141,7 +142,7 @@ function Decision({ pick, number, leaving, onGone }: { pick: FocusPick; number: 
             }}
             className="focus-ring-ink t-body-s h-[40px] shrink-0 cursor-pointer rounded-full bg-on-ink px-5 text-ink transition-transform hover:scale-[1.03]"
           >
-            {next ? "Mark done" : "Break it down"}
+            <ShuffleText text={next ? "Mark done" : "Break it down"} />
           </button>
         </div>
         <ProposalBlock parentId={task.id} />

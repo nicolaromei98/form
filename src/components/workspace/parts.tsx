@@ -7,6 +7,7 @@ import { useForm } from "@/lib/store";
 import { springs, move } from "@/lib/motion";
 import { fmtDays, fmtEuro } from "@/lib/selectors";
 import { PRIORITY_LABEL, PRIORITY_ORDER, STATUS_LABEL, STATUS_ORDER, type Priority, type Status, type Task } from "@/lib/schema";
+import { ShuffleText } from "../text/ShuffleText";
 
 /* ------------------------------------------------------------------
    Status
@@ -130,7 +131,7 @@ export function StatusControl({ task, variant = "chip" }: { task: Task; variant?
         <motion.span layoutId={`status-${task.id}`} layout="position" className="flex">
           <StatusGlyph status={task.status} />
         </motion.span>
-        {variant === "chip" && <span className="t-body-s whitespace-nowrap">{STATUS_LABEL[task.status]}</span>}
+        {variant === "chip" && <ShuffleText text={STATUS_LABEL[task.status]} className="t-body-s whitespace-nowrap" />}
       </button>
       <Popover anchor={statusPopEl} pos={statusPopPos} onClose={statusPopClose}>
         <div role="menu" className="flex w-[176px] flex-col">
@@ -301,7 +302,7 @@ export function EstimateControl({ task }: { task: Task }) {
         }}
         className="focus-ring t-data cursor-pointer rounded-full border border-dashed border-[var(--c-line)] px-2.5 py-1 text-[var(--c-fg-3)] transition-colors hover:text-[var(--c-fg)]"
       >
-        + Duration
+        <ShuffleText text="+ Duration" />
       </button>
     );
   }
@@ -549,14 +550,14 @@ export function ProposalBlock({ parentId, dense = false }: { parentId: string; d
                 onClick={() => resolve(true)}
                 className="focus-ring t-body-s h-[34px] flex-1 cursor-pointer rounded-full bg-[var(--c-fill)] px-4 text-[var(--c-on-fill)] transition-transform hover:scale-[1.015]"
               >
-                Accept {proposal.items.length} steps
+                <ShuffleText text={`Accept ${proposal.items.length} steps`} />
               </button>
               <button
                 type="button"
                 onClick={() => resolve(false)}
                 className="focus-ring t-body-s h-[34px] cursor-pointer rounded-full px-4 text-[var(--c-fg-2)] transition-colors hover:bg-[var(--c-hover)] hover:text-[var(--c-fg)]"
               >
-                Discard
+                <ShuffleText text="Discard" />
               </button>
             </div>
           </div>
