@@ -40,8 +40,10 @@ export function Caption({ anchor, placement, composerOpen }: Props) {
   const show = caption && phase !== "processing";
 
   return (
-    <div className="pointer-events-none fixed z-50 flex justify-center" style={style}>
-      <AnimatePresence mode="popLayout">
+    // One grid cell: an outgoing caption dissolves in place (no popLayout, which would collapse
+    // this bottom-anchored box and drop the caption before it fades), and a new one overlaps it
+    <div className="pointer-events-none fixed z-50 grid justify-items-center" style={style}>
+      <AnimatePresence>
         {show && (
           <motion.div
             key={caption.id}
@@ -49,8 +51,8 @@ export function Caption({ anchor, placement, composerOpen }: Props) {
             aria-live="polite"
             initial={{ opacity: 0, filter: "blur(12px)" }}
             animate={{ opacity: 1, filter: "blur(0px)", transition: { duration: 0.6, ease: ease.out, delay: phase === "creating" ? 0.9 : 0.12 } }}
-            exit={{ opacity: 0, filter: "blur(10px)", transition: { duration: 0.3 } }}
-            className="glass-hi pointer-events-auto flex max-w-full items-center gap-2.5 rounded-[22px] py-2 pr-2 pl-4"
+            exit={{ opacity: 0, filter: "blur(10px)", transition: { duration: 0.45, ease: ease.out } }}
+            className="glass-hi pointer-events-auto flex max-w-full items-center gap-2.5 rounded-[22px] py-2 pr-2 pl-4 [grid-area:1/1]"
           >
             <ToneDot tone={caption.tone} />
             <RevealText text={caption.text} delay={phase === "creating" ? 1 : 0.2} className="t-body-s py-1 text-text" />
