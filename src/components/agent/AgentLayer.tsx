@@ -1,16 +1,19 @@
 "use client";
 
 import { AnimatePresence, animate, motion, useMotionValue, useTransform, type Transition } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, type Rect } from "@/lib/store";
-import { CREATE, ease, springs } from "@/lib/motion";
+import { CREATE, TAB_GROW_MS, ease, springs } from "@/lib/motion";
 import { useViewport } from "@/lib/useViewport";
-import { agentScale, agentShape, compactFrame, composerFrame, type AgentMode, type Capsule, type Vec } from "./geometry";
+import { NODE, agentScale, agentShape, compactFrame, composerFrame, nodeFrames, type AgentMode, type Capsule, type Vec } from "./geometry";
 import { Fluid } from "./Fluid";
 import { IdleCaption } from "./IdleCaption";
 import { Composer } from "./Composer";
 import { CompactPill } from "./CompactPill";
 import { Caption } from "./Caption";
+import { NODE_TIMING, NodeBlobs, NodeLabels } from "./ViewNodes";
+import { VIEW_OFFER } from "./suggestions";
+import { nextViews } from "@/lib/views";
 
 export function AgentLayer() {
   const { w: vw, h: vh } = useViewport();
@@ -21,6 +24,22 @@ export function AgentLayer() {
   const fxSeq = useForm((s) => s.fx.seq);
   const reduced = useForm((s) => s.reducedMotion);
   const openComposer = useForm((s) => s.openComposer);
+  const submit = useForm((s) => s.submit);
+  const intro = useForm((s) => s.intro);
+  // Nodes only speak when nothing else is being decided: no selection, proposal or plan
+  const quiet = useForm((s) => !s.selectedId && !s.doc.proposal && !s.doc.plan);
+  const views = useForm((s) => s.doc.tool?.views);
+  const offers = useMemo(() => nextViews(views), [views]);
+  const [nodeHover, setNodeHover] = useState<number | null>(null);
+  // A different set of offers (a view added, undone or redone) folds the nodes back into the agent
+  // before the new ones bud: nodes never slide into each other's places or sit there unlabelled
+  const offersKey = offers.join();
+  const [budKey, setBudKey] = useState(offersKey);
+  useEffect(() => {
+    if (budKey === offersKey) return;
+    const t = setTimeout(() => setBudKey(offersKey), reduced ? 0 : NODE_TIMING.retract * 1000);
+    return () => clearTimeout(t);
+  }, [budKey, offersKey, reduced]);
 
   const [hover, setHover] = useState(false);
   const [pressed, setPressed] = useState(false);
@@ -55,6 +74,14 @@ export function AgentLayer() {
 
   const showHit = mode === "idle" || mode === "hover";
 
+  // Views to create next, budding off the docked agent once it has settled
+  const nodes = nodeFrames(dock, vw, offers);
+  const nodesShown = mode === "compact" && phase === "rest" && !intro && quiet && budKey === offersKey && nodes.frames.length > 0;
+  // Nodes that leave under the pointer never get a pointerleave: forget the hover with them
+  if (!nodesShown && nodeHover !== null) setNodeHover(null);
+  // Away from the pill they fold back into the agent's body wherever it is now
+  const nodeOrigin = mode === "compact" ? nodes.origin : { x: dock.x, y: dock.y - 8 };
+
   return (
     <>
       <svg className="pointer-events-none fixed inset-0 z-40" width={vw} height={vh} aria-hidden>
@@ -67,6 +94,7 @@ export function AgentLayer() {
         <g filter="url(#form-goo)" fill="var(--ink)">
           <Body target={shape.body} transition={bodyT} />
           <Fluid mode={mode} anchor={anchor} scale={sc} targets={shape.blobs} satellite={shape.satellite} pressed={pressed} reduced={reduced} />
+          <NodeBlobs frames={nodes.frames} origin={nodeOrigin} shown={nodesShown} hovered={nodeHover} reduced={reduced} />
           {phase === "creating" &&
             spawn?.map((r, i) => <SpawnBlob key={`${fxSeq}-${i}`} origin={center} rect={r} index={i} />)}
         </g>
@@ -127,9 +155,35 @@ export function AgentLayer() {
         placement={hasTool ? "dock" : "center"}
       />
 
-      <CompactPill visible={mode === "compact" && phase === "rest"} frame={compactFrame(dock)} />
+      {/* Hovering a node, the pill speaks the command the node will send */}
+      <CompactPill
+        visible={mode === "compact" && phase === "rest"}
+        frame={compactFrame(dock)}
+        hint={nodesShown && nodeHover !== null && nodes.frames[nodeHover] ? VIEW_OFFER[nodes.frames[nodeHover].view] : null}
+      />
 
-      <Caption anchor={hasTool ? dock : center} placement={hasTool ? "dock" : "center"} composerOpen={mode === "input"} />
+      <NodeLabels
+        frames={nodes.frames}
+        shown={nodesShown}
+        reduced={reduced}
+        onHover={setNodeHover}
+        // The same path as typing it: the agent takes it in, answers with a caption, and Undo removes the view
+        onPick={(view, keyboard) =>
+          // Canned phrases the demo parser routes: deterministic and immediate on any engine
+          void submit(VIEW_OFFER[view], { engine: "demo" }).then((ok) => {
+            // Keyboard users land on the new tab once it has grown
+            if (!ok || !keyboard) return;
+            setTimeout(() => {
+              // Only if focus went nowhere (the node unmounted): never pull it out of the composer
+              if (document.activeElement && document.activeElement !== document.body) return;
+              document.querySelector<HTMLElement>(`[data-rep-tab="${view}"]`)?.focus({ preventScroll: true });
+            }, TAB_GROW_MS);
+          })
+        }
+      />
+
+      {/* On phones the nodes sit above the pill: the caption rises to clear them */}
+      <Caption anchor={hasTool ? dock : center} placement={hasTool ? "dock" : "center"} composerOpen={mode === "input"} lift={nodesShown && nodes.layout === "row" ? NODE.h + NODE.rowGap - 2 : 0} />
     </>
   );
 }

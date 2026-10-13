@@ -2,6 +2,7 @@ import { breakdownFor } from "./library";
 import { schedule } from "../selectors";
 import { focusPick } from "../focus";
 import { balancePlan, fmtLoad, loadsOf } from "../team";
+import { homeView, replacesProject } from "../views";
 import {
   BRIEF_TEXT_MAX,
   REPRESENTATION_LABEL,
@@ -53,6 +54,9 @@ export function interpretDemo(raw: string, ctx: InterpretContext): Interpretatio
   /* ---------- control ---------- */
   if (/^(undo|undo (that|it)|go back|revert( that)?)$/.test(s)) return control("undo", "Undone");
   if (/^redo( that| it)?$/.test(s)) return control("redo", "Redone");
+  // Before the brief: "Remove the brief" closes the view, it isn't a line of the brief
+  const removing = removeViewIntent(s, doc);
+  if (removing) return removing;
   // Brief lines come first: their own words ("DNS needs a reset", "budget not approved") are content, not commands
   const briefEdit = briefEditIntent(raw, clean, s, doc);
   if (briefEdit) return briefEdit;
@@ -78,26 +82,37 @@ export function interpretDemo(raw: string, ctx: InterpretContext): Interpretatio
   /* ---------- create ---------- */
   const createVerb = /\b(create|make|build|set ?up|start|generate|spin up|give me|i need|new)\b/.test(s);
   const createNoun = /\b(tracker|project|plan|planner|tasks?|to-?dos?|workspace|board|kanban|timeline)\b/.test(s);
-  const explicitCreate =
-    /\b(create|build|generate|set ?up|spin up)\b.*\b(project|tracker|planner|workspace)\b/.test(s) || /\bnew (project|tracker)\b/.test(s);
   const organise = /\b(help me )?(organi[sz]e|track|plan)\b.*\b(tasks?|work|project|website|site|launch)\b/.test(s);
 
   const wantsMood = /\bmoodboards?\b/.test(s);
-  if ((!doc.tool && ((createVerb && (createNoun || wantsMood)) || organise)) || (doc.tool && explicitCreate)) {
+  const birth = representationIn(s, true)?.rep;
+  // With a project open, "create a timeline for my project" adds a view: only an explicit new project replaces it
+  const recreate = replacesProject(s);
+  // A project starts as a tracker, board or timeline; the other views need its tasks first. Ask, don't guess —
+  // but only when that view is the thing being created ("create a team view"), not "a project for the team"
+  const other = /\b(?:create|make|build|set ?up|give me|i need|start)\b(?: me)?(?: an?| the| my)? (team(?: view| workload)?|workload|focus(?: view)?|brief(?! summary)|status (?:update|report))\b(?! project| member)/.exec(s)?.[1];
+  if ((!doc.tool || recreate) && !birth && other) {
+    const label = /team|workload/.test(other) ? "Team" : other === "focus" ? "Focus" : "Brief";
+    return clarify(`A project starts as a tracker, board or timeline. Try 'Create a timeline for my project', then add the ${label} view.`);
+  }
+  if ((!doc.tool && ((createVerb && (createNoun || wantsMood)) || organise)) || (doc.tool && recreate)) {
     const isWeb = /\b(web ?site|site|landing page|web)\b/.test(s);
     const subject = clean.match(/\bfor (?:my|our|the|a|an)?\s*(?:new\s+)?(.+)$/i)?.[1];
-    const title = isWeb || !subject ? "New website" : capitalise(subject).slice(0, 60);
-    const ops: Operation[] = [{ op: "createProject", title, template: "website" }];
-    const rep = representationIn(s, true)?.rep;
-    if (rep && rep !== "cards") ops.push({ op: "setRepresentation", representation: rep });
+    // "for my project" names no subject: "New project", not "Project"
+    const generic = !!subject && /^(?:(?:this|that|the|my|our) )?(?:project|work|tasks?|it|me|us)$/i.test(subject);
+    const title = isWeb || !subject ? "New website" : generic ? "New project" : capitalise(subject).slice(0, 60);
+    const born = birth === "board" || birth === "timeline" ? birth : "cards";
+    // The project is born as the one view asked for; the others are created later, on request
+    const ops: Operation[] = [{ op: "createProject", title, template: "website", ...(born !== "cards" ? { representation: born } : {}) }];
     // A moodboard lives inside a project: asking for one creates the project around it
     if (wantsMood) ops.push({ op: "addBlock", block: "moodboard" });
     const note = isWeb || !subject || wantsMood ? "" : " · Demo mode ships one template (website) — rename anything";
-    return { ops, tone: "done", message: `Project tracker created · 4 tasks${wantsMood ? " · moodboard below, drop images onto it" : ""}${note}`, target: null };
+    const dates = born === "timeline" ? " · sample dates, sequenced from estimates" : "";
+    return { ops, tone: "done", message: `${REPRESENTATION_LABEL[born]} created · 4 tasks${dates}${wantsMood ? " · moodboard below, drop images onto it" : ""}${note}`, target: null };
   }
 
   if (!doc.tool) {
-    return clarify("Nothing to shape yet. Start with: 'Create a project tracker for my new website'.");
+    return clarify("Nothing to shape yet. Start with 'Create a timeline for my project', or a tracker or a board.");
   }
 
   /* ---------- workload plan follow-ups ---------- */
@@ -148,7 +163,7 @@ export function interpretDemo(raw: string, ctx: InterpretContext): Interpretatio
     const items = breakdownFor(target);
     const total = items.every((i) => i.estimate != null) ? ` · fits its ${target.estimate}d estimate` : "";
     // The brief and the team view don't show proposals: bring the tasks back so the steps can be reviewed
-    const show: Operation[] = doc.view.representation === "brief" || doc.view.representation === "team" ? [{ op: "setRepresentation", representation: "cards" }] : [];
+    const show: Operation[] = doc.view.representation === "brief" || doc.view.representation === "team" ? [{ op: "setRepresentation", representation: homeView(doc) }] : [];
     return {
       ops: [...show, { op: "proposeSubtasks", parentId: target.id, items }],
       tone: "proposal",
@@ -272,7 +287,8 @@ export function interpretDemo(raw: string, ctx: InterpretContext): Interpretatio
     };
   }
   if (/\b(exit|leave|stop) focus\b|\bshow (me )?(everything|all( tasks)?)( again)?\b/.test(s)) {
-    return { ops: [{ op: "setRepresentation", representation: "cards" }], tone: "done", message: "Tracker · everything back", target: null };
+    const home = homeView(doc);
+    return { ops: [{ op: "setRepresentation", representation: home }], tone: "done", message: `${REPRESENTATION_LABEL[home]} · everything back`, target: null };
   }
 
   // Representation
@@ -407,8 +423,9 @@ export function interpretDemo(raw: string, ctx: InterpretContext): Interpretatio
   // Focus and the brief hide the metrics and progress blocks: show the tracker so an added block is visible
   const quiet = doc.view.representation === "focus" || doc.view.representation === "brief";
   if (quiet && ops.some((o) => o.op === "addBlock" && (o.block === "metrics" || o.block === "progress")) && !ops.some((o) => o.op === "setRepresentation")) {
-    ops.push({ op: "setRepresentation", representation: "cards" });
-    notes.push("Tracker");
+    const home = homeView(doc);
+    ops.push({ op: "setRepresentation", representation: home });
+    notes.push(REPRESENTATION_LABEL[home]);
   }
 
   if (!ops.length && !notes.length) {
@@ -600,7 +617,7 @@ function briefIntent(s: string, doc: Doc): Interpretation | null {
   // "summary" alone stays with the metrics block ("show the project summary"); only "summary for the client/team" is a brief
   const asks =
     (new RegExp(`\\b(status|client|team|weekly|project|progress) ${noun}\\b`).test(s) && !/\bupdate (the|its|their|my|his|her) /.test(s)) ||
-    new RegExp(`\\b(write|draft|prepare|generate|create|compose|give me|send)\\b( me)?( an?| the| a quick| a short| a weekly)? ${noun}\\b`).test(s) ||
+    new RegExp(`\\b(write|draft|prepare|generate|create|compose|give me|send|make|add|open)\\b( me)?( an?| the| a quick| a short| a weekly)? ${noun}\\b`).test(s) ||
     /\b(update|report|recap|brief|summary) for (the |my |our )?(client|team)\b/.test(s) ||
     /\bsend (the |my |our )?(client|team) (an? )?(update|brief|recap|report)\b/.test(s) ||
     /\bwhat (do|should|can) (i|we) (tell|say to|send) (the |my |our )?(client|team)\b/.test(s) ||
@@ -661,7 +678,10 @@ function teamIntent(clean: string, s: string, doc: Doc, selectedId: string | nul
   const loads = loadsOf(doc).filter((l) => l.person);
   const noTeam = clarify("There's no team yet. Say 'add a sample team', or 'add Giulia and Paolo to the team'.");
   const wantsShow =
-    /\b(show|open|see|switch to|go to|view|display)\b.*\b(team|workload|work load|people|capacity)\b/.test(s) || /\bwho('s| is)? doing what\b|\bwho does what\b|\bteam (view|workload)\b/.test(s);
+    /\b(show|open|see|switch to|go to|view|display)\b.*\b(team|workload|work load|people|capacity)\b/.test(s) ||
+    // Creating the view, and only the view: "add the team view" (not "add a team member called Giulia")
+    /^(?:please )?(?:create|add|make|build|set ?up|open|give me)(?: me)?(?: an?| the| my)? (?:team|workload)(?: view| tab)?(?: for (?:the|my|our|this) project)?$/.test(s) ||
+    /\bwho('s| is)? doing what\b|\bwho does what\b|\bteam (view|workload)\b/.test(s);
 
   // Sample team
   if (/\b(sample|demo|example) team\b/.test(s)) {
@@ -786,6 +806,7 @@ function representationIn(s: string, creating: boolean): { rep: Representation; 
   if (!creating) {
     push(/\b(?:as|into|to|show|switch to|return to|back to)\b(?: the| a| an| my)?(?: original| default| first)?(?: project)? (?:tracker|cards?|card view)\b/, "cards");
     push(/\b(back|return|revert)\b.*\b(tracker|cards?|original)\b/, "cards");
+    push(/\b(?:create|add|make|build|open|set ?up|give me)\b(?: me)?(?: the| a| an| my)?(?: original| default)?(?: project)? (?:tracker|cards? view)\b/, "cards");
     push(/\b(?:as|into|in) (?:a )?list\b|\blist (?:view|layout)\b/, "cards", true);
   }
   if (!hits.length) return null;
@@ -829,4 +850,25 @@ function unsupported(message: string): Interpretation {
 }
 function control(c: "undo" | "redo" | "reset", message: string): Interpretation {
   return { ops: [], tone: "done", message, control: c, target: null };
+}
+
+const VIEW_NOUN: [RegExp, Representation][] = [
+  // Plural only: "delete this card" is about a task
+  [/^(project tracker|tracker|cards)$/, "cards"],
+  [/^(kanban board|kanban|board)$/, "board"],
+  [/^(timeline|gantt(?: chart)?)$/, "timeline"],
+  [/^(team workload|team|workload)$/, "team"],
+  [/^focus$/, "focus"],
+  [/^(status brief|brief)$/, "brief"],
+];
+
+/** "Remove the board": closes a view's tab. Never the data, never the last view. */
+function removeViewIntent(s: string, doc: Doc): Interpretation | null {
+  const m = /^(?:please )?(?:remove|delete|hide|drop|get rid of)(?: the| this| my)? ([a-z ]+?)(?: view| tab)?$/.exec(s);
+  const rep = m && VIEW_NOUN.find(([re]) => re.test(m[1]))?.[1];
+  if (!rep || !doc.tool) return null;
+  const label = REPRESENTATION_LABEL[rep];
+  if (!doc.tool.views.includes(rep)) return clarify(`There's no ${label} view in this project.`);
+  if (doc.tool.views.length === 1) return clarify(`The ${label} is this project's only view · add another before removing it.`);
+  return { ops: [{ op: "removeView", representation: rep }], tone: "done", message: `${label} view removed · nothing in the project is deleted`, target: null };
 }

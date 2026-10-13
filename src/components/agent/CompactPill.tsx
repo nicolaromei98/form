@@ -9,10 +9,12 @@ import { ShuffleText } from "../text/ShuffleText";
 interface Props {
   visible: boolean;
   frame: { lead: Circle; body: Capsule };
+  /** The command a hovered suggestion node will send, shown in place of "Ask FORM" */
+  hint?: string | null;
 }
 
 /** State F — the agent contracted into a floating capsule, always reachable. */
-export function CompactPill({ visible, frame }: Props) {
+export function CompactPill({ visible, frame, hint = null }: Props) {
   const selected = useForm((s) => (s.selectedId ? s.doc.tasks[s.selectedId] : null));
   const proposal = useForm((s) => !!s.doc.proposal);
   const open = useForm((s) => s.openComposer);
@@ -40,14 +42,16 @@ export function CompactPill({ visible, frame }: Props) {
           <span className="flex min-w-0 flex-1 items-center justify-between gap-2 pr-[14px] pl-[10px]">
             <AnimatePresence mode="wait" initial={false}>
               <motion.span
-                key={selected?.id ?? (proposal ? "proposal" : "idle")}
+                key={hint ? `hint-${hint}` : (selected?.id ?? (proposal ? "proposal" : "idle"))}
                 initial={{ opacity: 0, filter: "blur(8px)" }}
                 animate={{ opacity: 1, filter: "blur(0px)" }}
                 exit={{ opacity: 0, filter: "blur(8px)" }}
                 transition={{ duration: 0.3 }}
                 className="t-body-s flex min-w-0 items-center gap-1.5 text-on-ink"
               >
-                {selected ? (
+                {hint ? (
+                  <span className="truncate">{hint}</span>
+                ) : selected ? (
                   <>
                     <span className="h-[6px] w-[6px] shrink-0 rounded-full bg-on-ink" />
                     <span className="truncate">{selected.title}</span>
@@ -57,7 +61,20 @@ export function CompactPill({ visible, frame }: Props) {
                 )}
               </motion.span>
             </AnimatePresence>
-            <kbd className="t-micro grid h-[22px] min-w-[22px] shrink-0 place-items-center rounded-full bg-white/[0.1] px-1.5 text-on-ink-2">/</kbd>
+            {/* Leaves while a hint shows, so the command has the whole label width */}
+            <AnimatePresence initial={false}>
+              {!hint && (
+                <motion.kbd
+                  key="kbd"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                  className="t-micro grid h-[22px] min-w-[22px] shrink-0 place-items-center rounded-full bg-white/[0.1] px-1.5 text-on-ink-2"
+                >
+                  /
+                </motion.kbd>
+              )}
+            </AnimatePresence>
           </span>
         </motion.button>
       )}

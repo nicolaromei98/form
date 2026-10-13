@@ -38,3 +38,5 @@ export const CREATE_TOTAL_MS = Math.round((createRevealAt(3) + CREATE.skin + 0.1
 
 /** Minimum perceptible beat for local processing — no fake reasoning. */
 export const PROCESS_BEAT_MS = 340;
+/** A created view's tab grows in for one move, then the ink slides onto it */
+export const TAB_GROW_MS = Math.round(move.duration * 1000);

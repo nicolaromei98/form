@@ -47,6 +47,10 @@ export const ReassignPlanSchema = z.object({ moves: z.array(ReassignMoveSchema).
    ------------------------------------------------------------------ */
 
 export const RepresentationSchema = z.enum(["cards", "board", "timeline", "focus", "team", "brief"]);
+/** Every view, in the tab order docs saved before progressive creation had */
+export const ALL_VIEWS = ["cards", "board", "timeline", "team", "focus", "brief"] as const;
+/** Views a project can be born as: the ones whose surfaces the creation volumes land on */
+export const BirthViewSchema = z.enum(["cards", "board", "timeline"]);
 export const DensitySchema = z.enum(["comfortable", "compact"]);
 export const LayoutSchema = z.enum(["grid", "list"]);
 export const SortSchema = z.enum(["manual", "priority", "progress", "status", "title", "estimate"]);
@@ -90,6 +94,16 @@ export const ToolSchema = z.object({
   startDateIsSample: z.boolean(),
   /** Registry blocks composing this tool, in render order */
   blocks: z.array(BlockTypeSchema),
+  /**
+   * Views the user has created, in creation order (= tab order). Docs saved before
+   * progressive creation had every view, so they keep all six; a broken list does too.
+   */
+  views: z
+    .array(RepresentationSchema)
+    .min(1)
+    .refine((v) => new Set(v).size === v.length)
+    .default(() => [...ALL_VIEWS])
+    .catch(() => [...ALL_VIEWS]),
 });
 
 /* ------------------------------------------------------------------
@@ -186,9 +200,17 @@ const TaskPatchSchema = TaskSchema.pick({
 const ViewPatchSchema = ViewSchema.omit({ representation: true, fields: true }).partial();
 
 export const OperationSchema = z.discriminatedUnion("op", [
-  z.object({ op: z.literal("createProject"), title: z.string().min(1).max(80), template: z.literal("website") }),
+  z.object({
+    op: z.literal("createProject"),
+    title: z.string().min(1).max(80),
+    template: z.literal("website"),
+    /** The one view the project starts with (default: the tracker) */
+    representation: BirthViewSchema.optional(),
+  }),
   z.object({ op: z.literal("renameTool"), title: z.string().min(1).max(80) }),
   z.object({ op: z.literal("setRepresentation"), representation: RepresentationSchema }),
+  /** Closes a view's tab; never its data, never the last view */
+  z.object({ op: z.literal("removeView"), representation: RepresentationSchema }),
   z.object({ op: z.literal("setView"), patch: ViewPatchSchema }),
   z.object({ op: z.literal("setFields"), patch: FieldsSchema.partial() }),
   z.object({ op: z.literal("updateTask"), id: z.string(), patch: TaskPatchSchema }),

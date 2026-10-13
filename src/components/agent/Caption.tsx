@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect } from "react";
 import { useForm } from "@/lib/store";
-import { ease } from "@/lib/motion";
+import { ease, move } from "@/lib/motion";
 import { RevealText } from "../text/TextMotion";
 import { useViewport } from "@/lib/useViewport";
 import type { Vec } from "./geometry";
@@ -13,16 +13,19 @@ interface Props {
   anchor: Vec;
   placement: "center" | "dock";
   composerOpen: boolean;
+  /** Extra rise (px) while something sits between the caption and the dock */
+  lift?: number;
 }
 
 /** The agent's only verbal channel: a one-line caption of what changed. */
-export function Caption({ anchor, placement, composerOpen }: Props) {
+export function Caption({ anchor, placement, composerOpen, lift = 0 }: Props) {
   const { w: vw, h: vh } = useViewport();
   const caption = useForm((s) => s.caption);
   const phase = useForm((s) => s.phase);
   const dismiss = useForm((s) => s.dismissCaption);
   const undo = useForm((s) => s.undo);
   const canUndo = useForm((s) => s.past.length > 0);
+  const reduced = useForm((s) => s.reducedMotion);
 
   useEffect(() => {
     if (!caption) return;
@@ -34,15 +37,19 @@ export function Caption({ anchor, placement, composerOpen }: Props) {
   const width = Math.min(600, vw - 32);
   const style =
     placement === "dock"
-      ? { left: anchor.x - width / 2, width, bottom: vh - anchor.y + (composerOpen ? 92 : 40) }
+      ? { left: anchor.x - width / 2, width, bottom: vh - anchor.y + 40 }
       : { left: anchor.x - width / 2, width, bottom: vh - anchor.y + (composerOpen ? 56 : 150) };
 
   const show = caption && phase !== "processing";
+  // At the dock the caption clears the open composer, or the nodes above the pill on phones —
+  // one transform on the move curve, so switching between them glides instead of jumping
+  const rise = placement === "dock" ? Math.max(lift, composerOpen ? 52 : 0) : 0;
 
   return (
     // One grid cell: an outgoing caption dissolves in place (no popLayout, which would collapse
     // this bottom-anchored box and drop the caption before it fades), and a new one overlaps it
-    <div className="pointer-events-none fixed z-50 grid justify-items-center" style={style}>
+    // A transform (not bottom, which would snap) keeps the glass blur
+    <motion.div className="pointer-events-none fixed z-50 grid justify-items-center" style={style} initial={false} animate={{ y: -rise }} transition={reduced ? { duration: 0 } : move}>
       <AnimatePresence>
         {show && (
           <motion.div
@@ -81,7 +88,7 @@ export function Caption({ anchor, placement, composerOpen }: Props) {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
 

@@ -1,3 +1,5 @@
+import type { Representation } from "@/lib/schema";
+
 /**
  * Agent geometry. Every visual state of FORM's agent is a set of circles
  * plus (optionally) a capsule body and a satellite circle, all fused by
@@ -140,4 +142,62 @@ export function agentShape(mode: AgentMode, anchor: Vec, vw: number, docked = fa
   }));
   blobs[0] = lead;
   return { blobs, body, satellite: { cx: body.x + body.w - COMPACT.h / 2, cy: anchor.y, r: 0 } };
+}
+
+/* ------------------------------------------------------------------
+   Suggestion nodes: views the agent offers to create next. Ink capsules
+   that bud off the docked pill and rest just far enough away that the
+   goo lets go of them (end to end ≥ 10px; stacked flat edges ≥ 14px).
+   ------------------------------------------------------------------ */
+
+export const NODE = {
+  h: 36,
+  /** End-to-end gap: pill → node → node */
+  gap: 12,
+  /** Phones: gap between the pill's top and the row's bottom (flat edges fuse more easily; hovered, the gap stays above the goo's reach) */
+  rowGap: 21,
+  /** Fixed widths so goo and label agree without measuring; labels are centred */
+  w: { cards: 96, board: 84, timeline: 100, team: 80, focus: 84, brief: 80 } as Record<Representation, number>,
+};
+
+export interface NodeFrame {
+  view: Representation;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Where the offered views sit around the docked pill, and the point inside the pill they bud from. */
+export function nodeFrames(dock: Vec, vw: number, views: Representation[]): { layout: "chain" | "row"; frames: NodeFrame[]; origin: Vec } {
+  const half = (COMPACT.lead + COMPACT.w - COMPACT.overlap) / 2;
+  if (vw >= 768) {
+    // A chain on the pill's centre line, to its right; it ends before the xl corner metadata
+    const limit = vw >= 1280 ? vw - 180 : vw - 24;
+    const frames: NodeFrame[] = [];
+    let x = dock.x + half + NODE.gap;
+    for (const view of views) {
+      const w = NODE.w[view];
+      if (x + w > limit) break;
+      frames.push({ view, x, y: dock.y - NODE.h / 2, w, h: NODE.h });
+      x += w + NODE.gap;
+    }
+    return { layout: "chain", frames, origin: { x: dock.x + half - COMPACT.h / 2, y: dock.y } };
+  }
+  // Phones: under 80px beside the pill, so a centred row above it
+  const fit: Representation[] = [];
+  let total = -NODE.gap;
+  for (const view of views) {
+    if (total + NODE.gap + NODE.w[view] > vw - 32) break;
+    fit.push(view);
+    total += NODE.gap + NODE.w[view];
+  }
+  const y = dock.y - COMPACT.h / 2 - NODE.rowGap - NODE.h;
+  let x = dock.x - total / 2;
+  const frames = fit.map((view) => {
+    const f = { view, x, y, w: NODE.w[view], h: NODE.h };
+    x += f.w + NODE.gap;
+    return f;
+  });
+  return { layout: "row", frames, origin: { x: dock.x, y: dock.y - COMPACT.h / 2 + 10 } };
 }

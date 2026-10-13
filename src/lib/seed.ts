@@ -64,6 +64,7 @@ export function websiteTemplate(title: string): { tool: Tool; tasks: Record<stri
       startDate: SAMPLE_START_DATE,
       startDateIsSample: true,
       blocks: ["header", "metrics", "collection"],
+      views: ["cards"],
     },
     tasks: Object.fromEntries(list.map((t) => [t.id, t])),
     order: list.map((t) => t.id),

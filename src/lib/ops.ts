@@ -1,6 +1,6 @@
 import { DEFAULT_VIEW, SAMPLE_OWNERS, sampleTeam, uid, websiteTemplate } from "./seed";
 import { addMoodItems, arrangeMood, patchMoodItem } from "./mood";
-import { BRIEF_LINES_MAX, BRIEF_TEXT_MAX, type BlockType, type Doc, type Operation, type ReassignPlan, type Task } from "./schema";
+import { BRIEF_LINES_MAX, BRIEF_TEXT_MAX, type BlockType, type Doc, type Operation, type ReassignPlan, type Representation, type Task } from "./schema";
 
 const BLOCK_ORDER: BlockType[] = ["header", "metrics", "progress", "collection", "moodboard"];
 
@@ -20,16 +20,22 @@ function withBlock(doc: Doc, block: BlockType): Doc {
   return { ...doc, tool: { ...doc.tool, blocks } };
 }
 
+function withView(doc: Doc, view: Representation): Doc {
+  if (!doc.tool || doc.tool.views.includes(view)) return doc;
+  return { ...doc, tool: { ...doc.tool, views: [...doc.tool.views, view] } };
+}
+
 /** Pure reducer: applies one validated operation to the document. */
 export function applyOperation(doc: Doc, op: Operation): Doc {
   switch (op.op) {
     case "createProject": {
       const t = websiteTemplate(op.title);
+      const representation = op.representation ?? "cards";
       return {
-        tool: t.tool,
+        tool: { ...t.tool, views: [representation] },
         tasks: t.tasks,
         order: t.order,
-        view: { ...DEFAULT_VIEW, fields: { ...DEFAULT_VIEW.fields } },
+        view: { ...DEFAULT_VIEW, fields: { ...DEFAULT_VIEW.fields }, representation },
         proposal: null,
         mood: [],
         people: t.people,
@@ -43,7 +49,8 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
       return { ...doc, tool: { ...doc.tool, title: op.title } };
 
     case "setRepresentation":
-      return { ...doc, view: { ...doc.view, representation: op.representation } };
+      // Opening a view the project doesn't have yet creates it: appended, so existing tabs never move
+      return { ...withView(doc, op.representation), view: { ...doc.view, representation: op.representation } };
 
     case "setView": {
       const patch = { ...op.patch };
@@ -145,6 +152,16 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
 
     case "addBlock":
       return withBlock(doc, op.block);
+
+    case "removeView": {
+      const views = doc.tool?.views;
+      const i = views ? views.indexOf(op.representation) : -1;
+      if (!doc.tool || !views || i < 0 || views.length === 1) return doc;
+      const rest = views.filter((v) => v !== op.representation);
+      // Removing the view on screen moves to the tab on its left
+      const representation = doc.view.representation === op.representation ? rest[Math.max(0, i - 1)] : doc.view.representation;
+      return { ...doc, tool: { ...doc.tool, views: rest }, view: { ...doc.view, representation } };
+    }
 
     case "removeBlock": {
       if (!doc.tool || op.block === "header" || op.block === "collection") return doc;

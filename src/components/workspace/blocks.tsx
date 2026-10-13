@@ -1,11 +1,11 @@
 "use client";
 
-import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, LayoutGroup, motion, useIsPresent } from "motion/react";
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useGSAP } from "@gsap/react";
 import { DecodeText, RevealText, revealWords } from "../text/TextMotion";
 import { useForm } from "@/lib/store";
-import { ease, move } from "@/lib/motion";
+import { TAB_GROW_MS, ease, move } from "@/lib/motion";
 import { fmtEuro, metrics, parseISODate, topLevel } from "@/lib/selectors";
 import { REPRESENTATION_LABEL, SORT_LABEL, type Representation, type Sort } from "@/lib/schema";
 import { EditableText, Popover, usePopover } from "./parts";
@@ -71,7 +71,7 @@ export function HeaderBlock() {
     <BlockShell className="mb-7 flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
       <div className="min-w-0">
         {/* The eyebrow re-decodes whenever the representation changes */}
-        <DecodeText text={`Project tracker · ${REPRESENTATION_LABEL[doc.view.representation]}`} delay={d} className="t-meta mb-3 block text-text-3" />
+        <DecodeText text={`Project · ${REPRESENTATION_LABEL[doc.view.representation]}`} delay={d} className="t-meta mb-3 block text-text-3" />
         <TitleReveal delay={d + 0.08}>
           <EditableText value={tool.title} label="Project title" onCommit={(v) => commit([{ op: "renameTool", title: v }], "rename project")} className="t-display-l tone-light" />
         </TitleReveal>
@@ -103,28 +103,99 @@ function TitleReveal({ delay, children }: { delay: number; children: ReactNode }
   );
 }
 
-function RepresentationSwitch() {
+/** Fresh array for a doc without a tool (never rendered: the header needs a tool) */
+const NO_VIEWS: Representation[] = [];
+/** Last change whose new tab already grew, so a remount (focus header) never holds the ink again */
+let grownSeq = -1;
+
+/** A created view's tab growing in, and the tab the ink waits on meanwhile */
+interface Hold {
+  view: Representation;
+  from: Representation;
+  seq: number;
+}
+
+// memo: HeaderBlock re-renders on every doc change, which must not interrupt a growing tab
+const RepresentationSwitch = memo(function RepresentationSwitch() {
   const rep = useForm((s) => s.doc.view.representation);
+  const views = useForm((s) => s.doc.tool?.views ?? NO_VIEWS);
+  const fx = useForm((s) => s.fx);
+  const reduced = useForm((s) => s.reducedMotion);
   const setRep = useForm((s) => s.setRepresentation);
-  const reps: Representation[] = ["cards", "board", "timeline", "team", "focus", "brief"];
+  const listRef = useRef<HTMLDivElement>(null);
+  // Only the views this project has, in creation order; the current one is a safety net for direct commits
+  const tabs = views.includes(rep) ? views : [...views, rep];
+  // The ink waits on the previous tab while the new one grows, then slides over — never onto a box
+  // still opening. The hold belongs to the growth: a toggle or an edit during it doesn't cut it short.
+  const fresh: Hold | null = !reduced && fx.added && fx.from && fx.added !== fx.from && fx.seq !== grownSeq ? { view: fx.added, from: fx.from, seq: fx.seq } : null;
+  const [hold, setHold] = useState<Hold | null>(fresh);
+  if (fresh && fresh.seq !== hold?.seq) setHold(fresh);
+  useEffect(() => {
+    if (!hold) return;
+    const t = setTimeout(() => {
+      grownSeq = hold.seq;
+      setHold(null);
+    }, TAB_GROW_MS);
+    return () => clearTimeout(t);
+  }, [hold]);
+  // Held only while the created view is on screen and the tab the ink waits on still exists
+  const pill = hold && hold.view === rep && views.includes(hold.from) ? hold.from : rep;
+  // A new tab past the edge of a scrolling tab bar (phones) scrolls into view as it grows
+  useEffect(() => {
+    if (!fx.added) return;
+    const list = listRef.current;
+    if (list && list.scrollWidth > list.clientWidth) list.scrollTo({ left: list.scrollWidth, behavior: "smooth" });
+  }, [fx.added, fx.seq]);
+
   return (
     <LayoutGroup id="rep-switch">
-      <div role="tablist" aria-label="Representation" className="glass no-scrollbar flex h-[44px] max-w-full items-center overflow-x-auto rounded-full p-1">
-        {reps.map((r) => (
-          <button
-            key={r}
-            role="tab"
-            type="button"
-            aria-selected={rep === r}
-            onClick={() => setRep(r)}
-            className={`focus-ring t-body-s relative h-full shrink-0 cursor-pointer rounded-full px-2 whitespace-nowrap transition-colors duration-300 min-[400px]:px-3 sm:px-4 ${rep === r ? "text-on-ink" : "text-text-2 hover:text-text"}`}
-          >
-            {rep === r && <motion.span layoutId="rep-active" className="absolute inset-0 rounded-full bg-ink" transition={move} />}
-            <ShuffleText text={REPRESENTATION_LABEL[r]} className="relative" />
-          </button>
-        ))}
+      <div ref={listRef} role="tablist" aria-label="Views" className="glass no-scrollbar flex h-[44px] max-w-full items-center overflow-x-auto rounded-full p-1">
+        {/* initial={false}: the tabs a header mounts with are just there; every tab added later grows in */}
+        <AnimatePresence initial={false}>
+          {tabs.map((r) => (
+            <ViewTab key={r} view={r} selected={rep === r} inked={pill === r} reduced={reduced} onPick={setRep} />
+          ))}
+        </AnimatePresence>
       </div>
     </LayoutGroup>
+  );
+});
+
+function ViewTab({ view, selected, inked, reduced, onPick }: { view: Representation; selected: boolean; inked: boolean; reduced: boolean; onPick: (r: Representation) => void }) {
+  // A closing tab renders with its last props: it drops the ink at once so the ink slides to the neighbour
+  const present = useIsPresent();
+  const ink = inked && present;
+  return (
+    <button
+      role="tab"
+      type="button"
+      aria-selected={selected && present}
+      data-rep-tab={view}
+      onClick={() => onPick(view)}
+      className={`focus-ring t-body-s relative h-full shrink-0 cursor-pointer rounded-full transition-colors duration-300 ${ink ? "text-on-ink" : "text-text-2 hover:text-text"} ${present ? "" : "pointer-events-none"}`}
+    >
+      {ink && <motion.span layoutId="rep-active" className="absolute inset-0 rounded-full bg-ink" transition={move} />}
+      {/* Real width, not scale: the glass capsule widens with the tab and nothing stretches.
+          Only the label is clipped, so the sliding ink is never cut off */}
+      <motion.span
+        className="relative flex h-full overflow-hidden"
+        initial={{ width: 0 }}
+        animate={{ width: "auto" }}
+        // A tab holding the ink stays open until the ink has left it; any other closes from where it is
+        exit={{ width: 0, transition: reduced ? { duration: 0 } : { ...move, delay: inked ? move.duration : 0 } }}
+        transition={reduced ? { duration: 0 } : move}
+      >
+        {/* The label condenses out of a blur on a child, so the glass keeps its backdrop blur */}
+        <motion.span
+          className="flex shrink-0 items-center px-2 whitespace-nowrap min-[400px]:px-3 sm:px-4"
+          initial={{ opacity: 0, filter: "blur(8px)" }}
+          animate={{ opacity: 1, filter: "blur(0px)", transition: { duration: reduced ? 0 : 0.5, ease: ease.out, delay: reduced ? 0 : 0.24 } }}
+          exit={{ opacity: 0, filter: "blur(8px)", transition: { duration: reduced ? 0 : 0.24 } }}
+        >
+          <ShuffleText text={REPRESENTATION_LABEL[view]} />
+        </motion.span>
+      </motion.span>
+    </button>
   );
 }
 

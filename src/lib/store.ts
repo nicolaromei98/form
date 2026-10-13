@@ -7,6 +7,7 @@ import { emptyDoc } from "./seed";
 import { claudeInterpreter, demoInterpreter, type EngineId } from "./interpret";
 import { interpretDemo } from "./interpret/demo";
 import { CREATE_TOTAL_MS, PROCESS_BEAT_MS } from "./motion";
+import { addedView, addedViews, announceView, migrateViews } from "./views";
 import {
   DocSchema,
   OperationListSchema,
@@ -38,6 +39,8 @@ export interface Fx {
   kind: FxKind;
   seq: number;
   from: Representation | null;
+  /** The view this change created (its tab grows in), if any */
+  added: Representation | null;
 }
 
 interface LogEntry {
@@ -71,7 +74,8 @@ interface FormState {
   intro: boolean;
 
   /* actions */
-  submit: (command: string) => Promise<boolean>;
+  /** engine overrides the chosen engine for this command (agent nodes run canned, demo-routable phrases) */
+  submit: (command: string, opts?: { engine?: EngineId }) => Promise<boolean>;
   commit: (ops: Operation[], label: string, source?: LogEntry["source"], extra?: Partial<FormState>) => void;
   checkpoint: () => void;
   live: (ops: Operation[]) => void;
@@ -95,13 +99,21 @@ interface FormState {
 let captionId = 0;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function fxFor(ops: Operation[], prev: Doc, seq: number): Fx {
-  if (ops.some((o) => o.op === "createProject")) return { kind: "create", seq, from: null };
-  if (ops.some((o) => o.op === "setRepresentation" && o.representation !== prev.view.representation))
-    return { kind: "shift", seq, from: prev.view.representation };
+function fxFor(ops: Operation[], prev: Doc, next: Doc, seq: number): Fx {
+  const added = addedView(prev, next);
+  if (ops.some((o) => o.op === "createProject")) return { kind: "create", seq, from: null, added: null };
+  if (
+    ops.some(
+      (o) =>
+        (o.op === "setRepresentation" && o.representation !== prev.view.representation) ||
+        // Closing the view on screen hands over to its neighbour
+        (o.op === "removeView" && o.representation === prev.view.representation),
+    )
+  )
+    return { kind: "shift", seq, from: prev.view.representation, added };
   if (ops.some((o) => o.op === "setView" || o.op === "setFields" || o.op === "addBlock" || o.op === "removeBlock"))
-    return { kind: "reflow", seq, from: prev.view.representation };
-  return { kind: "edit", seq, from: prev.view.representation };
+    return { kind: "reflow", seq, from: prev.view.representation, added };
+  return { kind: "edit", seq, from: prev.view.representation, added };
 }
 
 export const useForm = create<FormState>()(
@@ -115,14 +127,14 @@ export const useForm = create<FormState>()(
       composerOpen: false,
       phase: "rest",
       caption: null,
-      fx: { kind: "edit", seq: 0, from: null },
+      fx: { kind: "edit", seq: 0, from: null, added: null },
       spawn: null,
       engine: "demo",
       commandHistory: [],
       reducedMotion: false,
       intro: false,
 
-      async submit(command) {
+      async submit(command, opts) {
         const text = command.trim();
         // Only an in-flight interpretation blocks input; creation choreography never does
         if (!text || get().phase === "processing") return false;
@@ -133,7 +145,7 @@ export const useForm = create<FormState>()(
         let result: Interpretation;
         let fellBack = false;
         try {
-          result = await (get().engine === "claude" ? claudeInterpreter : demoInterpreter).interpret(text, ctx);
+          result = await ((opts?.engine ?? get().engine) === "claude" ? claudeInterpreter : demoInterpreter).interpret(text, ctx);
         } catch {
           result = interpretDemo(text, ctx);
           fellBack = get().engine === "claude";
@@ -172,7 +184,8 @@ export const useForm = create<FormState>()(
         get().commit(ops, text, "agent", {
           phase: creating && !get().reducedMotion ? "creating" : "rest",
           composerOpen: !ok,
-          caption: { id: ++captionId, text: result.message + suffix, tone: result.tone, undoable: ops.length > 0 },
+          // Any engine: a command that created a view says so ("Team view added · …")
+          caption: { id: ++captionId, text: announceView(result.message, addedViews(get().doc, nextDoc)) + suffix, tone: result.tone, undoable: ops.length > 0 },
           // Point & Ask: selection is explicit — commands never select on their own
           selectedId: creating ? null : keep(get().selectedId),
         });
@@ -197,7 +210,7 @@ export const useForm = create<FormState>()(
           doc: next,
           past: [...st.past, prev].slice(-HISTORY_LIMIT),
           future: [],
-          fx: fxFor(ops, prev, st.fx.seq + 1),
+          fx: fxFor(ops, prev, next, st.fx.seq + 1),
           log: [{ at: Date.now(), label, source }, ...st.log].slice(0, 40),
         }));
       },
@@ -217,7 +230,8 @@ export const useForm = create<FormState>()(
       },
 
       setRepresentation(r) {
-        if (get().doc.view.representation === r) return;
+        // Tabs only switch between created views; creating one goes through the agent
+        if (get().doc.view.representation === r || !get().doc.tool?.views.includes(r)) return;
         get().commit([{ op: "setRepresentation", representation: r }], `view → ${r}`, "direct");
       },
 
@@ -270,7 +284,7 @@ export const useForm = create<FormState>()(
           doc: prev,
           past: past.slice(0, -1),
           future: [doc, ...future].slice(0, HISTORY_LIMIT),
-          fx: { kind: "restore", seq: fx.seq + 1, from: doc.view.representation },
+          fx: { kind: "restore", seq: fx.seq + 1, from: doc.view.representation, added: addedView(doc, prev) },
           selectedId: get().selectedId && prev.tasks[get().selectedId!] ? get().selectedId : null,
         });
       },
@@ -283,7 +297,7 @@ export const useForm = create<FormState>()(
           doc: next,
           past: [...past, doc].slice(-HISTORY_LIMIT),
           future: future.slice(1),
-          fx: { kind: "restore", seq: fx.seq + 1, from: doc.view.representation },
+          fx: { kind: "restore", seq: fx.seq + 1, from: doc.view.representation, added: addedView(doc, next) },
           selectedId: get().selectedId && next.tasks[get().selectedId!] ? get().selectedId : null,
         });
       },
@@ -298,7 +312,7 @@ export const useForm = create<FormState>()(
           composerOpen: false,
           phase: "rest",
           spawn: null,
-          fx: { kind: "restore", seq: fx.seq + 1, from: null },
+          fx: { kind: "restore", seq: fx.seq + 1, from: null, added: null },
         });
       },
 
@@ -330,7 +344,7 @@ export const useForm = create<FormState>()(
       merge: (persisted, current) => {
         const p = persisted as Partial<FormState> | undefined;
         const ok = p?.doc ? DocSchema.safeParse(p.doc) : null;
-        return { ...current, doc: ok?.success ? ok.data : current.doc, log: Array.isArray(p?.log) ? p!.log! : current.log };
+        return { ...current, doc: ok?.success ? migrateViews(p!.doc, ok.data) : current.doc, log: Array.isArray(p?.log) ? p!.log! : current.log };
       },
     },
   ),
