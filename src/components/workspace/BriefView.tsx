@@ -1,11 +1,11 @@
 "use client";
 
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
 import { useForm } from "@/lib/store";
 import { ease, move } from "@/lib/motion";
 import { briefHtml, briefPlainText, composeBrief, lineText, type Audience, type Brief, type BriefLine, type BriefSection } from "@/lib/brief";
-import type { BriefSectionKey, Doc } from "@/lib/schema";
+import { BRIEF_TEXT_MAX, type BriefSectionKey, type Doc } from "@/lib/schema";
 import { DecodeText } from "../text/TextMotion";
 import { ShuffleText } from "../text/ShuffleText";
 
@@ -133,14 +133,24 @@ export function BriefView() {
           Composed by FORM from the project data. Nothing is invented: what it doesn&rsquo;t know is listed as a question. Click any line to rewrite it.
         </p>
         {brief.changes > 0 && (
-          <button
-            type="button"
-            onClick={() => commit([{ op: "resetBrief", audience }], "reset brief")}
-            className="focus-ring t-data shrink-0 cursor-pointer rounded-full bg-black/[0.05] px-3 py-1.5 text-text-2 transition-colors hover:bg-black/[0.08] hover:text-text"
-          >
-            {brief.changes} {brief.changes === 1 ? "edit" : "edits"}
-            {brief.hidden > 0 ? ` · ${brief.hidden} hidden` : ""} · Reset to FORM&rsquo;s version
-          </button>
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+            {brief.hidden.length > 0 && (
+              <button
+                type="button"
+                onClick={() => commit(brief.hidden.map((key) => ({ op: "resetBriefLine" as const, key })), "show hidden lines")}
+                className="focus-ring t-data cursor-pointer rounded-full px-3 py-1.5 text-text-2 transition-colors hover:bg-black/[0.05] hover:text-text"
+              >
+                Show {brief.hidden.length} hidden
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => commit([{ op: "resetBrief", audience }], "reset brief")}
+              className="focus-ring t-data cursor-pointer rounded-full bg-black/[0.05] px-3 py-1.5 text-text-2 transition-colors hover:bg-black/[0.08] hover:text-text"
+            >
+              {brief.changes} {brief.changes === 1 ? "edit" : "edits"} · Reset to FORM&rsquo;s version
+            </button>
+          </div>
         )}
       </motion.div>
     </motion.article>
@@ -219,19 +229,28 @@ function Section({
 function Row({ line, doc, delay, className, plainMentions = false }: { line: BriefLine; doc: Doc; delay: number; className: string; plainMentions?: boolean }) {
   const commit = useForm((s) => s.commit);
   const [editing, setEditing] = useState(false);
+  // FORM's wording when the edit began: if the facts move on mid-edit, the line is flagged rather than silently re-based
+  const basis = useRef(line.composed);
   const text = lineText(line, doc);
   const mine = line.kind === "custom" || line.edited != null;
 
+  const begin = () => {
+    basis.current = line.composed;
+    setEditing(true);
+  };
   const save = (next: string) => {
     setEditing(false);
     if (next.replace(/\s+/g, " ").trim() === text.trim()) return;
     if (line.kind === "custom") commit([{ op: "updateBriefLine", id: line.id, text: next }], next.trim() ? "edit brief line" : "remove brief line");
-    else commit([{ op: "editBriefLine", key: line.key, text: next, basis: line.composed }], next.trim() ? "edit brief" : "hide brief line");
+    else commit([{ op: "editBriefLine", key: line.key, text: next, basis: basis.current }], next.trim() ? "edit brief" : "hide brief line");
   };
-  const startEditing = (e: MouseEvent) => {
+  const startEditing = (e: MouseEvent<HTMLSpanElement>) => {
     // Mentions keep selecting their task; everything else in the line opens the editor
     if ((e.target as HTMLElement).closest("button")) return;
-    setEditing(true);
+    // A drag that selected part of the line is someone copying, not editing
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed && e.currentTarget.contains(sel.anchorNode)) return;
+    begin();
   };
 
   return (
@@ -261,7 +280,7 @@ function Row({ line, doc, delay, className, plainMentions = false }: { line: Bri
               {mine ? text : <Runs line={line} doc={doc} plainMentions={plainMentions} />}
             </motion.span>
           </AnimatePresence>
-          <LineTools line={line} onEdit={() => setEditing(true)} />
+          <LineTools line={line} onEdit={begin} />
         </span>
       )}
       {line.stale && !editing && <Stale line={line} doc={doc} />}
@@ -350,34 +369,68 @@ function Stale({ line, doc }: { line: BriefLine; doc: Doc }) {
   );
 }
 
-/** In-place plain-text editor: Enter saves, Shift+Enter is ignored, Escape cancels, blur saves */
+/** Put the caret after the last character */
+function caretToEnd(el: HTMLElement) {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel?.removeAllRanges();
+  sel?.addRange(range);
+}
+
+/**
+ * In-place plain-text editor. Enter saves (on an emptied line it hides it), Escape cancels,
+ * clicking away saves — but clicking away from an emptied line leaves it as it was, and
+ * switching window or tab keeps the edit open.
+ */
 function Editor({ initial, className, placeholder, onDone, onCancel }: { initial: string; className: string; placeholder?: string; onDone: (text: string) => void; onCancel: () => void }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const cancelled = useRef(false);
+  // Read once: the user's typing is never overwritten when the data behind the line changes mid-edit
+  const first = useRef(initial);
+  const settled = useRef(false);
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.textContent = initial;
+    el.textContent = first.current;
     el.focus();
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    range.collapse(false);
-    const sel = window.getSelection();
-    sel?.removeAllRanges();
-    sel?.addRange(range);
-  }, [initial]);
+    caretToEnd(el);
+  }, []);
+
+  const finish = (text: string | null) => {
+    if (settled.current) return;
+    settled.current = true;
+    if (text === null) onCancel();
+    else onDone(text);
+  };
 
   const onKeyDown = (e: KeyboardEvent<HTMLSpanElement>) => {
     e.stopPropagation();
+    // Enter and Escape belong to the IME while it is composing (Japanese, Chinese, Korean input)
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === "Enter") {
       e.preventDefault();
-      e.currentTarget.blur();
+      finish(e.currentTarget.textContent ?? "");
     } else if (e.key === "Escape") {
       e.preventDefault();
-      cancelled.current = true;
-      e.currentTarget.blur();
+      finish(null);
     }
+  };
+
+  const onInput = (e: FormEvent<HTMLSpanElement>) => {
+    const el = e.currentTarget;
+    const t = el.textContent ?? "";
+    if (t.length <= BRIEF_TEXT_MAX) return;
+    el.textContent = t.slice(0, BRIEF_TEXT_MAX);
+    caretToEnd(el);
+  };
+
+  const onBlur = (e: FocusEvent<HTMLSpanElement>) => {
+    // The window or tab lost focus: the edit stays open and focus returns with it
+    if (!document.hasFocus()) return;
+    const t = e.currentTarget.textContent ?? "";
+    finish(t.trim() ? t : null);
   };
 
   return (
@@ -391,7 +444,8 @@ function Editor({ initial, className, placeholder, onDone, onCancel }: { initial
       data-placeholder={placeholder}
       data-interactive
       onKeyDown={onKeyDown}
-      onBlur={(e) => (cancelled.current ? onCancel() : onDone(e.currentTarget.textContent ?? ""))}
+      onInput={onInput}
+      onBlur={onBlur}
       className={`${className} -mx-2 rounded-[10px] bg-black/[0.04] px-2 outline-none empty:before:text-text-4 empty:before:content-[attr(data-placeholder)]`}
     />
   );

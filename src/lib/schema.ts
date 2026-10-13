@@ -139,13 +139,18 @@ export const ProposalSchema = z.object({
    ------------------------------------------------------------------ */
 
 export const BriefSectionKeySchema = z.enum(["note", "done", "moving", "next", "risks", "questions"]);
-export const BriefEditSchema = z.object({ text: z.string().max(600), basis: z.string().max(600) });
-export const BriefLineSchema = z.object({ id: z.string(), audience: AudienceSchema, section: BriefSectionKeySchema, text: z.string().max(600) });
+/** The longest line the user can write; reducers clamp to it, so a stored brief always parses */
+export const BRIEF_TEXT_MAX = 600;
+/** Most lines the user can add across both versions */
+export const BRIEF_LINES_MAX = 80;
+// No cap on basis: it is FORM's own wording, which grows with task titles
+export const BriefEditSchema = z.object({ text: z.string().max(BRIEF_TEXT_MAX), basis: z.string() });
+export const BriefLineSchema = z.object({ id: z.string(), audience: AudienceSchema, section: BriefSectionKeySchema, text: z.string().max(BRIEF_TEXT_MAX) });
 export const BriefStateSchema = z.object({
   /** "<audience>:<sentence id>" → the user's wording; empty text hides the sentence */
   edits: z.record(z.string(), BriefEditSchema).default({}),
   /** Lines the user added */
-  lines: z.array(BriefLineSchema).max(80).default([]),
+  lines: z.array(BriefLineSchema).max(BRIEF_LINES_MAX).default([]),
 });
 
 export const DocSchema = z.object({
@@ -160,7 +165,8 @@ export const DocSchema = z.object({
   people: z.array(PersonSchema).max(20).default([]),
   /** Proposed reassignments, shown as a preview on the Team view */
   plan: ReassignPlanSchema.nullable().default(null),
-  brief: BriefStateSchema.default({ edits: {}, lines: [] }),
+  // A brief that somehow fails to parse costs the user's brief edits, never the whole workspace
+  brief: BriefStateSchema.default({ edits: {}, lines: [] }).catch({ edits: {}, lines: [] }),
 });
 
 /* ------------------------------------------------------------------
@@ -222,10 +228,10 @@ export const OperationSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("acceptReassign") }),
   z.object({ op: z.literal("discardReassign") }),
   /** Brief: rewrite a composed sentence (key = "<audience>:<sentence id>", basis = the composed wording it replaces) */
-  z.object({ op: z.literal("editBriefLine"), key: z.string(), text: z.string().max(600), basis: z.string().max(600) }),
+  z.object({ op: z.literal("editBriefLine"), key: z.string(), text: z.string().max(BRIEF_TEXT_MAX), basis: z.string() }),
   z.object({ op: z.literal("resetBriefLine"), key: z.string() }),
-  z.object({ op: z.literal("addBriefLine"), audience: AudienceSchema, section: BriefSectionKeySchema, text: z.string().min(1).max(600) }),
-  z.object({ op: z.literal("updateBriefLine"), id: z.string(), text: z.string().max(600) }),
+  z.object({ op: z.literal("addBriefLine"), audience: AudienceSchema, section: BriefSectionKeySchema, text: z.string().min(1).max(BRIEF_TEXT_MAX) }),
+  z.object({ op: z.literal("updateBriefLine"), id: z.string(), text: z.string().max(BRIEF_TEXT_MAX) }),
   z.object({ op: z.literal("removeBriefLine"), id: z.string() }),
   z.object({ op: z.literal("resetBrief"), audience: AudienceSchema }),
 ]);

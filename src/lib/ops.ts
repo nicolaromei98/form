@@ -1,6 +1,6 @@
 import { DEFAULT_VIEW, SAMPLE_OWNERS, sampleTeam, uid, websiteTemplate } from "./seed";
 import { addMoodItems, arrangeMood, patchMoodItem } from "./mood";
-import type { BlockType, Doc, Operation, ReassignPlan, Task } from "./schema";
+import { BRIEF_LINES_MAX, BRIEF_TEXT_MAX, type BlockType, type Doc, type Operation, type ReassignPlan, type Task } from "./schema";
 
 const BLOCK_ORDER: BlockType[] = ["header", "metrics", "progress", "collection", "moodboard"];
 
@@ -233,7 +233,7 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
 
     case "editBriefLine": {
       const edits = { ...doc.brief.edits };
-      const text = op.text.replace(/\s+/g, " ").trim();
+      const text = briefText(op.text);
       // Writing back exactly what FORM composed is no edit at all
       if (text === op.basis.trim()) delete edits[op.key];
       else edits[op.key] = { text, basis: op.basis };
@@ -248,13 +248,13 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
     }
 
     case "addBriefLine": {
-      const text = op.text.replace(/\s+/g, " ").trim();
-      if (!text) return doc;
+      const text = briefText(op.text);
+      if (!text || doc.brief.lines.length >= BRIEF_LINES_MAX) return doc;
       return { ...doc, brief: { ...doc.brief, lines: [...doc.brief.lines, { id: uid("b"), audience: op.audience, section: op.section, text }] } };
     }
 
     case "updateBriefLine": {
-      const text = op.text.replace(/\s+/g, " ").trim();
+      const text = briefText(op.text);
       if (!doc.brief.lines.some((l) => l.id === op.id)) return doc;
       const lines = text ? doc.brief.lines.map((l) => (l.id === op.id ? { ...l, text } : l)) : doc.brief.lines.filter((l) => l.id !== op.id);
       return { ...doc, brief: { ...doc.brief, lines } };
@@ -274,6 +274,9 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
       return doc.plan ? { ...doc, plan: null } : doc;
   }
 }
+
+/** The user's brief wording: one line, within the stored limit (a longer one would fail the persisted parse) */
+const briefText = (t: string) => t.replace(/\s+/g, " ").trim().slice(0, BRIEF_TEXT_MAX).trim();
 
 export function applyOperations(doc: Doc, ops: Operation[]): Doc {
   return ops.reduce(applyOperation, doc);

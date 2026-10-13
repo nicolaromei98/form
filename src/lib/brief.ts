@@ -50,8 +50,8 @@ export interface Brief {
   palette: string[];
   /** The user's changes for this audience: rewritten, hidden and added lines */
   changes: number;
-  /** Composed lines the user hid in this audience */
-  hidden: number;
+  /** Edit keys of the composed lines the user hid in this audience */
+  hidden: string[];
 }
 
 export const SECTION_LABEL: Record<BriefSectionKey, string> = {
@@ -224,7 +224,8 @@ export function composeBrief(doc: Doc, audience: Audience, short: boolean, today
   if (!doc.tool) return null;
   const d = draft(doc, audience, today);
   const edits = doc.brief.edits;
-  let hidden = 0;
+  const hidden: string[] = [];
+  let applied = 0;
 
   // The composed sentence with the user's edit on top; null when they hid it
   const compose = (x: Draft): BriefLine | null => {
@@ -232,9 +233,13 @@ export function composeBrief(doc: Doc, audience: Audience, short: boolean, today
     const composed = plainText(x.runs, doc);
     const e = edits[key];
     if (e && !e.text) {
-      hidden++;
+      // A hide holds only while FORM would say the same thing: a new fact in that slot shows up
+      if (e.basis !== composed) return { id: x.id, key, kind: "composed", runs: x.runs, composed, edited: null, stale: false };
+      hidden.push(key);
+      applied++;
       return null;
     }
+    if (e) applied++;
     return { id: x.id, key, kind: "composed", runs: x.runs, composed, edited: e ? e.text : null, stale: !!e && e.basis !== composed };
   };
 
@@ -243,22 +248,22 @@ export function composeBrief(doc: Doc, audience: Audience, short: boolean, today
   for (const key of ORDER) {
     // The short version keeps what's moving, what's next, what could go wrong and what isn't known —
     // never figures without the gaps behind them — plus everything the user wrote themselves
-    if (short && key === "done") continue;
-    const composedLines = (d.sections[key] ?? []).map(compose).filter((l): l is BriefLine => l !== null);
+    const composedLines = short && key === "done" ? [] : (d.sections[key] ?? []).map(compose).filter((l): l is BriefLine => l !== null);
     const lines = [
       ...(short ? composedLines.slice(0, 2) : composedLines),
       ...custom
         .filter((l) => l.section === key)
         .map((l): BriefLine => ({ id: l.id, key: l.id, kind: "custom", runs: [l.text], composed: "", edited: null, stale: false })),
     ];
-    if (lines.length || (key !== "note" && d.sections[key]?.length)) sections.push({ key, label: SECTION_LABEL[key], lines });
+    if (lines.length || (key !== "note" && !(short && key === "done") && d.sections[key]?.length)) sections.push({ key, label: SECTION_LABEL[key], lines });
   }
 
   const headline = d.headline.map(compose).filter((l): l is BriefLine => l !== null);
   const team = audience === "team";
   const eyebrow = ["Status", date(today), team ? "For the team" : "For the client", ...(d.sample ? ["Sample schedule"] : [])];
   const palette = doc.mood.filter((i) => i.kind === "color" && i.hex).map((i) => i.hex!).slice(0, 8);
-  const changes = Object.keys(edits).filter((k) => k.startsWith(`${audience}:`)).length + custom.length;
+  // Only what is on the page: edits to sentences FORM no longer writes stay dormant until they come back
+  const changes = applied + custom.length;
 
   return { eyebrow, headline, progress: d.bar, sections, palette, changes, hidden };
 }
