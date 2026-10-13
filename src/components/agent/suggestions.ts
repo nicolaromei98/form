@@ -9,6 +9,10 @@ export function suggestionsFor(doc: Doc, selectedId: string | null): string[] {
   if (doc.plan) return ["Accept the plan", "Discard"];
   if (sel) {
     if (sel.parentId) return ["Mark it done", "Make it urgent"];
+    // From the brief, only offer changes the brief shows
+    if (doc.view.representation === "brief") {
+      return [sel.status === "done" ? "Mark it in progress" : "Mark it done", sel.status === "review" ? "Mark it in progress" : "Mark it in review", `Focus on ${sel.title}`];
+    }
     const out = ["Break this task into smaller steps", "Make this more prominent"];
     out.push(sel.status === "done" ? "Mark it in progress" : "Mark it done");
     return out;
@@ -17,11 +21,19 @@ export function suggestionsFor(doc: Doc, selectedId: string | null): string[] {
   const v = doc.view;
   const out: string[] = [];
   if (v.representation === "focus") return ["Show me everything again", "Show this project as a timeline", "Highlight the urgent ones"];
+  if (v.representation === "brief") {
+    return [
+      (v.briefAudience ?? "client") === "client" ? "Now make it for the team" : "Now make it for the client",
+      v.briefShort ? "Make it longer" : "Make it shorter",
+      "Change back to the original project tracker",
+    ];
+  }
   if (v.representation === "team") {
     if (!doc.people.length) return ["Add a sample team", "Add Giulia and Paolo to the team", "Change back to the original project tracker"];
     return ["Balance the workload", "Who's overloaded?", "Assign Development to Sara", "Change back to the original project tracker"];
   }
   out.push("What should I work on now?");
+  out.push("Write a status update for the client");
   if (v.representation === "cards") {
     if (v.density === "comfortable" || v.sort !== "priority") out.push("Make the cards more compact and sort them by priority");
     out.push("Show the team workload");
@@ -60,6 +72,11 @@ export const CAPABILITIES: { group: string; needs: Requirement; items: string[] 
     group: "Layout",
     needs: "tool",
     items: ["Make the cards more compact", "Show the tasks in two columns", "Sort them by priority", "Hide completed tasks", "Highlight the urgent ones", "Add a progress indicator"],
+  },
+  {
+    group: "Brief",
+    needs: "tool",
+    items: ["Write a status update for the client", "Now make it for the team", "Make the brief shorter", "What do I tell the client?"],
   },
   {
     group: "Team",

@@ -46,7 +46,7 @@ export const ReassignPlanSchema = z.object({ moves: z.array(ReassignMoveSchema).
    UI representation + layout preferences (structured config, not code)
    ------------------------------------------------------------------ */
 
-export const RepresentationSchema = z.enum(["cards", "board", "timeline", "focus", "team"]);
+export const RepresentationSchema = z.enum(["cards", "board", "timeline", "focus", "team", "brief"]);
 export const DensitySchema = z.enum(["comfortable", "compact"]);
 export const LayoutSchema = z.enum(["grid", "list"]);
 export const SortSchema = z.enum(["manual", "priority", "progress", "status", "title", "estimate"]);
@@ -70,6 +70,10 @@ export const ViewSchema = z.object({
   fields: FieldsSchema,
   /** Focus representation: task the user pinned; null = FORM decides */
   focusId: z.string().nullable().optional(),
+  /** Brief representation: who the written update is for */
+  briefAudience: z.enum(["client", "team"]).optional(),
+  /** Brief representation: the short version (independent of the tracker's density) */
+  briefShort: z.boolean().optional(),
 });
 
 export const ToolSchema = z.object({
@@ -258,6 +262,7 @@ export const REPRESENTATION_LABEL: Record<Representation, string> = {
   timeline: "Timeline",
   focus: "Focus",
   team: "Team",
+  brief: "Brief",
 };
 
 export const SORT_LABEL: Record<Sort, string> = {

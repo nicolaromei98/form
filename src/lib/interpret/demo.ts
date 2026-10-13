@@ -60,6 +60,12 @@ export function interpretDemo(raw: string, ctx: InterpretContext): Interpretatio
     return unsupported("Budget overviews aren't in this build yet. You can give a selected task a cost — e.g. 'set the cost to €2,400'.");
   }
 
+  /* ---------- status brief ---------- */
+  // Before create ("generate a status report for the project" isn't a new project)
+  // and before team ("now make it for the team" is about the brief's audience)
+  const brief = briefIntent(s, doc);
+  if (brief) return brief;
+
   /* ---------- create ---------- */
   const createVerb = /\b(create|make|build|set ?up|start|generate|spin up|give me|i need|new)\b/.test(s);
   const createNoun = /\b(tracker|project|plan|planner|tasks?|to-?dos?|workspace|board|kanban|timeline)\b/.test(s);
@@ -132,8 +138,10 @@ export function interpretDemo(raw: string, ctx: InterpretContext): Interpretatio
     if (target.parentId) return clarify("Steps can't be nested further in this build.");
     const items = breakdownFor(target);
     const total = items.every((i) => i.estimate != null) ? ` · fits its ${target.estimate}d estimate` : "";
+    // The brief and the team view don't show proposals: bring the tasks back so the steps can be reviewed
+    const show: Operation[] = doc.view.representation === "brief" || doc.view.representation === "team" ? [{ op: "setRepresentation", representation: "cards" }] : [];
     return {
-      ops: [{ op: "proposeSubtasks", parentId: target.id, items }],
+      ops: [...show, { op: "proposeSubtasks", parentId: target.id, items }],
       tone: "proposal",
       message: `${items.length} steps proposed for ${target.title}${total}. Review them on the task.`,
       target: target.id,
@@ -387,6 +395,13 @@ export function interpretDemo(raw: string, ctx: InterpretContext): Interpretatio
     notes.push(`${title} added`);
   }
 
+  // Focus and the brief hide the metrics and progress blocks: show the tracker so an added block is visible
+  const quiet = doc.view.representation === "focus" || doc.view.representation === "brief";
+  if (quiet && ops.some((o) => o.op === "addBlock" && (o.block === "metrics" || o.block === "progress")) && !ops.some((o) => o.op === "setRepresentation")) {
+    ops.push({ op: "setRepresentation", representation: "cards" });
+    notes.push("Tracker");
+  }
+
   if (!ops.length && !notes.length) {
     return unsupported(
       target && /\b(this|it)\b/.test(s)
@@ -503,6 +518,59 @@ function moodboardIntent(clean: string, s: string, doc: Doc): Interpretation | n
     };
   }
   return null;
+}
+
+/* ------------------------------------------------------------------
+   Status brief
+   ------------------------------------------------------------------ */
+
+function briefIntent(s: string, doc: Doc): Interpretation | null {
+  if (!doc.tool) return null;
+  // Commands about something else that merely contain brief-like words ("add a task called Status report",
+  // "add a note: client brief due Friday", "mark Website copy as done", "assign UI Design to the team")
+  if (/\b(add|create|new|rename|called|named|note)\b.*\b(task|step|subtask|note|it)\b|\b(called|named|rename)\b|^add (a |an )?note\b/.test(s)) return null;
+  if (/\b(assign\w*|overload\w*|workload|capacity|balance|rebalanc\w*)\b/.test(s)) return null;
+  if (findNamedTask(s, doc)) return null;
+
+  const inBrief = doc.view.representation === "brief";
+  const noun = "(brief|update|report|recap)";
+  // "summary" alone stays with the metrics block ("show the project summary"); only "summary for the client/team" is a brief
+  const asks =
+    (new RegExp(`\\b(status|client|team|weekly|project|progress) ${noun}\\b`).test(s) && !/\bupdate (the|its|their|my|his|her) /.test(s)) ||
+    new RegExp(`\\b(write|draft|prepare|generate|create|compose|give me|send)\\b( me)?( an?| the| a quick| a short| a weekly)? ${noun}\\b`).test(s) ||
+    /\b(update|report|recap|brief|summary) for (the |my |our )?(client|team)\b/.test(s) ||
+    /\bsend (the |my |our )?(client|team) (an? )?(update|brief|recap|report)\b/.test(s) ||
+    /\bwhat (do|should|can) (i|we) (tell|say to|send) (the |my |our )?(client|team)\b/.test(s) ||
+    /\b(show|open|switch to|go to)( the)? brief\b|\bas a brief\b/.test(s);
+  // Follow-ups only as whole commands, so they can't swallow task edits
+  const forTeam = /^(now |and )?(make it |write it |make the brief |show it )?(for (the |my |our )?team|internal|the team version|team version)( version)?$/.test(s);
+  const forClient = /^(now |and )?(make it |write it |make the brief |show it )?(for (the |my |our )?client|external|the client version|client version)( version)?$/.test(s);
+  const shorter = /^(now )?(make (it|the brief) )?(shorter|short|briefer|the short version|short version|just the essentials|tl;?dr)$/.test(s);
+  const longer = /^(now )?(make (it|the brief) )?(longer|the full version|full version|full|more detail(ed)?)$/.test(s);
+  const copy = /^copy( it| this| the brief)?$/.test(s);
+  // From another view, "make it for the team" / "make the brief shorter" mean the brief too (they're in the palette)
+  const followUp = forTeam || forClient || shorter || longer || copy;
+  if (!asks && !followUp) return null;
+  if (!inBrief && !asks && (copy || ((shorter || longer) && !/\bbrief\b/.test(s)))) return null;
+
+  const current = doc.view.briefAudience ?? "client";
+  const audience =
+    forTeam || (asks && /\bteam\b/.test(s) && !/\bclient\b/.test(s)) ? "team" : forClient || (asks && /\bclient\b/.test(s)) ? "client" : inBrief ? current : "client";
+  const wasShort = doc.view.briefShort ?? false;
+  const ops: Operation[] = [];
+  if (!inBrief) ops.push({ op: "setRepresentation", representation: "brief" });
+  if (audience !== current) ops.push({ op: "setView", patch: { briefAudience: audience } });
+  if (shorter && !wasShort) ops.push({ op: "setView", patch: { briefShort: true } });
+  else if (longer && wasShort) ops.push({ op: "setView", patch: { briefShort: false } });
+  if (copy && inBrief) return clarify("Use Copy on the brief: the clipboard needs a click.");
+  const short = shorter ? true : longer ? false : wasShort;
+  if (!ops.length) return { ops, tone: "done", message: `Already the ${audience} brief${short ? ", short version" : ""}`, target: null };
+  return {
+    ops,
+    tone: "done",
+    message: `Status brief · for the ${audience}${short ? " · short version" : ""} · composed from the project, nothing invented`,
+    target: null,
+  };
 }
 
 /* ------------------------------------------------------------------

@@ -15,6 +15,7 @@ import { BoardView } from "./BoardView";
 import { TimelineView } from "./TimelineView";
 import { FocusView } from "./FocusView";
 import { TeamView } from "./TeamView";
+import { BriefView } from "./BriefView";
 import { ShuffleText } from "../text/ShuffleText";
 
 /* ------------------------------------------------------------------
@@ -105,10 +106,10 @@ function TitleReveal({ delay, children }: { delay: number; children: ReactNode }
 function RepresentationSwitch() {
   const rep = useForm((s) => s.doc.view.representation);
   const setRep = useForm((s) => s.setRepresentation);
-  const reps: Representation[] = ["cards", "board", "timeline", "team", "focus"];
+  const reps: Representation[] = ["cards", "board", "timeline", "team", "focus", "brief"];
   return (
     <LayoutGroup id="rep-switch">
-      <div role="tablist" aria-label="Representation" className="glass flex h-[44px] items-center rounded-full p-1">
+      <div role="tablist" aria-label="Representation" className="glass no-scrollbar flex h-[44px] max-w-full items-center overflow-x-auto rounded-full p-1">
         {reps.map((r) => (
           <button
             key={r}
@@ -116,7 +117,7 @@ function RepresentationSwitch() {
             type="button"
             aria-selected={rep === r}
             onClick={() => setRep(r)}
-            className={`focus-ring t-body-s relative h-full cursor-pointer rounded-full px-3 transition-colors duration-300 sm:px-4 ${rep === r ? "text-on-ink" : "text-text-2 hover:text-text"}`}
+            className={`focus-ring t-body-s relative h-full shrink-0 cursor-pointer rounded-full px-2 whitespace-nowrap transition-colors duration-300 min-[400px]:px-3 sm:px-4 ${rep === r ? "text-on-ink" : "text-text-2 hover:text-text"}`}
           >
             {rep === r && <motion.span layoutId="rep-active" className="absolute inset-0 rounded-full bg-ink" transition={move} />}
             <ShuffleText text={REPRESENTATION_LABEL[r]} className="relative" />
@@ -134,6 +135,19 @@ function ViewControls() {
   const sorts: Sort[] = ["manual", "priority", "progress", "status", "title", "estimate"];
   // Timeline follows workflow order; focus shows one task — sorting means nothing there
   const timeline = view.representation === "timeline" || view.representation === "focus";
+
+  // The brief is prose: its only control is its length; the task-view toggles would do nothing there
+  if (view.representation === "brief") {
+    return (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Toggle
+          label="Short version"
+          on={view.briefShort ?? false}
+          onChange={(v) => commit([{ op: "setView", patch: { briefShort: v } }], v ? "short brief" : "full brief")}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -332,10 +346,11 @@ const REPRESENTATIONS: Record<Representation, () => ReactNode> = {
   timeline: TimelineView,
   focus: FocusView,
   team: TeamView,
+  brief: BriefView,
 };
 
 /** Views with their own spatial model: they build themselves instead of morphing task surfaces */
-const HANDOVER: Representation[] = ["timeline", "team"];
+const HANDOVER: Representation[] = ["timeline", "team", "brief"];
 
 export function CollectionBlock() {
   const rep = useForm((s) => s.doc.view.representation);

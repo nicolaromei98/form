@@ -7,7 +7,7 @@ import { BLOCKS } from "./registry";
 
 export function Workspace() {
   const tool = useForm((s) => s.doc.tool);
-  const focus = useForm((s) => s.doc.view.representation === "focus");
+  const rep = useForm((s) => s.doc.view.representation);
   const fx = useForm((s) => s.fx);
   const phase = useForm((s) => s.phase);
   const setSpawn = useForm((s) => s.setSpawn);
@@ -32,11 +32,14 @@ export function Workspace() {
     <LayoutGroup>
       <div className="mx-auto w-full max-w-[1240px] px-4 pt-[104px] pb-[200px] md:px-10 md:pt-[120px]">
         <AnimatePresence>
-          {/* In focus, only the header line and the stage remain */}
-          {tool.blocks.filter((b) => !focus || b === "header" || b === "collection").map((b) => {
-            const Block = BLOCKS[b];
-            return <Block key={b} />;
-          })}
+          {/* Focus is a stage: only the header line and the stage remain. The brief already
+              states progress, so the metrics and progress blocks step aside for it */}
+          {tool.blocks
+            .filter((b) => (rep === "focus" ? b === "header" || b === "collection" : rep === "brief" ? b !== "metrics" && b !== "progress" : true))
+            .map((b) => {
+              const Block = BLOCKS[b];
+              return <Block key={b} />;
+            })}
         </AnimatePresence>
       </div>
     </LayoutGroup>
