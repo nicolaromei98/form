@@ -21,6 +21,7 @@ export function emptyDoc(): Doc {
     mood: [],
     people: [],
     plan: null,
+    brief: { edits: {}, lines: [] },
   };
 }
 

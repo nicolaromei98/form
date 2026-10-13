@@ -34,6 +34,7 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
         mood: [],
         people: t.people,
         plan: null,
+        brief: { edits: {}, lines: [] },
       };
     }
 
@@ -228,6 +229,45 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
       const tasks = { ...doc.tasks };
       for (const m of plan.moves) tasks[m.taskId] = { ...tasks[m.taskId], owner: m.to };
       return { ...doc, tasks, plan: null };
+    }
+
+    case "editBriefLine": {
+      const edits = { ...doc.brief.edits };
+      const text = op.text.replace(/\s+/g, " ").trim();
+      // Writing back exactly what FORM composed is no edit at all
+      if (text === op.basis.trim()) delete edits[op.key];
+      else edits[op.key] = { text, basis: op.basis };
+      return { ...doc, brief: { ...doc.brief, edits } };
+    }
+
+    case "resetBriefLine": {
+      if (!(op.key in doc.brief.edits)) return doc;
+      const edits = { ...doc.brief.edits };
+      delete edits[op.key];
+      return { ...doc, brief: { ...doc.brief, edits } };
+    }
+
+    case "addBriefLine": {
+      const text = op.text.replace(/\s+/g, " ").trim();
+      if (!text) return doc;
+      return { ...doc, brief: { ...doc.brief, lines: [...doc.brief.lines, { id: uid("b"), audience: op.audience, section: op.section, text }] } };
+    }
+
+    case "updateBriefLine": {
+      const text = op.text.replace(/\s+/g, " ").trim();
+      if (!doc.brief.lines.some((l) => l.id === op.id)) return doc;
+      const lines = text ? doc.brief.lines.map((l) => (l.id === op.id ? { ...l, text } : l)) : doc.brief.lines.filter((l) => l.id !== op.id);
+      return { ...doc, brief: { ...doc.brief, lines } };
+    }
+
+    case "removeBriefLine":
+      return doc.brief.lines.some((l) => l.id === op.id) ? { ...doc, brief: { ...doc.brief, lines: doc.brief.lines.filter((l) => l.id !== op.id) } } : doc;
+
+    case "resetBrief": {
+      const edits = Object.fromEntries(Object.entries(doc.brief.edits).filter(([k]) => !k.startsWith(`${op.audience}:`)));
+      const lines = doc.brief.lines.filter((l) => l.audience !== op.audience);
+      if (lines.length === doc.brief.lines.length && Object.keys(edits).length === Object.keys(doc.brief.edits).length) return doc;
+      return { ...doc, brief: { edits, lines } };
     }
 
     case "discardReassign":

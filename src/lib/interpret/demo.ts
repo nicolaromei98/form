@@ -8,6 +8,7 @@ import {
   STATUS_LABEL,
   type Doc,
   type Interpretation,
+  type BriefSectionKey,
   type MoodInput,
   type MoodLayout,
   type Operation,
@@ -50,7 +51,10 @@ export function interpretDemo(raw: string, ctx: InterpretContext): Interpretatio
   /* ---------- control ---------- */
   if (/^(undo|undo (that|it)|go back|revert( that)?)$/.test(s)) return control("undo", "Undone");
   if (/^redo( that| it)?$/.test(s)) return control("redo", "Redone");
-  if (/\b(reset|start over|clear (the )?(workspace|everything)|wipe (it|everything))\b/.test(s)) return control("reset", "Workspace reset");
+  // "Reset the brief" / "restore FORM's version" only clear the user's brief edits, never the workspace
+  if (/\b(reset|start over|clear (the )?(workspace|everything)|wipe (it|everything))\b/.test(s) && !/\b(brief|my edits)\b|form'?s version/.test(s)) {
+    return control("reset", "Workspace reset");
+  }
 
   /* ---------- tool families not in this build ---------- */
   if (/\b(compar\w*|versus|vs|pros and cons|trade-?offs?)\b/.test(s)) {
@@ -63,6 +67,8 @@ export function interpretDemo(raw: string, ctx: InterpretContext): Interpretatio
   /* ---------- status brief ---------- */
   // Before create ("generate a status report for the project" isn't a new project)
   // and before team ("now make it for the team" is about the brief's audience)
+  const briefEdit = briefEditIntent(clean, s, doc);
+  if (briefEdit) return briefEdit;
   const brief = briefIntent(s, doc);
   if (brief) return brief;
 
@@ -523,6 +529,49 @@ function moodboardIntent(clean: string, s: string, doc: Doc): Interpretation | n
 /* ------------------------------------------------------------------
    Status brief
    ------------------------------------------------------------------ */
+
+const BRIEF_SECTION: Record<string, BriefSectionKey> = {
+  note: "note",
+  notes: "note",
+  done: "done",
+  "in progress": "moving",
+  progress: "moving",
+  next: "next",
+  risk: "risks",
+  risks: "risks",
+  questions: "questions",
+  "open questions": "questions",
+};
+
+/** The user's own words in the brief: "add to the brief: homepage preview on Friday", "reset the brief" */
+function briefEditIntent(clean: string, s: string, doc: Doc): Interpretation | null {
+  if (!doc.tool) return null;
+  const audience = doc.view.briefAudience ?? "client";
+  const show: Operation[] = doc.view.representation === "brief" ? [] : [{ op: "setRepresentation", representation: "brief" }];
+  const section = "(note|notes|done|in progress|progress|next|risks?|open questions|questions)";
+  const add =
+    clean.match(new RegExp(`^(?:add|write|put|include)\\s+(?:a\\s+)?(?:line|note|sentence)?\\s*(?:to|in|on|into)\\s+(?:the\\s+)?brief(?:\\s+(?:under|in|to)\\s+(?:the\\s+)?${section})?\\s*[:,\\-–]\\s*(.+)$`, "i")) ??
+    (doc.view.representation === "brief" ? clean.match(new RegExp(`^(?:add|write|put)\\s+(?:to|under|in)\\s+(?:the\\s+)?${section}\\s*[:,\\-–]\\s*(.+)$`, "i")) : null);
+  if (add) {
+    const text = add[2].trim().replace(/^["“]|["”]$/g, "");
+    if (!text) return clarify("What should the line say? e.g. 'add to the brief: homepage preview on Friday'.");
+    // Without a section, the user's line is a note: their own words, under the headline
+    const key = BRIEF_SECTION[(add[1] ?? "note").toLowerCase()] ?? "note";
+    const line = text.charAt(0).toUpperCase() + text.slice(1);
+    return {
+      ops: [...show, { op: "addBriefLine", audience, section: key, text: /[.!?]$/.test(line) ? line : `${line}.` }],
+      tone: "done",
+      message: `Added to the ${audience} brief · ${key === "note" ? "Note" : key === "moving" ? "In progress" : key === "questions" ? "Open questions" : key.charAt(0).toUpperCase() + key.slice(1)}`,
+      target: null,
+    };
+  }
+  if (/^(reset|restore|clear|undo)\b.*\b(brief|my edits|form's version|forms version)\b/.test(s) && /\bbrief\b|form'?s version|my edits/.test(s)) {
+    const mine = Object.keys(doc.brief.edits).some((k) => k.startsWith(`${audience}:`)) || doc.brief.lines.some((l) => l.audience === audience);
+    if (!mine) return { ops: show, tone: "done", message: `The ${audience} brief is already FORM's version`, target: null };
+    return { ops: [...show, { op: "resetBrief", audience }], tone: "done", message: `Your edits to the ${audience} brief are cleared · FORM's version`, target: null };
+  }
+  return null;
+}
 
 function briefIntent(s: string, doc: Doc): Interpretation | null {
   if (!doc.tool) return null;

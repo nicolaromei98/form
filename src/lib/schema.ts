@@ -58,6 +58,9 @@ export const FieldsSchema = z.object({
   progress: z.boolean(),
 });
 
+/** Who a status brief is written for */
+export const AudienceSchema = z.enum(["client", "team"]);
+
 export const ViewSchema = z.object({
   representation: RepresentationSchema,
   density: DensitySchema,
@@ -71,7 +74,7 @@ export const ViewSchema = z.object({
   /** Focus representation: task the user pinned; null = FORM decides */
   focusId: z.string().nullable().optional(),
   /** Brief representation: who the written update is for */
-  briefAudience: z.enum(["client", "team"]).optional(),
+  briefAudience: AudienceSchema.optional(),
   /** Brief representation: the short version (independent of the tracker's density) */
   briefShort: z.boolean().optional(),
 });
@@ -129,6 +132,22 @@ export const ProposalSchema = z.object({
   items: z.array(ProposalItemSchema).min(1).max(8),
 });
 
+/* ------------------------------------------------------------------
+   Brief edits — the user's own wording on top of the composed brief.
+   An edit remembers the generated sentence it replaced (its basis), so
+   when the data moves on the brief can say so instead of going stale.
+   ------------------------------------------------------------------ */
+
+export const BriefSectionKeySchema = z.enum(["note", "done", "moving", "next", "risks", "questions"]);
+export const BriefEditSchema = z.object({ text: z.string().max(600), basis: z.string().max(600) });
+export const BriefLineSchema = z.object({ id: z.string(), audience: AudienceSchema, section: BriefSectionKeySchema, text: z.string().max(600) });
+export const BriefStateSchema = z.object({
+  /** "<audience>:<sentence id>" → the user's wording; empty text hides the sentence */
+  edits: z.record(z.string(), BriefEditSchema).default({}),
+  /** Lines the user added */
+  lines: z.array(BriefLineSchema).max(80).default([]),
+});
+
 export const DocSchema = z.object({
   tool: ToolSchema.nullable(),
   tasks: z.record(z.string(), TaskSchema),
@@ -141,6 +160,7 @@ export const DocSchema = z.object({
   people: z.array(PersonSchema).max(20).default([]),
   /** Proposed reassignments, shown as a preview on the Team view */
   plan: ReassignPlanSchema.nullable().default(null),
+  brief: BriefStateSchema.default({ edits: {}, lines: [] }),
 });
 
 /* ------------------------------------------------------------------
@@ -201,6 +221,13 @@ export const OperationSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("proposeReassign"), moves: z.array(ReassignMoveSchema).min(1).max(8) }),
   z.object({ op: z.literal("acceptReassign") }),
   z.object({ op: z.literal("discardReassign") }),
+  /** Brief: rewrite a composed sentence (key = "<audience>:<sentence id>", basis = the composed wording it replaces) */
+  z.object({ op: z.literal("editBriefLine"), key: z.string(), text: z.string().max(600), basis: z.string().max(600) }),
+  z.object({ op: z.literal("resetBriefLine"), key: z.string() }),
+  z.object({ op: z.literal("addBriefLine"), audience: AudienceSchema, section: BriefSectionKeySchema, text: z.string().min(1).max(600) }),
+  z.object({ op: z.literal("updateBriefLine"), id: z.string(), text: z.string().max(600) }),
+  z.object({ op: z.literal("removeBriefLine"), id: z.string() }),
+  z.object({ op: z.literal("resetBrief"), audience: AudienceSchema }),
 ]);
 
 export const OperationListSchema = z.array(OperationSchema).max(12);
@@ -229,6 +256,9 @@ export type Tool = z.infer<typeof ToolSchema>;
 export type ProposalItem = z.infer<typeof ProposalItemSchema>;
 export type Proposal = z.infer<typeof ProposalSchema>;
 export type Person = z.infer<typeof PersonSchema>;
+export type AudienceKind = z.infer<typeof AudienceSchema>;
+export type BriefSectionKey = z.infer<typeof BriefSectionKeySchema>;
+export type BriefState = z.infer<typeof BriefStateSchema>;
 export type ReassignMove = z.infer<typeof ReassignMoveSchema>;
 export type ReassignPlan = z.infer<typeof ReassignPlanSchema>;
 export type MoodKind = z.infer<typeof MoodKindSchema>;

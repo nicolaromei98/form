@@ -76,7 +76,7 @@ export const CAPABILITIES: { group: string; needs: Requirement; items: string[] 
   {
     group: "Brief",
     needs: "tool",
-    items: ["Write a status update for the client", "Now make it for the team", "Make the brief shorter", "What do I tell the client?"],
+    items: ["Write a status update for the client", "Now make it for the team", "Make the brief shorter", "What do I tell the client?", "Add to the brief: homepage preview on Friday", "Reset the brief"],
   },
   {
     group: "Team",
