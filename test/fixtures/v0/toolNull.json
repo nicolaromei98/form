@@ -1,0 +1,74 @@
+{
+  "state": {
+    "doc": {
+      "tool": null,
+      "tasks": {},
+      "order": [],
+      "view": {
+        "representation": "cards",
+        "density": "comfortable",
+        "layout": "grid",
+        "columns": null,
+        "sort": "manual",
+        "hideDone": false,
+        "highlightUrgent": false,
+        "fields": {
+          "priority": true,
+          "estimate": true,
+          "progress": true
+        }
+      },
+      "proposal": null,
+      "mood": [],
+      "people": [],
+      "plan": null,
+      "brief": {
+        "edits": {},
+        "lines": []
+      }
+    },
+    "log": [
+      {
+        "at": 1791965220000,
+        "label": "Highlight the urgent ones",
+        "source": "agent"
+      },
+      {
+        "at": 1791965160000,
+        "label": "view → cards",
+        "source": "direct"
+      },
+      {
+        "at": 1791965100000,
+        "label": "view → brief",
+        "source": "direct"
+      },
+      {
+        "at": 1791965040000,
+        "label": "view → focus",
+        "source": "direct"
+      },
+      {
+        "at": 1791964980000,
+        "label": "view → team",
+        "source": "direct"
+      },
+      {
+        "at": 1791964920000,
+        "label": "view → timeline",
+        "source": "direct"
+      },
+      {
+        "at": 1791964860000,
+        "label": "view → board",
+        "source": "direct"
+      },
+      {
+        "at": 1791964800000,
+        "label": "Create a project tracker for my new website",
+        "source": "agent"
+      }
+    ]
+  },
+  "version": 1
+}

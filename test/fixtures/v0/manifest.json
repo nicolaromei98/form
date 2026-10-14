@@ -1,0 +1,263 @@
+[
+  {
+    "name": "docDemo",
+    "file": "docDemo.json",
+    "kind": "envelope",
+    "source": "audit",
+    "covers": "§10.6 #1",
+    "purpose": "The demo template with all six views on the tracker (the Phase 0 audit's demo document).",
+    "v0Load": "valid"
+  },
+  {
+    "name": "docTracker",
+    "file": "docTracker.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #1; e2e add-view",
+    "purpose": "The template exactly as created: one tracker view, the sample team and the sample start date.",
+    "v0Load": "valid"
+  },
+  {
+    "name": "legacyMinimal",
+    "file": "legacyMinimal.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #2",
+    "purpose": "A save from before views, team, moodboard and brief existed: no tool.views, people, mood, plan, brief or task owner.",
+    "v0Load": "valid"
+  },
+  {
+    "name": "overTitle140",
+    "file": "overTitle140.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #3",
+    "purpose": "A 140-character project title, stored by the header editor before the safety patch (limit 80).",
+    "v0Load": "invalid"
+  },
+  {
+    "name": "over21People",
+    "file": "over21People.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #3",
+    "purpose": "21 people, added one by one in the Team view before the safety patch capped the team at 20.",
+    "v0Load": "invalid"
+  },
+  {
+    "name": "over216Mood",
+    "file": "over216Mood.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #3",
+    "purpose": "216 moodboard references from nine 24-image drops, before the safety patch capped the board at 200.",
+    "v0Load": "invalid"
+  },
+  {
+    "name": "overMasonryTallNotes",
+    "file": "overMasonryTallNotes.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #3",
+    "purpose": "Tall notes arranged as a masonry before the safety patch: heights over 3 and tops past 20 board widths.",
+    "v0Load": "invalid"
+  },
+  {
+    "name": "overNarrowNote",
+    "file": "overNarrowNote.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #3",
+    "purpose": "A note resized to 0.06 × 3 board widths, then laid out as a grid before the patch: width below the 0.04 minimum.",
+    "v0Load": "invalid"
+  },
+  {
+    "name": "incoherentDone40",
+    "file": "incoherentDone40.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #4",
+    "purpose": "done@40: \"Mark UI Design done at 40%\" sets both fields in one patch, so v0 never coerces them.",
+    "v0Load": "valid"
+  },
+  {
+    "name": "incoherentTodo30",
+    "file": "incoherentTodo30.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #4",
+    "purpose": "todo@30: the status menu moves UI Design (In progress, 30%) back to To do and keeps its progress.",
+    "v0Load": "valid"
+  },
+  {
+    "name": "incoherentReview100",
+    "file": "incoherentReview100.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #4",
+    "purpose": "review@100: the board's lane arrow moves Research from Done back to In review at 100%.",
+    "v0Load": "valid"
+  },
+  {
+    "name": "incoherentActive100",
+    "file": "incoherentActive100.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #4",
+    "purpose": "active@100: the status menu moves Research from Done to In progress at 100%.",
+    "v0Load": "valid"
+  },
+  {
+    "name": "incoherentTodo100",
+    "file": "incoherentTodo100.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #4",
+    "purpose": "todo@100: a patch that sets To do and 100% together (parser or Claude path) on Development.",
+    "v0Load": "valid"
+  },
+  {
+    "name": "sliderReview90",
+    "file": "sliderReview90.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #4",
+    "purpose": "Visual Direction (In review, 85%) after a slider pass 90 → 95 → 100 → 95 → 90: v0 stores active@90, review lost.",
+    "v0Load": "valid"
+  },
+  {
+    "name": "stepGrandchild",
+    "file": "stepGrandchild.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #5",
+    "purpose": "A step under a step: UI Design › Wireframes › Mobile wireframes (the reducer accepts a step as parent).",
+    "v0Load": "valid"
+  },
+  {
+    "name": "stepOrphan",
+    "file": "stepOrphan.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #5",
+    "purpose": "An orphan step: removing Copywriting deletes its step Headlines but leaves the grandchild Hero line pointing at nothing.",
+    "v0Load": "valid"
+  },
+  {
+    "name": "proposalAndPlan",
+    "file": "proposalAndPlan.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #6",
+    "purpose": "A subtasks proposal on UI Design and a reassign plan pending at once (v2 keeps one: the subtasks).",
+    "v0Load": "valid"
+  },
+  {
+    "name": "stepsWithEstimates",
+    "file": "stepsWithEstimates.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #7",
+    "purpose": "UI Design broken into accepted steps that carry their own estimates, one of them done.",
+    "v0Load": "valid"
+  },
+  {
+    "name": "danglingFocus",
+    "file": "danglingFocus.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #8",
+    "purpose": "view.focusId still names Development after Development was deleted (removeTask never clears it).",
+    "v0Load": "valid"
+  },
+  {
+    "name": "briefEdits",
+    "file": "briefEdits.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #9",
+    "purpose": "Brief edits keyed client:risks:t-ui and team:risks:load:p-marta, one keyed by a task that no longer exists, and two added lines.",
+    "v0Load": "valid"
+  },
+  {
+    "name": "moodImage",
+    "file": "moodImage.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #10; e2e moodboard",
+    "purpose": "A moodboard with one image whose blob is missing (the e2e suite stores a blob under its asset id, img-fixture1).",
+    "v0Load": "valid"
+  },
+  {
+    "name": "corruptMainWithBackup",
+    "file": "corruptMainWithBackup.json",
+    "kind": "storage",
+    "source": "generated",
+    "covers": "§10.6 #11",
+    "purpose": "A main key that isn't JSON (a truncated write) next to a .backup ({doc, log}) holding a valid workspace.",
+    "v0Load": "unreadable"
+  },
+  {
+    "name": "shapeEnvelope",
+    "file": "shapeEnvelope.json",
+    "kind": "storage",
+    "source": "generated",
+    "covers": "§10.6 #12",
+    "purpose": "The zustand envelope {state: {doc, log}, version: 1} as v0's store writes it.",
+    "v0Load": "valid"
+  },
+  {
+    "name": "shapeBackup",
+    "file": "shapeBackup.json",
+    "kind": "storage",
+    "source": "generated",
+    "covers": "§10.6 #12",
+    "purpose": "Only a .backup ({doc, log}, the safety patch's copy of an unreadable save) and no main key.",
+    "v0Load": "absent"
+  },
+  {
+    "name": "shapeBare",
+    "file": "shapeBare.json",
+    "kind": "storage",
+    "source": "generated",
+    "covers": "§10.6 #12",
+    "purpose": "A bare document under the main key, with no zustand envelope around it.",
+    "v0Load": "unreadable"
+  },
+  {
+    "name": "toolNull",
+    "file": "toolNull.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "§10.6 #13",
+    "purpose": "\"Reset demo\" after some work: tool null, no tasks, a log that still counts the changes.",
+    "v0Load": "valid"
+  },
+  {
+    "name": "doc60",
+    "file": "doc60.json",
+    "kind": "envelope",
+    "source": "audit",
+    "covers": "§10.6 #14",
+    "purpose": "60 top-level tasks over all six views (the Phase 0 audit's stress document).",
+    "v0Load": "valid"
+  },
+  {
+    "name": "doc150",
+    "file": "doc150.json",
+    "kind": "envelope",
+    "source": "audit",
+    "covers": "§10.6 #14",
+    "purpose": "150 top-level tasks over all six views (the Phase 0 audit's scale document).",
+    "v0Load": "valid"
+  },
+  {
+    "name": "clearedEstimate",
+    "file": "clearedEstimate.json",
+    "kind": "envelope",
+    "source": "generated",
+    "covers": "e2e timeline with a cleared estimate",
+    "purpose": "Visual Direction's estimate cleared to unknown (a valid v0 patch), so v2 shows the unknown reaching its successors.",
+    "v0Load": "valid"
+  }
+]
