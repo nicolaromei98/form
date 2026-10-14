@@ -1,0 +1,205 @@
+{
+  "label": "A",
+  "commit": "864fb475737055f1853e0ecde1acf2daeef74643",
+  "note": "Axe rules baseline A breaks in each state, colour contrast aside (Q14 fixes it). a11y.spec.ts fails a later build on any other rule. Regenerate with the commands in scripts/e2e/a11y-baseline.mjs.",
+  "source": "e2e/.out/a11y-A-vs-T/base/artifacts/a11y",
+  "states": {
+    "board": [
+      "aria-prohibited-attr",
+      "region",
+      "target-size"
+    ],
+    "brief-client": [
+      "aria-prohibited-attr",
+      "region"
+    ],
+    "brief-short": [
+      "aria-prohibited-attr",
+      "region"
+    ],
+    "brief-team": [
+      "aria-prohibited-attr",
+      "region"
+    ],
+    "caption-undo": [
+      "aria-prohibited-attr",
+      "region",
+      "target-size"
+    ],
+    "composer": [
+      "region"
+    ],
+    "empty": [
+      "aria-prohibited-attr",
+      "region"
+    ],
+    "focus": [
+      "aria-prohibited-attr",
+      "region"
+    ],
+    "intro": [
+      "aria-prohibited-attr",
+      "region"
+    ],
+    "moodboard": [
+      "aria-prohibited-attr",
+      "region",
+      "target-size"
+    ],
+    "palette": [
+      "aria-prohibited-attr",
+      "landmark-no-duplicate-banner",
+      "landmark-unique",
+      "region",
+      "target-size"
+    ],
+    "proposal-accepted": [
+      "aria-prohibited-attr",
+      "region",
+      "target-size"
+    ],
+    "proposal": [
+      "aria-prohibited-attr",
+      "region",
+      "target-size"
+    ],
+    "team-balance-accepted": [
+      "aria-prohibited-attr",
+      "region"
+    ],
+    "team-balance-preview": [
+      "aria-prohibited-attr",
+      "region"
+    ],
+    "team": [
+      "aria-prohibited-attr",
+      "region"
+    ],
+    "timeline-cleared-estimate": [
+      "aria-prohibited-attr",
+      "region"
+    ],
+    "timeline": [
+      "aria-prohibited-attr",
+      "region"
+    ],
+    "tracker-compact": [
+      "aria-prohibited-attr",
+      "region",
+      "target-size"
+    ],
+    "tracker-hide-done-empty": [
+      "aria-prohibited-attr",
+      "region"
+    ],
+    "tracker-list": [
+      "aria-prohibited-attr",
+      "region",
+      "target-size"
+    ],
+    "tracker-urgent": [
+      "aria-prohibited-attr",
+      "region",
+      "target-size"
+    ],
+    "tracker": [
+      "aria-prohibited-attr",
+      "region",
+      "target-size"
+    ]
+  },
+  "colorContrastNodes": {
+    "board": {
+      "rendered": 0,
+      "flatGround": 21
+    },
+    "brief-client": {
+      "rendered": 13,
+      "flatGround": 26
+    },
+    "brief-short": {
+      "rendered": 12,
+      "flatGround": 24
+    },
+    "brief-team": {
+      "rendered": 13,
+      "flatGround": 26
+    },
+    "caption-undo": {
+      "rendered": 3,
+      "flatGround": 37
+    },
+    "composer": {
+      "rendered": 0,
+      "flatGround": 6
+    },
+    "empty": {
+      "rendered": 0,
+      "flatGround": 13
+    },
+    "focus": {
+      "rendered": 2,
+      "flatGround": 14
+    },
+    "intro": {
+      "rendered": 0,
+      "flatGround": 13
+    },
+    "moodboard": {
+      "rendered": 2,
+      "flatGround": 30
+    },
+    "palette": {
+      "rendered": 0,
+      "flatGround": 25
+    },
+    "proposal-accepted": {
+      "rendered": 0,
+      "flatGround": 32
+    },
+    "proposal": {
+      "rendered": 0,
+      "flatGround": 31
+    },
+    "team-balance-accepted": {
+      "rendered": 5,
+      "flatGround": 39
+    },
+    "team-balance-preview": {
+      "rendered": 5,
+      "flatGround": 40
+    },
+    "team": {
+      "rendered": 3,
+      "flatGround": 37
+    },
+    "timeline-cleared-estimate": {
+      "rendered": 0,
+      "flatGround": 48
+    },
+    "timeline": {
+      "rendered": 0,
+      "flatGround": 49
+    },
+    "tracker-compact": {
+      "rendered": 0,
+      "flatGround": 20
+    },
+    "tracker-hide-done-empty": {
+      "rendered": 0,
+      "flatGround": 21
+    },
+    "tracker-list": {
+      "rendered": 2,
+      "flatGround": 25
+    },
+    "tracker-urgent": {
+      "rendered": 3,
+      "flatGround": 37
+    },
+    "tracker": {
+      "rendered": 0,
+      "flatGround": 25
+    }
+  }
+}

@@ -9,13 +9,16 @@
 //
 // On a build with the Q14 tokens (plan step 4 on) every state must show:
 //   - no color-contrast violation in either pass;
-//   - no rule that baseline A doesn't already break in that state (e2e/baselines/a11y-A.json, or,
-//     for a state it lacks, the rules A broke anywhere: AUDIT §11.4). Those are later phases' work.
+//   - no rule that baseline A doesn't already break in that state (e2e/baselines/a11y-A.json; for a
+//     state it lacks, the rules A breaks anywhere). A breaks aria-prohibited-attr (the animated
+//     texts' labels), region (agent and chrome outside the landmarks), target-size (the priority
+//     dots) and, in the palette, landmark-no-duplicate-banner and landmark-unique: the Phase 3
+//     ARIA and keyboard work and Phase 6 (AUDIT §11.4, §12.2), not Phase 1.
 // Earlier builds (A, R) record without asserting. Every result goes to <artifacts>/a11y/<state>.json;
 // scripts/e2e/a11y-baseline.mjs turns a run of A into the baseline file.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ARTIFACTS_DIR, REPO } from "./env";
 import { open } from "./settle";
@@ -23,14 +26,6 @@ import { STATES } from "./states";
 
 /** The tags of the Phase 0 scan (AUDIT §11.4) */
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"];
-
-/**
- * The rules A breaks outside colour contrast (AUDIT §11.4), none of them in Phase 1's scope:
- * aria-prohibited-attr (the animated texts' labels) and label-content-name-mismatch (the number
- * badge) go with the Phase 3 keyboard and ARIA work, target-size (the priority dots) with Phase 6,
- * region (agent and chrome outside the landmarks) with both.
- */
-const A_RULES = ["aria-prohibited-attr", "label-content-name-mismatch", "target-size", "region"];
 
 const BASELINE = join(REPO, "e2e/baselines/a11y-A.json");
 
@@ -102,10 +97,10 @@ async function scan(page: Page): Promise<Pass> {
   return { violations, contrastUndecided };
 }
 
+/** The rules A breaks in this state, colour contrast aside */
 function baselineRules(state: string): string[] {
-  if (!existsSync(BASELINE)) return A_RULES;
   const states = (JSON.parse(readFileSync(BASELINE, "utf8")) as { states: Record<string, string[]> }).states;
-  return states[state] ?? A_RULES;
+  return states[state] ?? [...new Set(Object.values(states).flat())];
 }
 
 const describe = (pass: Pass) =>
