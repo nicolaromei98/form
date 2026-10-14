@@ -58,7 +58,7 @@ export function CommandSheet({ query, hasTool, hasSelection, origin, maxHeight, 
             <section key={g.group} className="mb-3 break-inside-avoid">
               <div className="flex items-baseline justify-between gap-2 px-2 pb-1">
                 <span className="t-micro text-text-3">{g.group}</span>
-                {!enabled && <span className="t-micro text-text-4">{REQUIREMENT_HINT[g.needs]}</span>}
+                {!enabled && <span className="t-micro text-text-3">{REQUIREMENT_HINT[g.needs]}</span>}
               </div>
               <ul>
                 {g.items.map((it) => (

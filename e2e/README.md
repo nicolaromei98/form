@@ -9,6 +9,7 @@ Plan §10.8. Every build gets the same input (a v0 workspace from `test/fixtures
 | `flow.spec.ts` | the v0 §15 path as a video, real time | Chromium and WebKit 1440×900 |
 | `agent-idle.spec.ts` | the agent's attribute writes at rest, rAF calls, CDP main-thread time | Chromium 1440×900 |
 | `route.spec.ts` | `/` answers 307 → `/demo` (query string kept), `/demo` answers 200, a browser opening `/` lands on the mounted app; skipped on builds from before the route move | Chromium and WebKit 1440×900 |
+| `a11y.spec.ts` | axe on every state, as rendered and with the ground flattened to its darkest end (`--paper-lo`), so the text axe can't decide over the gradient is decided. From the Q14 tokens on (plan step 4): no `color-contrast` violation in either pass, and no rule that A doesn't already break in that state (`e2e/baselines/a11y-A.json`). Earlier builds only record. Results in `artifacts/a11y/<state>.json` | Chromium 1440×900 |
 
 ## Running
 

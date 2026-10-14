@@ -8,7 +8,7 @@ The scripts, fixtures and raw results behind `docs/AUDIT.md`, moved here from `d
 | `agent/` | Probes of the interpretation pipeline: a parser battery, a mocked SDK, and the JSON Schema sent to Claude (`schema.raw.json` is the Zod output, `schema.sent.json` the payload after the SDK transform) with its parameter counts. |
 | `diagnosis/` | Checks of the v1 §2 points: the working-day schedule, scale benchmarks, contrast maths. |
 | `perf/` | `tools/`: the headless-Chrome harness (puppeteer-core + CDP, axe-core). `scripts/`: document generators and analysers. `fixtures/`: the demo, 60-task and 150-task documents (copied to `test/fixtures/v0/`). `results/`: the recorded measurements. |
-| `a11y/` | Contrast calculator and font name-table reader, with their output. |
+| `a11y/` | Contrast calculator and font name-table reader, with their output. `q14.mjs` is the exception to "evidence only": the Q14 check (plan §9.2), which reads the live tokens from `src/app/globals.css` and the dimmed surfaces from the components, and fails when a text pair drops below 4.5:1 or a meaningful stroke or red graphic below 3:1. `src/app/__tests__/contrast.test.ts` runs it in `npm test`. |
 
 ## Running
 

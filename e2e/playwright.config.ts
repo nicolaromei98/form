@@ -4,7 +4,8 @@
 //   npm run e2e:compare    two commits built in worktrees and served on 3500 and 3501 (scripts/e2e/compare.mjs)
 //
 // Stills run in Chromium and WebKit at 1440×900 and on the iPhone 13 preset; frame stepping, the
-// idle probe and the CDP measurements need Chromium; the v0 §15 videos are recorded in both engines.
+// idle probe and the CDP measurements need Chromium; the v0 §15 videos are recorded in both engines;
+// axe runs in Chromium at 1440×900, as the Phase 0 audit did.
 import { defineConfig, devices, type Project } from "@playwright/test";
 import { join } from "node:path";
 import { BASE_URL, OUT_DIR, PORT, REPO, SNAPSHOT_DIR, THRESHOLD } from "./env";
@@ -13,7 +14,7 @@ const DESKTOP = { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 }
 /** The iPhone 13 preset (touch, DSF 3) at the plan's 390×844; the preset's own viewport leaves out the browser chrome. */
 const PHONE = { ...devices["iPhone 13"], viewport: { width: 390, height: 844 } };
 
-const CHROMIUM_ONLY = /(motion|agent-idle)\.spec\.ts$/;
+const CHROMIUM_ONLY = /(motion|agent-idle|a11y)\.spec\.ts$/;
 
 const projects: Project[] = [
   { name: "chromium-desktop", use: { ...devices["Desktop Chrome"], ...DESKTOP } },

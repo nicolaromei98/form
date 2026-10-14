@@ -284,7 +284,8 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
       onClick={() => onChange(!on)}
       className="focus-ring t-body-s group flex h-[30px] cursor-pointer items-center gap-2 rounded-full px-1.5 text-text-3 transition-colors hover:text-text"
     >
-      <span className={`relative h-[15px] w-[26px] rounded-full transition-colors duration-300 ${on ? "bg-ink" : "bg-black/[0.09]"}`}>
+      {/* The off track is a meaningful stroke (Q14): 3:1 against the paper, and the white knob 3.8:1 against it */}
+      <span className={`relative h-[15px] w-[26px] rounded-full transition-colors duration-300 ${on ? "bg-ink" : "bg-line-strong"}`}>
         <motion.span
           className="absolute top-[2px] h-[11px] w-[11px] rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.18)]"
           initial={false}

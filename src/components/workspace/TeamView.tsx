@@ -22,6 +22,14 @@ const GAP = 4;
 const NONE = "__unassigned";
 const SAMPLE_IDS = ["p-marta", "p-sara", "p-luca"];
 const HATCH = "repeating-linear-gradient(-45deg, rgba(214,69,69,0.2) 0 5px, rgba(214,69,69,0.06) 5px 10px)";
+/**
+ * Segment surfaces. A dimmed segment (50%) and one leaving in a balance preview (40%) recede by
+ * their surface and shadow only; the text keeps full contrast (Q14).
+ */
+const SEG = "rgba(255,255,255,0.9)";
+const SEG_DIM = "rgba(255,255,255,0.45)";
+const SEG_LEAVING = "rgba(255,255,255,0.36)";
+const SEG_INK = "#0a0a0a";
 
 const wipe = (open: boolean) => `inset(0px ${open ? "0%" : "100%"} 0px 0px round ${TRACK_H / 2}px)`;
 
@@ -429,8 +437,15 @@ function Segment({
   onPointerDown: (e: RPointerEvent<HTMLElement>) => void;
 }) {
   const { selected, highlight, dim } = useTaskSurface(task);
-  const ink = task.emphasis;
+  // A leaving segment is the task's ghost, light whatever its emphasis: dimmed ink under light text would fail contrast
+  const ink = task.emphasis && !leaving;
   const unsized = task.estimate == null;
+  const surface = ink ? SEG_INK : leaving ? SEG_LEAVING : dim ? SEG_DIM : SEG;
+  const shadow = leaving
+    ? "shadow-[0_8px_22px_-14px_rgba(0,0,0,0.16)]"
+    : dim
+      ? "shadow-[0_8px_22px_-14px_rgba(0,0,0,0.2)]"
+      : "shadow-[0_8px_22px_-14px_rgba(0,0,0,0.4)]";
   return (
     // Same width in every row, so a handover only moves it: position-only layout, nothing stretches
     <motion.div
@@ -438,20 +453,21 @@ function Segment({
       layout="position"
       data-task-id={task.id}
       onPointerDown={onPointerDown}
-      className={`${ink ? "tone-dark bg-ink text-on-ink" : "tone-light bg-white/90 text-text"} t-body-s absolute flex cursor-grab touch-none items-center gap-2 overflow-hidden px-3.5 shadow-[0_8px_22px_-14px_rgba(0,0,0,0.4)] select-none active:cursor-grabbing ${
-        unsized || leaving ? "border-[1.5px] border-dashed border-text-3" : ""
+      className={`${ink ? "tone-dark text-on-ink" : "tone-light text-text"} t-body-s absolute flex cursor-grab touch-none items-center gap-2 overflow-hidden px-3.5 ${shadow} select-none active:cursor-grabbing ${
+        unsized || leaving ? "border-[1.5px] border-dashed border-line-strong" : ""
       } ${selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""}`}
       style={{ left: PAD + left, top: PAD, height: SEG_H, borderRadius: SEG_H / 2 }}
       initial={false}
-      animate={{ width: width - GAP, opacity: dragging ? 0.25 : leaving ? 0.4 : dim ? 0.5 : 1 }}
-      transition={{ layout: move, width: move, opacity: { duration: 0.3 } }}
+      // The drag source stays faint: the floating copy carries its text while it moves
+      animate={{ width: width - GAP, backgroundColor: surface, opacity: dragging ? 0.25 : 1 }}
+      transition={{ layout: move, width: move, backgroundColor: { duration: 0.3 }, opacity: { duration: 0.3 } }}
       title={`${task.title} · ${unsized ? "no estimate" : `${task.estimate}d`} · ${task.progress}%`}
     >
       {highlight && <span className="h-[6px] w-[6px] shrink-0 rounded-full bg-signal" />}
       <span className="min-w-0 truncate">{task.title}</span>
       <span className={`t-data ml-auto shrink-0 ${ink ? "text-on-ink/60" : "text-text-3"}`}>
         {unsized ? "?d" : `${task.estimate}d`}
-        {task.progress > 0 && <span className="opacity-70"> · {task.progress}%</span>}
+        {task.progress > 0 && <span> · {task.progress}%</span>}
       </span>
     </motion.div>
   );
@@ -462,7 +478,7 @@ function Avatar({ person, over }: { person: Person | null; over: boolean }) {
     return <span className="t-body-s grid h-[40px] w-[40px] shrink-0 place-items-center rounded-full border border-dashed border-text-4 text-text-3">?</span>;
   return (
     <span
-      className={`t-body-s relative grid h-[40px] w-[40px] shrink-0 place-items-center rounded-full bg-ink font-medium text-on-ink ring-offset-2 ring-offset-[var(--paper)] transition-[box-shadow] duration-500 ${over ? "ring-2 ring-signal" : "ring-0 ring-transparent"}`}
+      className={`t-body-s relative grid h-[40px] w-[40px] shrink-0 place-items-center rounded-full bg-ink font-medium text-on-ink ring-offset-2 ring-offset-[var(--paper)] transition-[box-shadow] duration-500 ${over ? "ring-2 ring-signal-graphic" : "ring-0 ring-transparent"}`}
     >
       {initials(person.name)}
     </span>
@@ -485,7 +501,7 @@ function LoadFigure({ load, next }: { load: Load; next: Load | null }) {
         <span className="text-text-3">/{fmtLoad(cap)}d</span>
       </span>
       {(changes ? next!.over : load.over) > 0 ? (
-        <span className="t-data text-signal">+{fmtLoad(changes ? next!.over : load.over)}d over</span>
+        <span className="t-data text-signal-text">+{fmtLoad(changes ? next!.over : load.over)}d over</span>
       ) : (
         <span className="t-data text-text-3">{fmtLoad(changes ? next!.free : load.free)}d free</span>
       )}

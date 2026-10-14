@@ -127,7 +127,7 @@ export function ColorPicker({ onAdd }: { onAdd: (hex: string, name: string | nul
 
       <div className="flex items-center gap-1.5">
         <span className="h-[34px] w-[34px] shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)]" style={{ background: hex }} />
-        <label className="flex h-[34px] min-w-0 flex-1 items-center gap-1 rounded-full bg-black/[0.05] px-3 focus-within:bg-black/[0.08]">
+        <label className="flex h-[34px] min-w-0 flex-1 items-center gap-1 rounded-full bg-black/[0.05] px-3 focus-within:bg-black/[0.08] focus-within:shadow-[0_0_0_1px_var(--line-strong)]">
           <span className="t-data text-text-3">#</span>
           <input
             aria-label="Hex colour"
@@ -194,7 +194,7 @@ export function ColorPicker({ onAdd }: { onAdd: (hex: string, name: string | nul
           value={name}
           maxLength={40}
           onChange={(e) => setName(e.target.value)}
-          className="t-body-s h-[34px] min-w-0 flex-1 rounded-full bg-black/[0.05] px-3 text-text outline-none placeholder:text-[rgba(10,10,10,0.38)]! focus:bg-black/[0.08]"
+          className="t-body-s h-[34px] min-w-0 flex-1 rounded-full bg-black/[0.05] px-3 text-text outline-none placeholder:text-text-3! focus:bg-black/[0.08] focus:shadow-[0_0_0_1px_var(--line-strong)]"
         />
         <button
           type="button"
