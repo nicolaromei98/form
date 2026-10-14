@@ -107,6 +107,9 @@ export default defineConfig([
     "scripts/audit/.out/**",
     // Frozen v0 copies: never fixed or reformatted
     "test/legacy/v0/**",
+    // Agent worktrees and local tooling state (each worktree is a full checkout of its own)
+    ".claude/**",
+    "e2e/.out/**",
   ]),
 
   // The audit harnesses include two CommonJS analysers.
