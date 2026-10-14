@@ -1,4 +1,4 @@
 {
-  "base": "A",
-  "note": "The baseline CI compares HEAD with (scripts/e2e/compare.mjs). A until the route move; then R, then B once the UI lane captures them (plan section 10.8 gates)."
+  "base": "R",
+  "note": "The baseline CI compares HEAD with (scripts/e2e/compare.mjs). R since the route move (it matched A with 0 differing pixels in every still); B once the UI lane captures it after the agent fix (plan section 10.8 gates)."
 }

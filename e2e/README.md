@@ -8,6 +8,7 @@ Plan §10.8. Every build gets the same input (a v0 workspace from `test/fixtures
 | `motion.spec.ts` | 11 triggers × frames at 0, 120, 240, 480, 900, 1,750 ms | Chromium 1440×900 |
 | `flow.spec.ts` | the v0 §15 path as a video, real time | Chromium and WebKit 1440×900 |
 | `agent-idle.spec.ts` | the agent's attribute writes at rest, rAF calls, CDP main-thread time | Chromium 1440×900 |
+| `route.spec.ts` | `/` answers 307 → `/demo` (query string kept), `/demo` answers 200, a browser opening `/` lands on the mounted app; skipped on builds from before the route move | Chromium and WebKit 1440×900 |
 
 ## Running
 
@@ -25,7 +26,12 @@ npm run e2e                                           # this checkout only, buil
 
 - No screenshot is committed. A baseline is a commit plus a manifest in `e2e/baselines/<label>.json` (environment, SHA-256 of every still and frame, videos, the idle probe's numbers). Rebuilding from the commit on the same machine and browsers gives the same bytes; CI rebuilds both sides on one runner.
 - **A** is the v0 app at `864fb47`, tagged `phase1-baseline-a` locally. It builds the same app as `main@b201af8`: only devDependencies, the unimported `src/lib/phase.ts` and tests differ. Captured on 2026-10-14: 92 stills (56 MB), 66 frames (13 MB), 2 videos (37 MB), and the idle probe at about 3,000 agent attribute writes per second in every state.
-- `gate.json` names the baseline CI compares with. The UI lane moves it to R after the route move and to B after the agent fix, capturing each with `--capture`.
+- **R** is the route move at `8ceb390` (plan step 3), served at `/demo`. Captured on 2026-10-14: 116 passed and 1 skipped, with 92 stills (56 MB), 66 frames (13 MB), 2 videos (38 MB), and the idle probe still at about 2,700 to 3,000 writes per second. Against A, all 92 stills are byte-identical (0 differing pixels), and `npm run e2e:compare -- --base phase1-baseline-a --head 8ceb390` passed all 116 tests. 22 motion frames differ from A by at most 0.06% of their pixels, within the 0.1% frame tolerance. The differences reproduce: a second R run repeated them, apart from one-level raster noise that A also shows against itself. At those instants the clock, the styled DOM and every Web Animation are identical. Only two rAF loops differ, and both take their start time from `performance.now()` inside a React effect:
+  - the text scramble's glyphs. The seeded random stream sits one value apart (A has drawn 162 values when `open()` returns, R 161), and the scramble is its only consumer;
+  - the agent fluid's particle positions.
+
+  The likely cause is effects committing at a slightly different fake millisecond under the `/demo` route tree.
+- `gate.json` names the baseline CI compares with: R since the route move. The UI lane moves it to B after the agent fix, capturing it with `--capture`.
 
 ## Determinism
 
