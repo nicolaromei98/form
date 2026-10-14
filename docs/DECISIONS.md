@@ -80,3 +80,53 @@ Choices not covered by `docs/FORM-v1.md`, or confirmed from its section 3.2. Eac
   - **An unreadable save is copied** to `form.workspace.v1.backup` before the first write can replace it.
   - **Claude runs only with `FORM_ENGINE=claude` and a key.** A key alone no longer enables it. Requests over 256 KB get a 413.
 - **Rejected:** waiting for Phase 1, which rebuilds `/demo` weeks later; the risk is live today.
+
+
+### 2026-10-14 · Phase 1 build plan
+- **Context:** `docs/PHASE-1-PLAN.md` is the Phase 1 design. It was chosen from three independent architectures (adapter, port, core-and-contracts), scored by an engineering judge and a product judge, and synthesised. The port approach won on later-phase cost and correctness, with the best ideas from the other two grafted on.
+- **Choice:** the plan's §13 decisions, adopted as written:
+
+1. **`/demo` strategy: port, not adapter.** Components move to v2 hooks in Phase 1, and the v0 lib is deleted (frozen copies are test-only). *Rejected:* a v0 view-model adapter (projection, op lowering, façades), which Phase 3 would throw away while paying for a second migration.
+2. **Routes in Phase 1.** `/demo` serves the app; `/` returns a temporary 307 to `/demo` until Phase 2 ships the public intro with "Sign in". There is no `/app`, `/login` or `/b`. *Rejected:* empty `/app` or `/login` shells (dead UI without auth or data).
+3. **The Claude path is removed until Phase 5**, and the engine label becomes "Demo parser · no AI model". *Rejected:* keeping the v0 route behind the v0 transport schema.
+4. **View ids keep the v0 names** ("cards" is labelled Tracker), and `BlockKind` keeps header and collection. The §9.4 transport maps "tracker" ↔ "cards" in Phase 5. *Rejected:* renaming during the switchover.
+5. **Q6 refinement.** Show, select and zoom are local intents outside the registry and commits. History entries restore the previous active view. viewConfig commits are hidden from Activity, while views and blocks are content. *Rejected:* view-scope ops in the registry or the commit schema.
+6. **Q9 refinement.** Archived and deleted state lives only in the workspace index entry, and `ProjectStatus` has no "archived". No op mutates two documents. *Rejected:* duplicating archived state in the project document.
+7. **Records keyed by id** for tasks, mood items, people, templates, closures, time off and the project index. Explicit order and z keys exist because `jsonb` reorders keys. *Rejected:* arrays, whose index-shifting patch paths break revert checks.
+8. **No stored `updatedAt`**; `createdAt` and `completedAt` are stored from `ctx.now`. *Rejected:* stamping every patch, which makes Phase 2 revert conflicts false (deviation from v1 §5.4–§5.5).
+9. **Ids** are a prefix plus 16 characters of `[0-9a-z]`, minted by producers; collisions are rejected; `duplicateProject` derives ids deterministically. *Rejected:* minting in the reducer, or an id-map payload.
+10. **Field-shaped update ops and anchor-based ordering** computed in the reducer, plus an explicit `rebalanceOrder` op. *Rejected:* patch-shaped updates, producer-computed keys, and silent re-keying.
+11. **The 66-op list** beyond v1 §16:
+    - added: addClosure/removeClosure, restorePerson, deletePerson (Q8), updateWorkspace and updateTemplate (Q12), rebalanceOrder;
+    - `setRepresentation` split into addView plus a local show;
+    - `resetBriefLine` takes several keys;
+    - arrangeMood and clearMood name their items.
+12. **No runnable deprecated ops.** The 35 v0 names map to v2 in the registry `deprecates` fields and in a test-only lowering. *Rejected:* keeping v0 ops callable "for migration" (v0 never persisted ops).
+13. **Status and progress table:**
+    - leaving Done goes to 95%;
+    - review@100 is valid only with `requireReview`, and turning `requireReview` off makes those tasks Done;
+    - each op changes one field, and status wins when both are given.
+
+    *Rejected:* keeping 100% after leaving Done.
+14. **Milestones** have an estimate of 0, no steps and allocation 1. *Rejected:* a null estimate (null means unknown).
+15. **"Blocked"** means a To-do task with an unfinished predecessor; started work is never hidden from Focus. *Rejected:* the literal v1 reading, which would block an urgent task already In progress.
+16. **Unknown propagation:** float is null when any downstream task is unknown. Late requires a confirmed start, in `/demo` too.
+17. **Load daily share** is `estimate / duration`, so total load equals the estimate. *Rejected:* allocation per day, which inflates half-day estimates.
+18. **The Phase 1 Team lane** is the person's work window, with over and free summed per week. The sample capacities are 2/4/5 days a week. Team rows are project members. *Rejected:* a whole-span aggregate (it hides peaks) and fractional span capacities.
+19. **Captions** come only from applied ops, local intents, typed query notes and fixed notices. Direct edits stay captionless as in v0. The cut at 280 characters happens after every suffix.
+20. **Commits** are best-effort per op, validated after every op, with at most 12 non-system ops per command and workspace ops first. *Rejected:* all-or-nothing commits.
+21. **Proposals.** One pending proposal; a new one replaces it; accept names the id and supports partial acceptance. `removeTask` deletes the brief edits keyed to the task (undo restores them).
+22. **Q3 detail.** Team "Add person" gives a visible 5; a command gives null plus a suggestion chip; "+ Duration" opens empty and the first "+" sets 0.5.
+23. **Q17 tiers** are computed now, with a `/demo` threshold of 0. The 340 ms beat stays for every `/demo` command until Phase 5 (Q19). "N weeks" is N × 5 working days.
+24. **One currency per project** (`project.currency`, `budgetCents`); only manual `costCents` is stored. *Rejected:* currency per budget object or per task.
+25. **Migration choices:**
+    - the subtasks proposal wins over the plan;
+    - orphan steps and steps beyond 40 are promoted to tasks;
+    - non-sample capacities become null;
+    - the log labels are dropped and the change count kept;
+    - brief keys are rewritten, and edits on missing entities are dropped and reported.
+26. **Demo storage.** The `form.demo.v2` envelope; the v0 keys are never written; an unreadable save goes to `.backup`; asset aliases are used instead of copying blobs; deleted projects are compacted on save.
+27. **`/demo` keeps absolute sample dates** with the sample labels until Phase 4. Relative labels are computed now.
+28. **Phase 1 visual baseline.** B is v0 plus the route move, Q14 and the agent fix, all on the v0 code. The engine port is gated at 0 differing pixels outside ED-1 to ED-10. Q14 is applied with the full verified token table, because raising `--text-3` alone would invert the ramp.
+29. **Agent settling (Q26, Q29).** Breathing fades out after 4 s of no input; the loop sleeps once settled and wakes on prop changes, a nearby pointer or visibility; under reduced motion the agent is a static SVG. The Focus floats are unchanged until Phase 4 or 6.
+30. **Phase workflow.** Every verified step is committed and pushed to `phase-1-domain`; `main` is untouched until Nicola merges.
