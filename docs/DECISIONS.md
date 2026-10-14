@@ -165,3 +165,21 @@ Choices not covered by `docs/FORM-v1.md`, or confirmed from its section 3.2. Eac
 - **Rejected:**
   - committing the 56 MB of PNG baselines;
   - running macOS e2e on every push (about 10× the cost of Linux minutes).
+
+### 2026-10-14 · Wave 3 outcomes (steps 3, 4, 5, 9, 11)
+- **Context:** the UI lane (route move, Q14, agent loop), the ops core and the planning schedule merged into `phase-1-domain`. Baselines now exist as R (route), T (tokens) and B (gate, tag `phase1-baseline-b`).
+- **Choice (accepted deviations):**
+  - **Route move.** R vs A has 0 differing pixels in all 92 stills. 22 motion frames differ by ≤ 0.06%, within the 0.1% frame tolerance. The cause is effects committing at a different fake millisecond under the `/demo` tree, which only moves the scramble glyphs and fluid particles.
+  - **Q14.** Checked by a live-token script (`scripts/audit/a11y/q14.mjs`, also run as a unit test): 208 checks pass. axe has 0 colour-contrast violations in all 23 states, in two passes (as rendered, and with the ground flattened to paper-lo). Additions inside the listed components:
+    - the Team over-capacity ring uses `--signal-graphic`;
+    - a segment's "· N%" loses its opacity;
+    - ColorPicker fields get a focus ring;
+    - moodboard swatch labels pick their ink by contrast.
+  - **Agent loop.** The agent has its own filter id, `#form-agent-goo`, with a region limited to its box; `#form-goo` stays for FocusView. At rest it makes 0 writes per second, wakes within 1 ms on a nearby pointer, and settles about 8 s after load (the 4 s breath fade starts after the birth). The pointer pull fades out at the wake radius, so a distant pointer can't keep the loop alive. With 60 cards at rest the main thread drops from 108 ms/s (audit) to about 1 ms/s.
+  - **Ops core.** Op samples are loosely typed and checked by parsing them against their schemas. The 61 stubs carry `stub: {family, until: 1}`, and the completeness test fails if any survive into Phase 2. Four behaviours go beyond the letter of the plan:
+    - addTask adds its owner to the members;
+    - removeTask also bridges plan-proposal seeds;
+    - turning a task into a milestone drops its subtasks proposal;
+    - v0's columns/layout rules are kept.
+  - **Planning.** `TaskTiming.last` holds the end ordinal. Milestone dates follow the predecessors' end day (or the pin). Absurd chains are capped at `PLAN_SPAN_MAX` = 400,000 working days and marked unknown with reason "horizon". Relative mode measures float against the planned end, steps are clamped into their parent's window, and done tasks carry no risk.
+- **Rejected:** forcing motion frames to be byte-identical across routes, which would have meant patching React's commit timing in the harness.
