@@ -94,7 +94,7 @@ export function AgentLayer() {
         <g filter="url(#form-goo)" fill="var(--ink)">
           <Body target={shape.body} transition={bodyT} />
           <Fluid mode={mode} anchor={anchor} scale={sc} targets={shape.blobs} satellite={shape.satellite} pressed={pressed} reduced={reduced} />
-          <NodeBlobs frames={nodes.frames} origin={nodeOrigin} shown={nodesShown} hovered={nodeHover} reduced={reduced} />
+          <NodeBlobs frames={nodes.frames} origin={nodeOrigin} shown={nodesShown} reduced={reduced} />
           {phase === "creating" &&
             spawn?.map((r, i) => <SpawnBlob key={`${fxSeq}-${i}`} origin={center} rect={r} index={i} />)}
         </g>

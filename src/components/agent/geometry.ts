@@ -55,7 +55,7 @@ export const BLOB_COUNT = RING.length + DROPS.length;
 
 export const COMPOSER = { h: 68, sat: 68, gap: 12, maxW: 620, minW: 220 };
 /** At rest the goo silhouette sits just inside the crisp DOM surface, so no soft edge shows */
-const REST_INSET = 3;
+export const REST_INSET = 3;
 export const COMPACT = { h: 46, lead: 54, w: 184, overlap: 2 };
 
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -151,13 +151,14 @@ export function agentShape(mode: AgentMode, anchor: Vec, vw: number, docked = fa
    ------------------------------------------------------------------ */
 
 export const NODE = {
-  h: 36,
+  /** The pill's own height: a node reads as a sibling of "Ask FORM", not a smaller chip */
+  h: COMPACT.h,
   /** End-to-end gap: pill → node → node */
   gap: 12,
-  /** Phones: gap between the pill's top and the row's bottom (flat edges fuse more easily; hovered, the gap stays above the goo's reach) */
+  /** Phones: gap between the pill's top and the row's bottom (flat edges fuse more easily, so it is wider than the chain gap) */
   rowGap: 21,
-  /** Fixed widths so goo and label agree without measuring; labels are centred */
-  w: { cards: 96, board: 84, timeline: 100, team: 80, focus: 84, brief: 80 } as Record<Representation, number>,
+  /** Fixed widths so goo and label agree without measuring: 20px either side of "+ Label" (Aeonik Pro, t-body-s) */
+  w: { cards: 98, board: 90, timeline: 102, team: 88, focus: 90, brief: 82 } as Record<Representation, number>,
 };
 
 export interface NodeFrame {
