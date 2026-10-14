@@ -12,6 +12,14 @@
 
 # testing
 /coverage
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# audit harness re-runs and their local tools
+/scripts/audit/.out/
+/scripts/audit/perf/tools/node_modules/
 
 # next.js
 /.next/

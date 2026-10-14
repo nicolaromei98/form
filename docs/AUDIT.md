@@ -21,7 +21,7 @@
   - performance, bundle and axe;
   - accessibility and contrast.
 - Runtime numbers come from a production build served locally and driven by headless Chrome 155 (puppeteer-core + CDP) on an Apple M5, at 1× and 4× CPU throttling.
-- Harnesses, fixtures and raw results are in `docs/audit/harness/`.
+- Harnesses, fixtures and raw results are in `scripts/audit/` (moved from `docs/audit/harness/` in Phase 1).
 
 **Not measured here, and why**
 - Safari: automation needs a system setting this audit must not change.
@@ -506,7 +506,7 @@ Frame time, Safari compositing and phone timings cannot be measured here. Measur
 
 ## 9. Domain model and reducer (v1 §5, §16)
 
-Scope: `src/lib/schema.ts`, `ops.ts`, `seed.ts`, `mood.ts`, `views.ts`, `store.ts`, `assets.ts`, plus every caller that builds operations. Code read at HEAD `177e822`. Behaviour was checked by running the real modules with jiti from scratch scripts outside the repo (`verify.mjs`, `verify2.mjs`, `verify3.mjs`, `verify4.mjs`, kept in `docs/audit/harness/domain/`). No repo file was changed.
+Scope: `src/lib/schema.ts`, `ops.ts`, `seed.ts`, `mood.ts`, `views.ts`, `store.ts`, `assets.ts`, plus every caller that builds operations. Code read at HEAD `177e822`. Behaviour was checked by running the real modules with jiti from scratch scripts outside the repo (`verify.mjs`, `verify2.mjs`, `verify3.mjs`, `verify4.mjs`, kept in `scripts/audit/domain/`). No repo file was changed.
 
 #### At a glance
 
@@ -816,7 +816,7 @@ What the v1 §15 property suite needs:
 
 ## 10. Interpretation pipeline (v1 §9)
 
-Scope: `src/lib/interpret/{demo,library,index,claude.server}.ts`, `src/app/api/interpret/route.ts`, the routing in `src/lib/store.ts` and the UI call sites. Measurements were run offline with jiti against HEAD 177e822 (Node 22.13, `@anthropic-ai/sdk` 0.133.0, `zod` 4.6.5). The scripts are kept in `docs/audit/harness/agent/`: `schema.mjs`, `recount.mjs`, `probe.mjs` and `mock-sdk.mjs`, which runs a copy of the Claude module with `server-only` removed and the SDK client mocked. The mock runs the SDK's real `parseBetaMessage` and Zod helper. **No request reached the Anthropic API.**
+Scope: `src/lib/interpret/{demo,library,index,claude.server}.ts`, `src/app/api/interpret/route.ts`, the routing in `src/lib/store.ts` and the UI call sites. Measurements were run offline with jiti against HEAD 177e822 (Node 22.13, `@anthropic-ai/sdk` 0.133.0, `zod` 4.6.5). The scripts are kept in `scripts/audit/agent/`: `schema.mjs`, `recount.mjs`, `probe.mjs` and `mock-sdk.mjs`, which runs a copy of the Claude module with `server-only` removed and the SDK client mocked. The mock runs the SDK's real `parseBetaMessage` and Zod helper. **No request reached the Anthropic API.**
 
 #### A. Demo parser (`demo.ts`): what it really is
 
@@ -1048,7 +1048,7 @@ Parsing is effectively free (<0.01 ms).
   - Result: 60 top-level tasks, `DocSchema.safeParse` PASS, 13.6 KB, persisted as `{state:{doc,log:[]},version:1}` under `form.workspace.v1`, with `form.intro.seen.v1 = "1"`.
   - A 150-task variant from the same generator also passes `DocSchema`.
   - The axe fixture is the v0 demo project (website template, 4 tasks, sample team) with all six views.
-- **Scripts and raw JSON** are kept in `docs/audit/harness/perf/`: `tools/lib.mjs`, `tools/runtime.mjs`, `tools/axe.mjs`, `tools/lcp.mjs`, `tools/fonts.mjs`, `scripts/gen-doc.mjs`, `scripts/gen-demo.mjs`, `scripts/derived-bench-n.mjs`, `scripts/analyze2.js`, `fixtures/`, `results/`. The Chrome traces (214 MB) were not kept.
+- **Scripts and raw JSON** are kept in `scripts/audit/perf/`: `tools/lib.mjs`, `tools/runtime.mjs`, `tools/axe.mjs`, `tools/lcp.mjs`, `tools/fonts.mjs`, `scripts/gen-doc.mjs`, `scripts/gen-demo.mjs`, `scripts/derived-bench-n.mjs`, `scripts/analyze2.js`, `fixtures/`, `results/`. The Chrome traces (214 MB) were not kept.
 - All servers and browsers I started have been stopped. Port 3417 (the user's dev server) was not touched.
 
 #### Verdict against the v1 §12 targets
@@ -1306,7 +1306,7 @@ Safari cannot be automated in this environment. `safaridriver` needs "Allow Remo
 
 ## 12. Accessibility and contrast, static review against WCAG 2.2 AA (v1 §13)
 
-**Scope and method.** This is a static reading of `src/` at HEAD `177e822`. Contrast was computed numerically with alpha compositing in sRGB and the WCAG 2.x relative-luminance formula. Font files were inspected by decoding their WOFF2 `name` and `OS/2` tables. Nothing was rendered in a browser or tested with assistive technology. Every point that depends on rendering or AT is marked, together with how to measure it. The scripts and raw output are kept in `docs/audit/harness/a11y/` (`contrast.mjs`, `contrast.out`, `check2.mjs`, `check3.mjs`, `woff2name.mjs`).
+**Scope and method.** This is a static reading of `src/` at HEAD `177e822`. Contrast was computed numerically with alpha compositing in sRGB and the WCAG 2.x relative-luminance formula. Font files were inspected by decoding their WOFF2 `name` and `OS/2` tables. Nothing was rendered in a browser or tested with assistive technology. Every point that depends on rendering or AT is marked, together with how to measure it. The scripts and raw output are kept in `scripts/audit/a11y/` (`contrast.mjs`, `contrast.out`, `check2.mjs`, `check3.mjs`, `woff2name.mjs`).
 
 **Verdict.** v0 does not meet WCAG 2.2 AA. Four problem areas block it:
 
@@ -1582,4 +1582,4 @@ Stop it after settling, as v1 §12.2 already requires for the agent, and cap the
 
 ## 13. Harnesses and raw results
 
-`docs/audit/harness/` holds the scripts, fixtures (60- and 150-task documents) and JSON results behind every number above. See its README; Phase 1 moves the useful ones into `scripts/` and `e2e/`.
+`scripts/audit/` holds the scripts, fixtures (60- and 150-task documents) and JSON results behind every number above. Phase 1 step 1 moved them there from `docs/audit/harness/`, with every path resolved from the repo, and copied the fixtures to `test/fixtures/v0/` for the Phase 1 tests. See its README.
