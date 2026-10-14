@@ -7,7 +7,7 @@ Plan §10.8. Every build gets the same input (a v0 workspace from `test/fixtures
 | `visual.spec.ts` | 23 full-page stills (`states.ts`), reduced motion | Chromium and WebKit, 1440×900 and iPhone 13 (390×844) |
 | `motion.spec.ts` | 11 triggers × frames at 0, 120, 240, 480, 900, 1,750 ms | Chromium 1440×900 |
 | `flow.spec.ts` | the v0 §15 path as a video, real time | Chromium and WebKit 1440×900 |
-| `agent-idle.spec.ts` | the agent's attribute writes at rest, rAF calls, CDP main-thread time | Chromium 1440×900 |
+| `agent-idle.spec.ts` | the agent's attribute writes at rest, rAF calls, CDP main-thread time. From the agent fix (plan step 5) it asserts §9.1: 0 writes per second 1 s after settling in every idle state, with and without reduced motion; a pointer near the settled agent wakes it within 50 ms, and it settles again; a hidden tab writes nothing and resumes when shown. On older builds it records v0's endless loop | Chromium 1440×900 |
 | `route.spec.ts` | `/` answers 307 → `/demo` (query string kept), `/demo` answers 200, a browser opening `/` lands on the mounted app; skipped on builds from before the route move | Chromium and WebKit 1440×900 |
 | `a11y.spec.ts` | axe on every state, as rendered and with the ground flattened to its darkest end (`--paper-lo`), so the text axe can't decide over the gradient is decided. From the Q14 tokens on (plan step 4): no `color-contrast` violation in either pass, and no rule that A doesn't already break in that state (`e2e/baselines/a11y-A.json`). Earlier builds only record. Results in `artifacts/a11y/<state>.json` | Chromium 1440×900 |
 
@@ -20,6 +20,7 @@ npm run e2e:compare -- --capture <ref> --label A      # capture a baseline and w
 npm run e2e:compare -- --keep -- visual.spec.ts --project chromium-desktop   # Playwright args after the second --
 npm run e2e                                           # this checkout only, built and served on 3500
 node scripts/e2e/pairs.mjs --before R --after T       # two captures' stills side by side, with diffs, in e2e/.out/pairs-R-T
+node scripts/e2e/pairs.mjs --before T --after B --frames   # the same, plus the motion frames (0.1% tolerance reported)
 node scripts/e2e/a11y-baseline.mjs <run>/base/artifacts <A's commit>   # a11y.spec.ts results of A → e2e/baselines/a11y-A.json
 ```
 
@@ -47,4 +48,4 @@ node scripts/e2e/a11y-baseline.mjs <run>/base/artifacts <A's commit>   # a11y.sp
 
 ## Knobs
 
-`E2E_BASE_URL`, `E2E_APP_PATH` (`/` or `/demo`, read from the served commit by `compare.mjs`), `E2E_OUT_DIR`, `E2E_SNAPSHOT_DIR`, `E2E_ARTIFACTS_DIR`, `E2E_THRESHOLD`, `E2E_AGENT_EXPECT=settled` (assert the §9.1 criteria instead of recording), `E2E_TRACE_DIR` (a DOM and animation dump next to every motion frame, to find where two runs diverge).
+`E2E_BASE_URL`, `E2E_APP_PATH` (`/` or `/demo`, read from the served commit by `compare.mjs`), `E2E_OUT_DIR`, `E2E_SNAPSHOT_DIR`, `E2E_ARTIFACTS_DIR`, `E2E_THRESHOLD`, `E2E_AGENT_EXPECT` (`settled`, the default: assert the §9.1 criteria; `record`: record v0's endless loop. `compare.mjs` picks it per served commit, from whether it has `src/components/agent/loop.ts`), `E2E_TRACE_DIR` (a DOM and animation dump next to every motion frame, to find where two runs diverge).
