@@ -145,3 +145,23 @@ Choices not covered by `docs/FORM-v1.md`, or confirmed from its section 3.2. Eac
   - Step 2 may edit `ci.yml` to wire the e2e job, the single exception to "only step 1 edits it".
   - Audit re-runs write to the gitignored `scripts/audit/.out/`.
 - **Rejected:** pinning older versions to match the plan's letter.
+
+### 2026-10-14 · Wave 2 outcomes (steps 2, 6, 7, 8)
+- **Context:** the evidence, domain, schema and calendar lanes merged into `phase-1-domain`. Their reports list small deviations from the plan's letter.
+- **Choice (accepted deviations):**
+  - **Dates.** `IsoDate` accepts 1970-01-01 to 2199-12-31, so planning stays total. Computed dates may go further, within fromDayNum's range.
+  - **Order keys.** `OrderKey` is also checked with fractional-indexing's own rules.
+  - **Home view.** `homeView(views)` returns one of the project's own views; v0 returned "cards" even when the project didn't have it.
+  - **Money** is always stored in hundredths of the major unit, for every currency.
+  - **Schema files.** The template and draft schemas live in `schema/template.ts` and `schema/project.ts`, to avoid an import cycle.
+  - **Cycle paths.** `wouldCycle` uses BFS, so the cycle caption names the shortest loop.
+  - **Planning → active.** A project moves from planning to active only when a task becomes "active" (§5.5, literally).
+  - **Leaving Done.** `LEFT_DONE_PROGRESS = 95`.
+  - **Calendar ordinals** count from a fixed origin (1970-01-01), so memoised calendars never shift. Only differences between ordinals carry meaning.
+  - **Baseline A** is the tag `phase1-baseline-a` at 864fb47. That is the v0 app plus the step 0–1 tooling only.
+  - **Baselines are regenerated from git refs and never committed.** Only `e2e/baselines/A.json` (hashes and sizes) is in git.
+  - **Still tolerance** is a per-pixel threshold of 0.01 with 0 differing pixels. Playwright's default (0.2) would hide a token change.
+- **Choice (CI cost):** the macOS e2e job runs on pull requests and on manual dispatch only, not on every `phase-*` push. Typecheck, lint, unit, golden, property, perf and build still run on every push, on Linux.
+- **Rejected:**
+  - committing the 56 MB of PNG baselines;
+  - running macOS e2e on every push (about 10× the cost of Linux minutes).

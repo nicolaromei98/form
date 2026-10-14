@@ -112,7 +112,9 @@ jobs:
     # Builds the baseline named in e2e/baselines/gate.json and this commit in worktrees, serves them
     # on 3500 and 3501, writes the baseline's screenshots and compares this commit's with them, on the
     # same runner (§10.8: no screenshots are committed)
-    if: github.event_name != 'schedule'
+    # macOS minutes cost about 10× Linux on a private repo: run on pull requests and on demand,
+    # not on every phase-branch push (DECISIONS.md, "CI e2e trigger")
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     timeout-minutes: 90
     steps:
