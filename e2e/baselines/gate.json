@@ -1,4 +1,4 @@
 {
-  "base": "R",
-  "note": "The baseline CI compares HEAD with (scripts/e2e/compare.mjs). R since the route move (it matched A with 0 differing pixels in every still); B once the UI lane captures it after the agent fix (plan section 10.8 gates)."
+  "base": "B",
+  "note": "The baseline CI compares HEAD with (scripts/e2e/compare.mjs). B since the agent fix (plan step 5): the route move, the Q14 tokens and the settling agent loop, on the v0 code, tagged phase1-baseline-b locally. The engine switchover is gated against it (plan section 10.8)."
 }

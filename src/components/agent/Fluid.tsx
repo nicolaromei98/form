@@ -230,7 +230,7 @@ export function Fluid({ mode, anchor, scale, targets, satellite, pressed, reduce
       }
       // Its pull fades out at the edge of the wake radius, so a pointer that can't wake the loop can't hold the material
       const reach = ring && pt && !pr ? pointerReach(Math.hypot(pt.x - a.x, pt.y - a.y), sc) : 0;
-      /** The pointer's pull on a volume at (x, y), as an acceleration */
+      /** The pointer's pull on a volume at (x, y): its direction and falloff, or null out of reach */
       const pull = (x: number, y: number) => {
         if (!pt || reach === 0) return null;
         const dx = pt.x - x;
