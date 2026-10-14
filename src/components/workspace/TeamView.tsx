@@ -7,7 +7,7 @@ import { useForm } from "@/lib/store";
 import { ease, move } from "@/lib/motion";
 import { fmtLoad, initials, loadsOf, ownersOf, type Load } from "@/lib/team";
 import { useWidth } from "@/lib/useWidth";
-import type { Doc, Person, ReassignPlan, Task } from "@/lib/schema";
+import { PEOPLE_MAX, type Doc, type Person, type ReassignPlan, type Task } from "@/lib/schema";
 import { EditableText } from "./parts";
 import { useTaskSurface } from "./TaskCard";
 import { ShuffleText } from "../text/ShuffleText";
@@ -158,8 +158,10 @@ function TeamBoard() {
           <div className="flex items-center gap-1.5">
             <button
               type="button"
+              disabled={doc.people.length >= PEOPLE_MAX}
+              title={doc.people.length >= PEOPLE_MAX ? `A team holds up to ${PEOPLE_MAX} people` : undefined}
               onClick={() => commit([{ op: "addPerson", name: `Person ${doc.people.length + 1}` }], "add person")}
-              className="focus-ring t-body-s h-[34px] cursor-pointer rounded-full px-3.5 text-text-2 transition-colors hover:bg-black/[0.05] hover:text-text"
+              className="focus-ring t-body-s h-[34px] cursor-pointer rounded-full px-3.5 text-text-2 transition-colors hover:bg-black/[0.05] hover:text-text disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
             >
               <ShuffleText text="Add person" />
             </button>
@@ -334,7 +336,8 @@ function Row({
             <EditableText
               value={p.name}
               label="Name"
-              onCommit={(v) => commit([{ op: "updatePerson", id: p.id, patch: { name: v.slice(0, 40) } }], "rename person")}
+              maxLength={40}
+              onCommit={(v) => commit([{ op: "updatePerson", id: p.id, patch: { name: v } }], "rename person")}
               className="t-body min-w-0 truncate"
             />
           ) : (

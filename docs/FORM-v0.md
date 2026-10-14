@@ -61,9 +61,9 @@ FORM è un progetto personale: il prototipo di un workspace adattivo. Descrivi a
 Le card cambiano tono (chiaro ↔ scuro) tramite variabili CSS locali, così gli stessi controlli funzionano su vetro e su inchiostro.
 
 **Tipografia**
-- Aeonik Pro per tutto: titoli, paragrafi, UI, numeri.
-- Aeonik Mono Pro solo per gli eyebrow, le piccole etichette maiuscole.
-- Font self-hosted in woff2.
+- Satoshi per tutto: titoli, paragrafi, UI, numeri. È il file variabile ufficiale di Indian Type Foundry, self-hosted senza modifiche, con licenza ITF Free Font License.
+- Geist Mono solo per gli eyebrow, le piccole etichette maiuscole. Arriva da Google Fonts tramite `next/font`, con licenza OFL.
+- Fino al 14 ottobre 2026 i font erano Aeonik Pro e Aeonik Mono Pro; sono stati sostituiti per evitare i vincoli di licenza (vedi `docs/DECISIONS.md`).
 - Scala a classi:
   - display-xl: clamp 44–76px (titolo Focus);
   - display-l: clamp 36–52px (titolo progetto, headline brief);

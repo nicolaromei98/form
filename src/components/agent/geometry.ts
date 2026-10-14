@@ -157,8 +157,8 @@ export const NODE = {
   gap: 12,
   /** Phones: gap between the pill's top and the row's bottom (flat edges fuse more easily, so it is wider than the chain gap) */
   rowGap: 21,
-  /** Fixed widths so goo and label agree without measuring: 20px either side of "+ Label" (Aeonik Pro, t-body-s) */
-  w: { cards: 98, board: 90, timeline: 102, team: 88, focus: 90, brief: 82 } as Record<Representation, number>,
+  /** Fixed widths so goo and label agree without measuring: 20px either side of "+ Label" (Satoshi, t-body-s) */
+  w: { cards: 96, board: 90, timeline: 102, team: 86, focus: 88, brief: 82 } as Record<Representation, number>,
 };
 
 export interface NodeFrame {

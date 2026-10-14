@@ -96,6 +96,8 @@ interface FormState {
   setIntro: (open: boolean) => void;
 }
 
+/** Where the document lives in this browser (the v2 importer reads it, and its ".backup") */
+export const STORAGE_KEY = "form.workspace.v1";
 let captionId = 0;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -203,6 +205,17 @@ export const useForm = create<FormState>()(
         const next = ops.length ? applyOperations(prev, ops) : prev;
         if (next === prev) {
           if (extra) set(extra);
+          return;
+        }
+        // Every change, from the agent or the page, must leave a document the schema accepts:
+        // stored, an invalid one would make the next load start from an empty workspace
+        if (!DocSchema.safeParse(next).success) {
+          set({
+            ...extra,
+            phase: "rest",
+            spawn: null,
+            caption: { id: ++captionId, text: "That change would break the workspace, so FORM didn't apply it.", tone: "unsupported", undoable: false },
+          });
           return;
         }
         set((st) => ({
@@ -337,13 +350,21 @@ export const useForm = create<FormState>()(
       },
     }),
     {
-      name: "form.workspace.v1",
+      name: STORAGE_KEY,
       version: 1,
       storage: createJSONStorage(() => localStorage),
       partialize: (st) => ({ doc: st.doc, log: st.log }),
       merge: (persisted, current) => {
         const p = persisted as Partial<FormState> | undefined;
         const ok = p?.doc ? DocSchema.safeParse(p.doc) : null;
+        // An unreadable save is kept aside before the first write replaces it, so it can still be recovered
+        if (p?.doc && !ok?.success) {
+          try {
+            localStorage.setItem(`${STORAGE_KEY}.backup`, JSON.stringify(persisted));
+          } catch {
+            // Storage full or blocked: nothing more can be done here
+          }
+        }
         return { ...current, doc: ok?.success ? migrateViews(p!.doc, ok.data) : current.doc, log: Array.isArray(p?.log) ? p!.log! : current.log };
       },
     },

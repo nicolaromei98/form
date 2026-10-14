@@ -55,11 +55,11 @@ command ─► Interpreter (demo parser | Claude) ─► Zod-validated Operation
 ## Using Claude instead of the demo parser
 
 ```bash
-cp .env.example .env.local   # then add ANTHROPIC_API_KEY
+cp .env.example .env.local   # then add ANTHROPIC_API_KEY and FORM_ENGINE=claude
 ```
 
-When the key is present the client switches to Claude automatically, and falls back to the demo parser on any error. Set `FORM_ENGINE=demo` to force the parser.
+Claude runs only when both the key and `FORM_ENGINE=claude` are set; the client then switches to it automatically and falls back to the demo parser on any error. The route has no accounts or rate limits yet, so leave it off on public deployments.
 
 ## Type
 
-**Aeonik Pro** (300/400/500) for everything · **Aeonik Mono Pro** only for eyebrows (small uppercase labels). Self-hosted as woff2 in `src/fonts/`, converted from the licensed Pro files.
+**Satoshi** (Indian Type Foundry, ITF Free Font License) for everything · **Geist Mono** (SIL OFL, via `next/font/google`) only for eyebrows (small uppercase labels). Satoshi is the official variable woff2, self-hosted unmodified in `src/fonts/satoshi/` with its licence; the licence forbids modifying the file and redistributing it through a public repository, so this repository must stay private (or the font must move out of git) before it is ever made public.

@@ -7,8 +7,13 @@ import { BirthViewSchema, InterpretationSchema, type Doc, type Interpretation, t
 
 const MODEL = "claude-opus-5-5";
 
+/**
+ * Claude runs only when explicitly enabled: a key alone is not enough. The route has no
+ * accounts or rate limits yet (FORM v1 phases 2 and 5), so a key left in an environment
+ * must never turn the public demo into an open proxy.
+ */
 export function claudeConfigured() {
-  if (process.env.FORM_ENGINE === "demo") return false;
+  if (process.env.FORM_ENGINE !== "claude") return false;
   return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 }
 

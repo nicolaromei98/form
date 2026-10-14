@@ -46,6 +46,11 @@ export const ReassignPlanSchema = z.object({ moves: z.array(ReassignMoveSchema).
    UI representation + layout preferences (structured config, not code)
    ------------------------------------------------------------------ */
 
+/** Document limits. Reducers and editors enforce them too: a stored document must always parse */
+export const TOOL_TITLE_MAX = 80;
+export const PEOPLE_MAX = 20;
+export const MOOD_MAX = 200;
+
 export const RepresentationSchema = z.enum(["cards", "board", "timeline", "focus", "team", "brief"]);
 /** Every view, in the tab order docs saved before progressive creation had */
 export const ALL_VIEWS = ["cards", "board", "timeline", "team", "focus", "brief"] as const;
@@ -87,7 +92,7 @@ export const ToolSchema = z.object({
   id: z.string(),
   kind: z.literal("project"),
   template: z.literal("website"),
-  title: z.string().max(80),
+  title: z.string().max(TOOL_TITLE_MAX),
   /** ISO date (yyyy-mm-dd) the schedule starts from */
   startDate: z.string(),
   /** True while the start date is the demo's labelled sample date */
@@ -175,8 +180,8 @@ export const DocSchema = z.object({
   view: ViewSchema,
   proposal: ProposalSchema.nullable(),
   /** Moodboard items, in stacking order (last on top). Kept when the block is hidden. */
-  mood: z.array(MoodItemSchema).max(200).default([]),
-  people: z.array(PersonSchema).max(20).default([]),
+  mood: z.array(MoodItemSchema).max(MOOD_MAX).default([]),
+  people: z.array(PersonSchema).max(PEOPLE_MAX).default([]),
   /** Proposed reassignments, shown as a preview on the Team view */
   plan: ReassignPlanSchema.nullable().default(null),
   // A brief that somehow fails to parse costs the user's brief edits, never the whole workspace
@@ -202,12 +207,12 @@ const ViewPatchSchema = ViewSchema.omit({ representation: true, fields: true }).
 export const OperationSchema = z.discriminatedUnion("op", [
   z.object({
     op: z.literal("createProject"),
-    title: z.string().min(1).max(80),
+    title: z.string().min(1).max(TOOL_TITLE_MAX),
     template: z.literal("website"),
     /** The one view the project starts with (default: the tracker) */
     representation: BirthViewSchema.optional(),
   }),
-  z.object({ op: z.literal("renameTool"), title: z.string().min(1).max(80) }),
+  z.object({ op: z.literal("renameTool"), title: z.string().min(1).max(TOOL_TITLE_MAX) }),
   z.object({ op: z.literal("setRepresentation"), representation: RepresentationSchema }),
   /** Closes a view's tab; never its data, never the last view */
   z.object({ op: z.literal("removeView"), representation: RepresentationSchema }),

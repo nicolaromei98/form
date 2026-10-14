@@ -1,6 +1,6 @@
 import { DEFAULT_VIEW, SAMPLE_OWNERS, sampleTeam, uid, websiteTemplate } from "./seed";
 import { addMoodItems, arrangeMood, patchMoodItem } from "./mood";
-import { BRIEF_LINES_MAX, BRIEF_TEXT_MAX, type BlockType, type Doc, type Operation, type ReassignPlan, type Representation, type Task } from "./schema";
+import { BRIEF_LINES_MAX, BRIEF_TEXT_MAX, PEOPLE_MAX, TOOL_TITLE_MAX, type BlockType, type Doc, type Operation, type ReassignPlan, type Representation, type Task } from "./schema";
 
 const BLOCK_ORDER: BlockType[] = ["header", "metrics", "progress", "collection", "moodboard"];
 
@@ -46,7 +46,7 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
 
     case "renameTool":
       if (!doc.tool) return doc;
-      return { ...doc, tool: { ...doc.tool, title: op.title } };
+      return { ...doc, tool: { ...doc.tool, title: op.title.slice(0, TOOL_TITLE_MAX) } };
 
     case "setRepresentation":
       // Opening a view the project doesn't have yet creates it: appended, so existing tabs never move
@@ -199,7 +199,7 @@ export function applyOperation(doc: Doc, op: Operation): Doc {
 
     case "addPerson": {
       const name = op.name.trim();
-      if (!name || doc.people.some((p) => p.name.toLowerCase() === name.toLowerCase())) return doc;
+      if (!name || doc.people.length >= PEOPLE_MAX || doc.people.some((p) => p.name.toLowerCase() === name.toLowerCase())) return doc;
       const person = { id: uid("p"), name: name[0].toUpperCase() + name.slice(1), role: op.role?.trim() || null, capacity: op.capacity ?? 10 };
       return { ...doc, people: [...doc.people, person] };
     }

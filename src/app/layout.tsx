@@ -1,29 +1,22 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-// Display role — Aeonik Pro (client-specified, licensed Pro files)
-const aeonik = localFont({
-  variable: "--font-aeonik",
-  display: "block",
-  adjustFontFallback: false,
-  src: [
-    { path: "../fonts/AeonikPro-Light.woff2", weight: "300", style: "normal" },
-    { path: "../fonts/AeonikPro-Regular.woff2", weight: "400", style: "normal" },
-    { path: "../fonts/AeonikPro-Medium.woff2", weight: "500", style: "normal" },
-  ],
+// Everything but eyebrows — Satoshi (Indian Type Foundry, ITF Free Font License, see src/fonts/satoshi).
+// The licence forbids modifying the file (no subsetting or conversion) and redistributing it through a
+// public repository: the official variable woff2 is self-hosted as shipped, and this repo stays private.
+const satoshi = localFont({
+  variable: "--font-satoshi",
+  display: "swap",
+  src: [{ path: "../fonts/satoshi/Satoshi-Variable.woff2", weight: "300 900", style: "normal" }],
 });
 
-// Body + metadata role — Aeonik Mono Pro (client-specified)
-const aeonikMono = localFont({
-  variable: "--font-aeonik-mono",
-  display: "block",
-  adjustFontFallback: false,
-  src: [
-    { path: "../fonts/AeonikMonoPro-Light.woff2", weight: "300", style: "normal" },
-    { path: "../fonts/AeonikMonoPro-Regular.woff2", weight: "400", style: "normal" },
-    { path: "../fonts/AeonikMonoPro-Medium.woff2", weight: "500", style: "normal" },
-  ],
+// Eyebrows only — Geist Mono (SIL Open Font License), self-hosted by next/font at build time
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -37,7 +30,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${aeonik.variable} ${aeonikMono.variable} h-full`}>
+    <html lang="en" className={`${satoshi.variable} ${geistMono.variable} h-full`}>
       <body className="min-h-full">{children}</body>
     </html>
   );

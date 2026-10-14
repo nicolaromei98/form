@@ -7,7 +7,7 @@ import { DecodeText, RevealText, revealWords } from "../text/TextMotion";
 import { useForm } from "@/lib/store";
 import { TAB_GROW_MS, ease, move } from "@/lib/motion";
 import { fmtEuro, metrics, parseISODate, topLevel } from "@/lib/selectors";
-import { REPRESENTATION_LABEL, SORT_LABEL, type Representation, type Sort } from "@/lib/schema";
+import { REPRESENTATION_LABEL, SORT_LABEL, TOOL_TITLE_MAX, type Representation, type Sort } from "@/lib/schema";
 import { EditableText, Popover, usePopover } from "./parts";
 import { useBlockReveal } from "./reveal";
 import { CardsView } from "./CardsView";
@@ -73,7 +73,7 @@ export function HeaderBlock() {
         {/* The eyebrow re-decodes whenever the representation changes */}
         <DecodeText text={`Project · ${REPRESENTATION_LABEL[doc.view.representation]}`} delay={d} className="t-meta mb-3 block text-text-3" />
         <TitleReveal delay={d + 0.08}>
-          <EditableText value={tool.title} label="Project title" onCommit={(v) => commit([{ op: "renameTool", title: v }], "rename project")} className="t-display-l tone-light" />
+          <EditableText value={tool.title} label="Project title" maxLength={TOOL_TITLE_MAX} onCommit={(v) => commit([{ op: "renameTool", title: v }], "rename project")} className="t-display-l tone-light" />
         </TitleReveal>
         <RevealText as="p" text={subtitle} delay={d + 0.3} className="t-body mt-3 text-text-2" />
       </div>

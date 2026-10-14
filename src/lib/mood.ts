@@ -1,5 +1,5 @@
 import { uid } from "./seed";
-import type { MoodInput, MoodItem, MoodKind, MoodLayout } from "./schema";
+import { MOOD_MAX, type MoodInput, type MoodItem, type MoodKind, type MoodLayout } from "./schema";
 
 /**
  * Moodboard geometry. Every value is in board-width units (1 = the board's
@@ -39,6 +39,8 @@ export function normaliseHex(hex: string | null | undefined): string | null {
 export function addMoodItems(existing: MoodItem[], inputs: MoodInput[]): MoodItem[] {
   const mood = [...existing];
   for (const input of inputs) {
+    // A full board takes no more references (a longer list would fail the stored document)
+    if (mood.length >= MOOD_MAX) break;
     const hex = normaliseHex(input.hex);
     if (input.kind === "image" && !input.asset) continue;
     if (input.kind === "color" && !hex) continue;
@@ -81,7 +83,18 @@ function hash(id: string, salt: number) {
 }
 
 /** Re-lays the board out. Every reference keeps its proportions; only size and place change. */
+/** Arranged boxes stay inside the stored bounds, however tall or many the items are */
+const bounded = (it: MoodItem): MoodItem => {
+  const w = clamp(it.w, 0.04, 1);
+  const h = clamp(it.h, 0.03, 3);
+  return { ...it, w, h, x: clamp(it.x, 0, 1 - w), y: clamp(it.y, 0, 20) };
+};
+
 export function arrangeMood(items: MoodItem[], layout: MoodLayout): MoodItem[] {
+  return arranged(items, layout).map(bounded);
+}
+
+function arranged(items: MoodItem[], layout: MoodLayout): MoodItem[] {
   if (!items.length) return items;
   if (layout === "collage") return collage(items);
 

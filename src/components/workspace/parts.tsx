@@ -353,11 +353,14 @@ export function EditableText({
   onCommit,
   className = "",
   label,
+  maxLength = 140,
 }: {
   value: string;
   onCommit: (v: string) => void;
   className?: string;
   label: string;
+  /** The field's stored limit: longer text is cut here, so the document always parses */
+  maxLength?: number;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -388,7 +391,7 @@ export function EditableText({
         }
       }}
       onBlur={(e) => {
-        const v = (e.currentTarget.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 140);
+        const v = (e.currentTarget.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength).trim();
         if (!v) e.currentTarget.textContent = value;
         else if (v !== value) onCommit(v);
       }}

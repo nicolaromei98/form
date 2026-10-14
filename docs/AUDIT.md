@@ -113,6 +113,8 @@ Process note: there is no `gh` or `vercel` CLI on this machine. Each phase is pu
 
 ## 3. Proposed: v0 safety patch before Phase 1
 
+> **Resolved 2026-10-14:** applied on `main`. Details in `docs/DECISIONS.md` ("v0 safety patch").
+
 This is outside the phase plan. It needs your yes, because it would go to `main` (the live demo) rather than to a phase branch. Small, one commit:
 
 1. **Enforce document limits where edits happen:**
@@ -126,6 +128,8 @@ This is outside the phase plan. It needs your yes, because it would go to `main`
 ---
 
 ## 4. Questions for Nicola
+
+> **Resolved 2026-10-14:** Nicola delegated the answers. The defaults below are adopted, with the refinements to Q3, Q16, Q23, Q24 and Q31 recorded in `docs/DECISIONS.md`. Satoshi and Geist Mono replace Aeonik.
 
 Each has a proposed default. "OK to the defaults" answers all of them. They are grouped by the phase that needs the answer.
 
