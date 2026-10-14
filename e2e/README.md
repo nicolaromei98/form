@@ -19,9 +19,11 @@ npm run e2e:compare -- --base <ref> --head <ref>      # any two commits
 npm run e2e:compare -- --capture <ref> --label A      # capture a baseline and write e2e/baselines/A.json
 npm run e2e:compare -- --keep -- visual.spec.ts --project chromium-desktop   # Playwright args after the second --
 npm run e2e                                           # this checkout only, built and served on 3500
+node scripts/e2e/pairs.mjs --before R --after T       # two captures' stills side by side, with diffs, in e2e/.out/pairs-R-T
+node scripts/e2e/a11y-baseline.mjs <run>/base/artifacts <A's commit>   # a11y.spec.ts results of A → e2e/baselines/a11y-A.json
 ```
 
-`compare.mjs` builds each commit in a git worktree under the system temp dir, serves it with `next start` on 3500 (base) and 3501 (head), runs these specs against the base with `--update-snapshots=all`, then against the head. Port 3417 is never used. Everything a run writes goes to the gitignored `e2e/.out/<run>/`: `snapshots/`, `base|head/report` (HTML), `base|head/test-results` (diffs, traces), `base|head/artifacts/{agent-idle.json,videos/}`.
+`compare.mjs` builds each commit in a git worktree under the system temp dir, serves it with `next start` on 3500 (base) and 3501 (head), runs these specs against the base with `--update-snapshots=all`, then against the head. Port 3417 is never used. Everything a run writes goes to the gitignored `e2e/.out/<run>/`: `snapshots/`, `base|head/report` (HTML), `base|head/test-results` (diffs, traces), `base|head/artifacts/{agent-idle.json,a11y/,videos/}`.
 
 ## Baselines
 
@@ -32,6 +34,7 @@ npm run e2e                                           # this checkout only, buil
   - the agent fluid's particle positions.
 
   The likely cause is effects committing at a slightly different fake millisecond under the `/demo` route tree.
+- **T** is the Q14 tokens commit at `01e67f1` (plan step 4: the token table, surface dimming, `--signal-text`/`--signal-graphic`, `--line-strong`), served at `/demo`. Captured on 2026-10-14: 139 passed and 1 skipped (140 with `a11y.spec.ts`), with 92 stills (56 MB), 66 frames (13 MB), 2 videos (39 MB); the idle probe is unchanged (about 2,800 to 3,000 writes per second; the agent fix is step 5). Against R, all 92 stills differ by design (the text ramp is on every screen): from about 3,100 pixels (empty, desktop) to 178,000 (tracker-urgent, phone), the most where the urgent highlight used to fade whole cards (tracker-urgent, caption-undo). No still changes size. `node scripts/e2e/pairs.mjs --before R --after T` lays the pairs out for review. On axe, A shows colour-contrast violations as rendered in 11 of 23 states and, on the flattened ground, in all 23; T shows none in either pass, and no rule A doesn't break in the same state (`e2e/baselines/a11y-A.json`). T is the reference for step 5's frames; it is not a gate.
 - `gate.json` names the baseline CI compares with: R since the route move. The UI lane moves it to B after the agent fix, capturing it with `--capture`.
 
 ## Determinism
