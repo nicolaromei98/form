@@ -130,3 +130,18 @@ Choices not covered by `docs/FORM-v1.md`, or confirmed from its section 3.2. Eac
 28. **Phase 1 visual baseline.** B is v0 plus the route move, Q14 and the agent fix, all on the v0 code. The engine port is gated at 0 differing pixels outside ED-1 to ED-10. Q14 is applied with the full verified token table, because raising `--text-3` alone would invert the ramp.
 29. **Agent settling (Q26, Q29).** Breathing fades out after 4 s of no input; the loop sleeps once settled and wakes on prop changes, a nearby pointer or visibility; under reduced motion the agent is a static SVG. The Focus floats are unchanged until Phase 4 or 6.
 30. **Phase workflow.** Every verified step is committed and pushed to `phase-1-domain`; `main` is untouched until Nicola merges.
+
+### 2026-10-14 · Phase 1 step 1 tooling details
+- **Context:** step 1 installed the phase's tooling. A few details differ from the plan's letter.
+- **Choice:**
+  - nanoid 6.0.2, not 5: same `customAlphabet` API.
+  - `@types/node` 22, because vitest 5 needs it and Node 22 runs locally and in CI.
+  - The config file is `vitest.config.mts` (ESM), as in the Next 16 guide.
+  - An extra `unit-dom` Vitest project (happy-dom) for store and component tests.
+  - `npm test` runs unit, unit-dom and golden (plan §10.1).
+  - The fast parser may import **types only** from `lib/ops`. Its result types live there, and the lint config can't be edited by parallel lanes.
+  - Cross-module relative imports (`../`) are a lint error, so the boundary rules always see `@/lib/...` paths.
+  - The components allow-list is enforced from step 18.
+  - Step 2 may edit `ci.yml` to wire the e2e job, the single exception to "only step 1 edits it".
+  - Audit re-runs write to the gitignored `scripts/audit/.out/`.
+- **Rejected:** pinning older versions to match the plan's letter.
