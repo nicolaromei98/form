@@ -1,0 +1,137 @@
+{
+  "op.count": 35,
+  "op.names": [
+    "createProject",
+    "renameTool",
+    "setRepresentation",
+    "removeView",
+    "setView",
+    "setFields",
+    "updateTask",
+    "addTask",
+    "removeTask",
+    "moveTask",
+    "proposeSubtasks",
+    "acceptProposal",
+    "discardProposal",
+    "addBlock",
+    "removeBlock",
+    "setStartDate",
+    "addMoodItems",
+    "updateMoodItem",
+    "removeMoodItem",
+    "arrangeMood",
+    "clearMood",
+    "addPerson",
+    "updatePerson",
+    "removePerson",
+    "assignTask",
+    "addSampleTeam",
+    "proposeReassign",
+    "acceptReassign",
+    "discardReassign",
+    "editBriefLine",
+    "resetBriefLine",
+    "addBriefLine",
+    "updateBriefLine",
+    "removeBriefLine",
+    "resetBrief"
+  ],
+  "det.createProject": false,
+  "det.addTask": false,
+  "det.addPerson": false,
+  "det.addBriefLine": false,
+  "det.addMoodItems": false,
+  "det.acceptProposal(collision)": false,
+  "det.updateTask": true,
+  "det.arrangeMood": true,
+  "mutation.errors": [],
+  "mutation.finalDocValid": "valid",
+  "alias.proposal.items===op.items": true,
+  "inv.done+progress40 (parser: 'mark it done at 40%')": "done@40",
+  "inv.active(30)->todo (status menu / board lane back)": "todo@30",
+  "inv.done(100)->review (board lane back)": "review@100",
+  "inv.done(100)->active (status menu)": "active@100",
+  "inv.review(85)->progress100": "done@100",
+  "inv.done->progress0": "active@0",
+  "inv.todo->progress50": "active@50",
+  "inv.active->progress0": "active@0",
+  "inv.todo+progress100+status todo": "todo@100",
+  "inv.done->todo progress": "todo@0",
+  "nest.grandchildCreated": true,
+  "nest.orphanAfterParentRemoved": "orphan t-gqw9z3 parentId=t-3o8ayn (exists: false)",
+  "nest.docStillValid": "valid",
+  "dangling.focusIdAfterRemove": "t-ui",
+  "ids.stepTaskIdEqualsPersonId": true,
+  "ids.templateFixed": {
+    "tasks": [
+      "t-research",
+      "t-visual",
+      "t-ui",
+      "t-dev"
+    ],
+    "people": [
+      "p-marta",
+      "p-sara",
+      "p-luca"
+    ],
+    "toolId": "tool-ci4jwa"
+  },
+  "ids.forcedUid": "t-ui",
+  "ids.collisionOverwrites t-ui": {
+    "title": "Overwrites",
+    "orderHasDup": 2
+  },
+  "ids.shortUid(0.5)": "t-i",
+  "identity.setView(same sort)": false,
+  "identity.setRepresentation(same)": false,
+  "identity.updateTask(same title)": false,
+  "identity.renameTool(same)": false,
+  "identity.updateTask(unknown id)": true,
+  "loss.renameTool140.opSchema": false,
+  "loss.renameTool140.doc": [
+    "tool.title: Too big: expected string to have <=80 characters"
+  ],
+  "loss.people.count": 21,
+  "loss.people21.doc": [
+    "people: Too big: expected array to have <=20 items"
+  ],
+  "ux.addPersonNameCollisionNoop": true,
+  "loss.mood.count": 216,
+  "loss.mood216.doc": [
+    "mood: Too big: expected array to have <=200 items"
+  ],
+  "loss.masonry120tall.maxY": "14.43",
+  "loss.masonry120tall.doc": "valid",
+  "loss.collage120tall.doc": "valid",
+  "loss.grid120tall.doc": "valid",
+  "loss.masonry.firstBreakingCount(aspect2.16)": 166,
+  "loss.tallNote.beforeArrange": "valid",
+  "loss.tallNote.masonry": [
+    "mood.0.h: Too big: expected number to be <=3"
+  ],
+  "loss.tallNote.collage": [
+    "mood.0.h: Too big: expected number to be <=3"
+  ],
+  "loss.tallNote.grid": [
+    "mood.0.w: Too small: expected number to be >=0.04"
+  ],
+  "ok.taskTitle140": "valid",
+  "v2.estimateOffGrid.opSchema": true,
+  "persist.afterHydrate.toolIsNull": true,
+  "persist.storageStillHasBadDocBeforeAnySet": 81,
+  "persist.afterFirstSet.storedTool": null,
+  "persist.commitAcceptedInvalidTitle": 140,
+  "persist.storedDocValid": [
+    "tool.title: Too big: expected string to have <=80 characters"
+  ],
+  "persist.versionMismatch.toolNull": false,
+  "persist.versionMismatch.consoleError": "State loaded from storage couldn't be migrated since no migrate function was provided",
+  "history.limit/past": {
+    "past": 2,
+    "partializeKeys": [
+      "doc",
+      "log"
+    ]
+  }
+}

@@ -1,0 +1,892 @@
+[
+  {
+    "state": "intro open (first visit, empty workspace behind)",
+    "violations": [
+      {
+        "id": "aria-prohibited-attr",
+        "impact": "serious",
+        "wcag": "wcag2a,wcag412",
+        "help": "Elements must only use permitted ARIA attributes",
+        "nodes": 4,
+        "examples": [
+          {
+            "target": ".t-body.text-text-2",
+            "html": "<span class=\"t-body text-text-2\" aria-label=\"Describe what you’re trying to do.\">",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"span\" elements with no valid role attribute."
+          },
+          {
+            "target": "span[aria-label=\"Click the form or press /\"]",
+            "html": "<span class=\"whitespace-pre t-micro text-text-3\" aria-label=\"Click the form or press /\"><span aria-hidden=\"true\">Click&nbsp;the&nbsp;form&nbsp;or&nbsp;press&nbs",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"span\" elements with no valid role attribute."
+          },
+          {
+            "target": ".gap-3 > .whitespace-pre.t-micro.text-text-3",
+            "html": "<span class=\"whitespace-pre t-micro text-text-3\" aria-label=\"Personal project · Work in progress\"><span aria-hidden=\"true\">Personal&nbsp;project&nbsp;·&nbsp;Wor",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"span\" elements with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "wcag": "",
+        "help": "All page content should be contained by landmarks",
+        "nodes": 4,
+        "examples": [
+          {
+            "target": ".left-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed bottom-6 left-7 z-20 hidden flex-col gap-0.5 text-text-3 xl:flex\"><span>FORM / 01 — Adaptive workspace</span><span",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": ".right-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed right-7 bottom-6 z-20 hidden flex-col items-end gap-0.5 text-text-3 xl:flex\"><span>/ — ask</span><span>⌘Z — undo</",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": ".text-center",
+            "html": "<div class=\"pointer-events-none fixed z-30 flex flex-col items-center gap-2.5 text-center\" style=\"left: 540px; top: 625px; width: 360px;\">",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          }
+        ]
+      }
+    ],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "wcag": "wcag2aa,wcag143",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "nodes": 29,
+        "examples": [
+          {
+            "target": ".font-display",
+            "html": "<span class=\"font-display text-[15px] leading-none font-medium tracking-[-0.03em]\">FORM</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".mr-1",
+            "html": "<span class=\"t-micro mr-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-text-3 sm:flex\" title=\"Commands are interpreted by a deterministic, rule-b",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".left-7 > span:nth-child(1)",
+            "html": "<span>FORM / 01 — Adaptive workspace</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ],
+    "ccIncompleteWhy": {
+      "bgGradient": 15,
+      "imgNode": 12,
+      "elmPartiallyObscuring": 2
+    }
+  },
+  {
+    "state": "empty workspace (idle agent)",
+    "violations": [
+      {
+        "id": "aria-prohibited-attr",
+        "impact": "serious",
+        "wcag": "wcag2a,wcag412",
+        "help": "Elements must only use permitted ARIA attributes",
+        "nodes": 2,
+        "examples": [
+          {
+            "target": ".t-body",
+            "html": "<span class=\"t-body text-text-2\" aria-label=\"Describe what you’re trying to do.\">",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"span\" elements with no valid role attribute."
+          },
+          {
+            "target": ".whitespace-pre",
+            "html": "<span class=\"whitespace-pre t-micro text-text-3\" aria-label=\"Click the form or press /\"><span aria-hidden=\"true\">Click&nbsp;the&nbsp;form&nbsp;or&nbsp;press&nbs",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"span\" elements with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "wcag": "",
+        "help": "All page content should be contained by landmarks",
+        "nodes": 4,
+        "examples": [
+          {
+            "target": ".left-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed bottom-6 left-7 z-20 hidden flex-col gap-0.5 text-text-3 xl:flex\"><span>FORM / 01 — Adaptive workspace</span><span",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": ".right-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed right-7 bottom-6 z-20 hidden flex-col items-end gap-0.5 text-text-3 xl:flex\"><span>/ — ask</span><span>⌘Z — undo</",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": ".gap-2\\.5",
+            "html": "<div class=\"pointer-events-none fixed z-30 flex flex-col items-center gap-2.5 text-center\" style=\"left: 540px; top: 625px; width: 360px;\">",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          }
+        ]
+      }
+    ],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "wcag": "wcag2aa,wcag143",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "nodes": 15,
+        "examples": [
+          {
+            "target": ".font-display",
+            "html": "<span class=\"font-display text-[15px] leading-none font-medium tracking-[-0.03em]\">FORM</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".mr-1",
+            "html": "<span class=\"t-micro mr-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-text-3 sm:flex\" title=\"Commands are interpreted by a deterministic, rule-b",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".left-7 > span:nth-child(1)",
+            "html": "<span>FORM / 01 — Adaptive workspace</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ],
+    "ccIncompleteWhy": {
+      "bgGradient": 15
+    }
+  },
+  {
+    "state": "empty workspace, composer open",
+    "violations": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "wcag": "",
+        "help": "All page content should be contained by landmarks",
+        "nodes": 4,
+        "examples": [
+          {
+            "target": ".left-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed bottom-6 left-7 z-20 hidden flex-col gap-0.5 text-text-3 xl:flex\"><span>FORM / 01 — Adaptive workspace</span><span",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": ".right-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed right-7 bottom-6 z-20 hidden flex-col items-end gap-0.5 text-text-3 xl:flex\"><span>/ — ask</span><span>⌘Z — undo</",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": "input",
+            "html": "<input placeholder=\"Describe what you need\" aria-label=\"Command\" autocomplete=\"off\" spellcheck=\"false\" class=\"t-body-l min-w-0 flex-1 bg-transparent px-1.5 text",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          }
+        ]
+      }
+    ],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "wcag": "wcag2aa,wcag143",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "nodes": 12,
+        "examples": [
+          {
+            "target": ".font-display",
+            "html": "<span class=\"font-display text-[15px] leading-none font-medium tracking-[-0.03em]\">FORM</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".mr-1",
+            "html": "<span class=\"t-micro mr-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-text-3 sm:flex\" title=\"Commands are interpreted by a deterministic, rule-b",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".left-7 > span:nth-child(1)",
+            "html": "<span>FORM / 01 — Adaptive workspace</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ],
+    "ccIncompleteWhy": {
+      "bgGradient": 8,
+      "emptyValue": 1,
+      "imgNode": 3
+    }
+  },
+  {
+    "state": "tracker (demo project, 4 tasks)",
+    "violations": [
+      {
+        "id": "aria-prohibited-attr",
+        "impact": "serious",
+        "wcag": "wcag2a,wcag412",
+        "help": "Elements must only use permitted ARIA attributes",
+        "nodes": 2,
+        "examples": [
+          {
+            "target": ".whitespace-pre",
+            "html": "<span class=\"whitespace-pre t-meta mb-3 block text-text-3\" aria-label=\"Project · Tracker\"><span aria-hidden=\"true\">Project&nbsp;·&nbsp;Tracker</span></span>",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"span\" elements with no valid role attribute."
+          },
+          {
+            "target": "p",
+            "html": "<p class=\"t-body mt-3 text-text-2\" aria-label=\"4 tasks · sample start 28 Sep\">",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"p\" elements with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "wcag": "wcag21a,wcag253",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 4,
+        "examples": [
+          {
+            "target": "article[data-task-id=\"t-research\"] > .-top-\\[9px\\].-right-\\[9px\\].z-10 > .w-\\[30px\\].transition-\\[background-color\\,color\\,scale\\].hover\\:scale-105",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-pressed=\"false\" aria-label=\"Select Research to a...\" class=\"focus-ring t-micro r...\" style=\"opacity: 1; trans",
+            "why": "Fix any of the following: Text inside the element is not included in the accessible name"
+          },
+          {
+            "target": "article[data-task-id=\"t-visual\"] > .-top-\\[9px\\].-right-\\[9px\\].z-10 > .w-\\[30px\\].transition-\\[background-color\\,color\\,scale\\].hover\\:scale-105",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-pressed=\"false\" aria-label=\"Select Visual Direct...\" class=\"focus-ring t-micro r...\" style=\"opacity: 1; trans",
+            "why": "Fix any of the following: Text inside the element is not included in the accessible name"
+          },
+          {
+            "target": "article[data-task-id=\"t-ui\"] > .-top-\\[9px\\].-right-\\[9px\\].z-10 > .w-\\[30px\\].transition-\\[background-color\\,color\\,scale\\].hover\\:scale-105",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-pressed=\"false\" aria-label=\"Select UI Design to ...\" class=\"focus-ring t-micro r...\" style=\"opacity: 1; trans",
+            "why": "Fix any of the following: Text inside the element is not included in the accessible name"
+          }
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "wcag": "",
+        "help": "All page content should be contained by landmarks",
+        "nodes": 3,
+        "examples": [
+          {
+            "target": ".left-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed bottom-6 left-7 z-20 hidden flex-col gap-0.5 text-text-3 xl:flex\"><span>FORM / 01 — Adaptive workspace</span><span",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": ".right-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed right-7 bottom-6 z-20 hidden flex-col items-end gap-0.5 text-text-3 xl:flex\"><span>/ — ask</span><span>⌘Z — undo</",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": "div[aria-label=\"Views FORM suggests\"]",
+            "html": "<div role=\"group\" aria-label=\"Views FORM suggests\"></div>",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          }
+        ]
+      },
+      {
+        "id": "target-size",
+        "impact": "serious",
+        "wcag": "wcag22aa,wcag258",
+        "help": "All touch targets must be 24px large, or leave sufficient space",
+        "nodes": 16,
+        "examples": [
+          {
+            "target": "div[aria-label=\"Priority: Low\"] > .items-center.flex > .h-\\[18px\\].w-\\[13px\\][aria-label=\"Set priority to Low\"]",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-label=\"Set priority to Low\" aria-pressed=\"true\" class=\"focus-ring group grid h-[18px] w-[13px] cursor-pointer",
+            "why": "Fix any of the following: Target has insufficient size (13px by 18px, should be at least 24px by 24px) Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 2px instead of at leas"
+          },
+          {
+            "target": "div[aria-label=\"Priority: Low\"] > .items-center.flex > .h-\\[18px\\].w-\\[13px\\][aria-label=\"Set priority to Medium\"]",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-label=\"Set priority to Medium\" aria-pressed=\"false\" class=\"focus-ring group grid h-[18px] w-[13px] cursor-poi",
+            "why": "Fix any of the following: Target has insufficient size (13px by 18px, should be at least 24px by 24px) Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 2px instead of at leas"
+          },
+          {
+            "target": "div[aria-label=\"Priority: Low\"] > .items-center.flex > .h-\\[18px\\].w-\\[13px\\][aria-label=\"Set priority to High\"]",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-label=\"Set priority to High\" aria-pressed=\"false\" class=\"focus-ring group grid h-[18px] w-[13px] cursor-point",
+            "why": "Fix any of the following: Target has insufficient size (13px by 18px, should be at least 24px by 24px) Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 2px instead of at leas"
+          }
+        ]
+      }
+    ],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "wcag": "wcag2aa,wcag143",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "nodes": 59,
+        "examples": [
+          {
+            "target": ".font-display",
+            "html": "<span class=\"font-display text-[15px] leading-none font-medium tracking-[-0.03em]\">FORM</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".mr-1",
+            "html": "<span class=\"t-micro mr-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-text-3 sm:flex\" title=\"Commands are interpreted by a deterministic, rule-b",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".ml-1 > .\\[font-kerning\\:none\\].\\[font-variant-ligatures\\:none\\][data-button-069-text=\"\"] > span[aria-hidden=\"true\"]",
+            "html": "<span aria-hidden=\"true\">Reset demo</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ],
+    "ccIncompleteWhy": {
+      "bgGradient": 52,
+      "shortTextContent": 6,
+      "imgNode": 1
+    }
+  },
+  {
+    "state": "board",
+    "violations": [
+      {
+        "id": "aria-prohibited-attr",
+        "impact": "serious",
+        "wcag": "wcag2a,wcag412",
+        "help": "Elements must only use permitted ARIA attributes",
+        "nodes": 2,
+        "examples": [
+          {
+            "target": ".whitespace-pre",
+            "html": "<span class=\"whitespace-pre t-meta mb-3 block text-text-3\" aria-label=\"Project · Board\"><span aria-hidden=\"true\">Project&nbsp;·&nbsp;Board</span></span>",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"span\" elements with no valid role attribute."
+          },
+          {
+            "target": "p",
+            "html": "<p class=\"t-body mt-3 text-text-2\" aria-label=\"4 tasks · sample start 28 Sep\">",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"p\" elements with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "wcag": "wcag21a,wcag253",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 4,
+        "examples": [
+          {
+            "target": "article[data-task-id=\"t-dev\"] > .-top-\\[9px\\].-right-\\[9px\\].z-10 > .w-\\[30px\\].transition-\\[background-color\\,color\\,scale\\].hover\\:scale-105",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-pressed=\"false\" aria-label=\"Select Development t...\" class=\"focus-ring t-micro r...\" style=\"opacity: 1; trans",
+            "why": "Fix any of the following: Text inside the element is not included in the accessible name"
+          },
+          {
+            "target": "article[data-task-id=\"t-ui\"] > .-top-\\[9px\\].-right-\\[9px\\].z-10 > .w-\\[30px\\].transition-\\[background-color\\,color\\,scale\\].hover\\:scale-105",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-pressed=\"false\" aria-label=\"Select UI Design to ...\" class=\"focus-ring t-micro r...\" style=\"opacity: 1; trans",
+            "why": "Fix any of the following: Text inside the element is not included in the accessible name"
+          },
+          {
+            "target": "article[data-task-id=\"t-visual\"] > .-top-\\[9px\\].-right-\\[9px\\].z-10 > .w-\\[30px\\].transition-\\[background-color\\,color\\,scale\\].hover\\:scale-105",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-pressed=\"false\" aria-label=\"Select Visual Direct...\" class=\"focus-ring t-micro r...\" style=\"opacity: 1; trans",
+            "why": "Fix any of the following: Text inside the element is not included in the accessible name"
+          }
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "wcag": "",
+        "help": "All page content should be contained by landmarks",
+        "nodes": 3,
+        "examples": [
+          {
+            "target": ".left-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed bottom-6 left-7 z-20 hidden flex-col gap-0.5 text-text-3 xl:flex\"><span>FORM / 01 — Adaptive workspace</span><span",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": ".right-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed right-7 bottom-6 z-20 hidden flex-col items-end gap-0.5 text-text-3 xl:flex\"><span>/ — ask</span><span>⌘Z — undo</",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": "div[aria-label=\"Views FORM suggests\"]",
+            "html": "<div role=\"group\" aria-label=\"Views FORM suggests\"></div>",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          }
+        ]
+      },
+      {
+        "id": "target-size",
+        "impact": "serious",
+        "wcag": "wcag22aa,wcag258",
+        "help": "All touch targets must be 24px large, or leave sufficient space",
+        "nodes": 16,
+        "examples": [
+          {
+            "target": "div[aria-label=\"Priority: Medium\"] > .items-center > .h-\\[18px\\].w-\\[13px\\][aria-label=\"Set priority to Low\"]",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-label=\"Set priority to Low\" aria-pressed=\"false\" class=\"focus-ring group grid h-[18px] w-[13px] cursor-pointe",
+            "why": "Fix any of the following: Target has insufficient size (13px by 18px, should be at least 24px by 24px) Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 2px instead of at leas"
+          },
+          {
+            "target": "div[aria-label=\"Priority: Medium\"] > .items-center > .h-\\[18px\\].w-\\[13px\\][aria-label=\"Set priority to Medium\"]",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-label=\"Set priority to Medium\" aria-pressed=\"true\" class=\"focus-ring group grid h-[18px] w-[13px] cursor-poin",
+            "why": "Fix any of the following: Target has insufficient size (13px by 18px, should be at least 24px by 24px) Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 2px instead of at leas"
+          },
+          {
+            "target": "div[aria-label=\"Priority: Medium\"] > .items-center > .h-\\[18px\\].w-\\[13px\\][aria-label=\"Set priority to High\"]",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-label=\"Set priority to High\" aria-pressed=\"false\" class=\"focus-ring group grid h-[18px] w-[13px] cursor-point",
+            "why": "Fix any of the following: Target has insufficient size (13px by 18px, should be at least 24px by 24px) Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 2px instead of at leas"
+          }
+        ]
+      }
+    ],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "wcag": "wcag2aa,wcag143",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "nodes": 55,
+        "examples": [
+          {
+            "target": ".font-display",
+            "html": "<span class=\"font-display text-[15px] leading-none font-medium tracking-[-0.03em]\">FORM</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".mr-1",
+            "html": "<span class=\"t-micro mr-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-text-3 sm:flex\" title=\"Commands are interpreted by a deterministic, rule-b",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".ml-1 > .\\[font-kerning\\:none\\].\\[font-variant-ligatures\\:none\\][data-button-069-text=\"\"] > span[aria-hidden=\"true\"]",
+            "html": "<span aria-hidden=\"true\">Reset demo</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ],
+    "ccIncompleteWhy": {
+      "bgGradient": 49,
+      "shortTextContent": 5,
+      "imgNode": 1
+    }
+  },
+  {
+    "state": "timeline",
+    "violations": [
+      {
+        "id": "aria-prohibited-attr",
+        "impact": "serious",
+        "wcag": "wcag2a,wcag412",
+        "help": "Elements must only use permitted ARIA attributes",
+        "nodes": 2,
+        "examples": [
+          {
+            "target": ".whitespace-pre",
+            "html": "<span class=\"whitespace-pre t-meta mb-3 block text-text-3\" aria-label=\"Project · Timeline\"><span aria-hidden=\"true\">Project&nbsp;·&nbsp;Timeline</span></span>",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"span\" elements with no valid role attribute."
+          },
+          {
+            "target": "p",
+            "html": "<p class=\"t-body mt-3 text-text-2\" aria-label=\"4 tasks · sample start 28 Sep\">",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"p\" elements with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "wcag": "wcag21a,wcag253",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 4,
+        "examples": [
+          {
+            "target": ".border-b.last\\:border-b-0.border-line:nth-child(1) > .pr-3.min-w-0.shrink-0 > .tone-light.flex-1.gap-2 > .shrink-0.relative.flex > .w-\\[30px\\].transition-\\[background-color\\,color\\,scale\\].duration-200",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-pressed=\"false\" aria-label=\"Select Research to a...\" class=\"focus-ring t-micro r...\" style=\"opacity: 1; trans",
+            "why": "Fix any of the following: Text inside the element is not included in the accessible name"
+          },
+          {
+            "target": ".border-b.last\\:border-b-0.border-line:nth-child(2) > .pr-3.min-w-0.shrink-0 > .tone-light.flex-1.gap-2 > .shrink-0.relative.flex > .w-\\[30px\\].transition-\\[background-color\\,color\\,scale\\].duration-200",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-pressed=\"false\" aria-label=\"Select Visual Direct...\" class=\"focus-ring t-micro r...\" style=\"opacity: 1; trans",
+            "why": "Fix any of the following: Text inside the element is not included in the accessible name"
+          },
+          {
+            "target": ".border-b.last\\:border-b-0.border-line:nth-child(3) > .pr-3.min-w-0.shrink-0 > .tone-light.flex-1.gap-2 > .shrink-0.relative.flex > .w-\\[30px\\].transition-\\[background-color\\,color\\,scale\\].duration-200",
+            "html": "<button type=\"button\" data-interactive=\"true\" aria-pressed=\"false\" aria-label=\"Select UI Design to ...\" class=\"focus-ring t-micro r...\" style=\"opacity: 1; trans",
+            "why": "Fix any of the following: Text inside the element is not included in the accessible name"
+          }
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "wcag": "",
+        "help": "All page content should be contained by landmarks",
+        "nodes": 3,
+        "examples": [
+          {
+            "target": ".left-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed bottom-6 left-7 z-20 hidden flex-col gap-0.5 text-text-3 xl:flex\"><span>FORM / 01 — Adaptive workspace</span><span",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": ".right-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed right-7 bottom-6 z-20 hidden flex-col items-end gap-0.5 text-text-3 xl:flex\"><span>/ — ask</span><span>⌘Z — undo</",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": "div[role=\"group\"]",
+            "html": "<div role=\"group\" aria-label=\"Views FORM suggests\"></div>",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          }
+        ]
+      }
+    ],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "wcag": "wcag2aa,wcag143",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "nodes": 81,
+        "examples": [
+          {
+            "target": ".font-display",
+            "html": "<span class=\"font-display text-[15px] leading-none font-medium tracking-[-0.03em]\">FORM</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".sm\\:flex",
+            "html": "<span class=\"t-micro mr-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-text-3 sm:flex\" title=\"Commands are interpreted by a deterministic, rule-b",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".ml-1 > .\\[font-kerning\\:none\\].\\[font-variant-ligatures\\:none\\][data-button-069-text=\"\"] > span[aria-hidden=\"true\"]",
+            "html": "<span aria-hidden=\"true\">Reset demo</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ],
+    "ccIncompleteWhy": {
+      "bgGradient": 69,
+      "shortTextContent": 5,
+      "elmPartiallyObscuring": 5,
+      "elmPartiallyObscured": 1,
+      "imgNode": 1
+    }
+  },
+  {
+    "state": "team",
+    "violations": [
+      {
+        "id": "aria-prohibited-attr",
+        "impact": "serious",
+        "wcag": "wcag2a,wcag412",
+        "help": "Elements must only use permitted ARIA attributes",
+        "nodes": 2,
+        "examples": [
+          {
+            "target": ".whitespace-pre",
+            "html": "<span class=\"whitespace-pre t-meta mb-3 block text-text-3\" aria-label=\"Project · Team\"><span aria-hidden=\"true\">Project&nbsp;·&nbsp;Team</span></span>",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"span\" elements with no valid role attribute."
+          },
+          {
+            "target": "p",
+            "html": "<p class=\"t-body mt-3 text-text-2\" aria-label=\"4 tasks · sample start 28 Sep\">",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"p\" elements with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "wcag": "wcag2aa,wcag143",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "nodes": 3,
+        "examples": [
+          {
+            "target": "div[data-task-id=\"t-visual\"] > .ml-auto.t-data.shrink-0",
+            "html": "<span class=\"t-data ml-auto shrink-0 text-text-3\">4d<span class=\"opacity-70\"> · 85%</span></span>",
+            "why": "Fix any of the following: Element has insufficient color contrast of 2.53 (foreground color: #a1a1a1, background color: #fdfdfd, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+          },
+          {
+            "target": "div[data-task-id=\"t-visual\"] > .ml-auto.t-data.shrink-0 > .opacity-70",
+            "html": "<span class=\"opacity-70\"> · 85%</span>",
+            "why": "Fix any of the following: Element has insufficient color contrast of 1.86 (foreground color: #bcbcbc, background color: #fdfdfd, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+          },
+          {
+            "target": "div[data-task-id=\"t-dev\"] > .ml-auto.t-data.shrink-0",
+            "html": "<span class=\"t-data ml-auto shrink-0 text-text-3\">8d</span>",
+            "why": "Fix any of the following: Element has insufficient color contrast of 2.53 (foreground color: #a1a1a1, background color: #fdfdfd, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+          }
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "wcag": "",
+        "help": "All page content should be contained by landmarks",
+        "nodes": 3,
+        "examples": [
+          {
+            "target": ".left-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed bottom-6 left-7 z-20 hidden flex-col gap-0.5 text-text-3 xl:flex\"><span>FORM / 01 — Adaptive workspace</span><span",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": ".right-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed right-7 bottom-6 z-20 hidden flex-col items-end gap-0.5 text-text-3 xl:flex\"><span>/ — ask</span><span>⌘Z — undo</",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": "div[role=\"group\"]",
+            "html": "<div role=\"group\" aria-label=\"Views FORM suggests\"></div>",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          }
+        ]
+      }
+    ],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "wcag": "wcag2aa,wcag143",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "nodes": 62,
+        "examples": [
+          {
+            "target": ".font-display",
+            "html": "<span class=\"font-display text-[15px] leading-none font-medium tracking-[-0.03em]\">FORM</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".mr-1",
+            "html": "<span class=\"t-micro mr-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-text-3 sm:flex\" title=\"Commands are interpreted by a deterministic, rule-b",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".ml-1 > .\\[font-kerning\\:none\\].\\[font-variant-ligatures\\:none\\][data-button-069-text=\"\"] > span[aria-hidden=\"true\"]",
+            "html": "<span aria-hidden=\"true\">Reset demo</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ],
+    "ccIncompleteWhy": {
+      "bgGradient": 54,
+      "shortTextContent": 7,
+      "imgNode": 1
+    }
+  },
+  {
+    "state": "focus",
+    "violations": [
+      {
+        "id": "aria-prohibited-attr",
+        "impact": "serious",
+        "wcag": "wcag2a,wcag412",
+        "help": "Elements must only use permitted ARIA attributes",
+        "nodes": 3,
+        "examples": [
+          {
+            "target": ".t-meta",
+            "html": "<span class=\"whitespace-pre t-meta text-text-3\" aria-label=\"Focus\"><span aria-hidden=\"true\">Focus</span></span>",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"span\" elements with no valid role attribute."
+          },
+          {
+            "target": "span[aria-label=\"New website\"]",
+            "html": "<span class=\"t-body truncate text-text-2\" aria-label=\"New website\">",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"span\" elements with no valid role attribute."
+          },
+          {
+            "target": "span[aria-label=\"FORM suggests · 03\"]",
+            "html": "<span class=\"whitespace-pre t-micro text-text-3\" aria-label=\"FORM suggests · 03\"><span aria-hidden=\"true\">FORM&nbsp;suggests&nbsp;·&nbsp;03</span></span>",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"span\" elements with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "wcag": "wcag2aa,wcag143",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "nodes": 2,
+        "examples": [
+          {
+            "target": ".text-on-ink-3.t-micro.shrink-0",
+            "html": "<span class=\"t-micro shrink-0 text-on-ink-3\">Next</span>",
+            "why": "Fix any of the following: Element has insufficient color contrast of 2.86 (foreground color: #5a5a59, background color: #0a0a0a, font size: 7.1pt (9.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+          },
+          {
+            "target": ".mt-5.text-on-ink-3.t-micro",
+            "html": "<span class=\"t-micro mt-5 text-on-ink-3\">Complete</span>",
+            "why": "Fix any of the following: Element has insufficient color contrast of 2.86 (foreground color: #5a5a59, background color: #0a0a0a, font size: 7.1pt (9.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+          }
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "wcag": "",
+        "help": "All page content should be contained by landmarks",
+        "nodes": 3,
+        "examples": [
+          {
+            "target": ".left-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed bottom-6 left-7 z-20 hidden flex-col gap-0.5 text-text-3 xl:flex\"><span>FORM / 01 — Adaptive workspace</span><span",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": ".right-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed right-7 bottom-6 z-20 hidden flex-col items-end gap-0.5 text-text-3 xl:flex\"><span>/ — ask</span><span>⌘Z — undo</",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": "div[role=\"group\"]",
+            "html": "<div role=\"group\" aria-label=\"Views FORM suggests\"></div>",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          }
+        ]
+      }
+    ],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "wcag": "wcag2aa,wcag143",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "nodes": 26,
+        "examples": [
+          {
+            "target": ".font-display",
+            "html": "<span class=\"font-display text-[15px] leading-none font-medium tracking-[-0.03em]\">FORM</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".mr-1",
+            "html": "<span class=\"t-micro mr-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-text-3 sm:flex\" title=\"Commands are interpreted by a deterministic, rule-b",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".ml-1 > .\\[font-kerning\\:none\\].\\[font-variant-ligatures\\:none\\][data-button-069-text=\"\"] > span[aria-hidden=\"true\"]",
+            "html": "<span aria-hidden=\"true\">Reset demo</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ],
+    "ccIncompleteWhy": {
+      "bgGradient": 17,
+      "bgOverlap": 7,
+      "nonBmp": 1,
+      "imgNode": 1
+    }
+  },
+  {
+    "state": "brief",
+    "violations": [
+      {
+        "id": "aria-prohibited-attr",
+        "impact": "serious",
+        "wcag": "wcag2a,wcag412",
+        "help": "Elements must only use permitted ARIA attributes",
+        "nodes": 2,
+        "examples": [
+          {
+            "target": ".t-meta",
+            "html": "<span class=\"whitespace-pre t-meta mb-3 block text-text-3\" aria-label=\"Project · Brief\"><span aria-hidden=\"true\">Project&nbsp;·&nbsp;Brief</span></span>",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"span\" elements with no valid role attribute."
+          },
+          {
+            "target": ".t-body",
+            "html": "<p class=\"t-body mt-3 text-text-2\" aria-label=\"4 tasks · sample start 28 Sep\">",
+            "why": "Fix all of the following: aria-label attribute cannot be used on \"p\" elements with no valid role attribute."
+          }
+        ]
+      },
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "wcag": "wcag2aa,wcag143",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "nodes": 13,
+        "examples": [
+          {
+            "target": "span[aria-label=\"Status\"] > span[aria-hidden=\"true\"]",
+            "html": "<span aria-hidden=\"true\">Status</span>",
+            "why": "Fix any of the following: Element has insufficient color contrast of 2.55 (foreground color: #9f9f9e, background color: #fbfbf9, font size: 7.1pt (9.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+          },
+          {
+            "target": "span[aria-label=\"14 Oct\"] > span[aria-hidden=\"true\"]",
+            "html": "<span aria-hidden=\"true\">14&nbsp;Oct</span>",
+            "why": "Fix any of the following: Element has insufficient color contrast of 2.55 (foreground color: #9f9f9e, background color: #fbfbf9, font size: 7.1pt (9.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+          },
+          {
+            "target": "span[aria-label=\"For the client\"] > span[aria-hidden=\"true\"]",
+            "html": "<span aria-hidden=\"true\">For&nbsp;the&nbsp;client</span>",
+            "why": "Fix any of the following: Element has insufficient color contrast of 2.55 (foreground color: #9f9f9e, background color: #fbfbf9, font size: 7.1pt (9.5px), font weight: normal). Expected contrast ratio of 4.5:1"
+          }
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "wcag": "",
+        "help": "All page content should be contained by landmarks",
+        "nodes": 3,
+        "examples": [
+          {
+            "target": ".left-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed bottom-6 left-7 z-20 hidden flex-col gap-0.5 text-text-3 xl:flex\"><span>FORM / 01 — Adaptive workspace</span><span",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": ".right-7",
+            "html": "<div class=\"t-micro pointer-events-none fixed right-7 bottom-6 z-20 hidden flex-col items-end gap-0.5 text-text-3 xl:flex\"><span>/ — ask</span><span>⌘Z — undo</",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          },
+          {
+            "target": "div[role=\"group\"]",
+            "html": "<div role=\"group\" aria-label=\"Views FORM suggests\"></div>",
+            "why": "Fix any of the following: Some page content is not contained by landmarks"
+          }
+        ]
+      }
+    ],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "wcag": "wcag2aa,wcag143",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "nodes": 28,
+        "examples": [
+          {
+            "target": ".font-display",
+            "html": "<span class=\"font-display text-[15px] leading-none font-medium tracking-[-0.03em]\">FORM</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".mr-1",
+            "html": "<span class=\"t-micro mr-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-text-3 sm:flex\" title=\"Commands are interpreted by a deterministic, rule-b",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "target": ".ml-1 > .\\[font-kerning\\:none\\].\\[font-variant-ligatures\\:none\\][data-button-069-text=\"\"] > span[aria-hidden=\"true\"]",
+            "html": "<span aria-hidden=\"true\">Reset demo</span>",
+            "why": "Fix any of the following: Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ],
+    "ccIncompleteWhy": {
+      "bgGradient": 22,
+      "shortTextContent": 5,
+      "imgNode": 1
+    }
+  }
+]

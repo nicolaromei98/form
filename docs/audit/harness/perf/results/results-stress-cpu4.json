@@ -1,0 +1,1031 @@
+{
+  "stressLoad": {
+    "domContentLoadedMs": 30,
+    "loadEventMs": 126,
+    "lcpMs": 740,
+    "lcpElement": "SPAN.inline-block",
+    "cls": 0,
+    "longTasksFirst6s": 3,
+    "longTaskMaxMs": 357,
+    "tbtFirst6sMs": 363,
+    "longTasks": [
+      [
+        42,
+        66
+      ],
+      [
+        132,
+        90
+      ],
+      [
+        228,
+        357
+      ]
+    ],
+    "sixtyCardsInDomMs_wallclock": 647
+  },
+  "trackerRest": {
+    "label": "tracker, 60 cards, at rest, 5 s",
+    "windowMs": 5001,
+    "fps": 60.19,
+    "frameGap": {
+      "p50": 16.7,
+      "p95": 16.7,
+      "max": 16.8,
+      "over33ms": 0,
+      "over50ms": 0
+    },
+    "appRafJsPerFrameMs": {
+      "framesWithAppCallbacks": 300,
+      "mean": 0.15,
+      "p50": 0.1,
+      "p95": 0.7,
+      "max": 1
+    },
+    "mainThreadMsPerSecond": {
+      "script": 9.98,
+      "task": 138.76,
+      "layout": 4.45,
+      "style": 8.85
+    },
+    "mainThreadMsPerFrame": {
+      "script": 0.17,
+      "task": 2.31,
+      "layout": 0.07,
+      "style": 0.15
+    },
+    "layoutCount": 300,
+    "styleRecalcCount": 300,
+    "longTasks": {
+      "count": 0,
+      "totalMs": 0,
+      "maxMs": 0
+    },
+    "domNodes": 3484,
+    "jsHeapMB": 24.91
+  },
+  "trackerRestTrace": {
+    "threads": [
+      {
+        "process": "Renderer",
+        "thread": "CrRendererMain",
+        "busyMsPerSec": 156.31
+      },
+      {
+        "process": "GPU Process",
+        "thread": "CrGpuMain",
+        "busyMsPerSec": 73
+      },
+      {
+        "process": "GPU Process",
+        "thread": "VizCompositorThread",
+        "busyMsPerSec": 30.87
+      },
+      {
+        "process": "Renderer",
+        "thread": "Compositor",
+        "busyMsPerSec": 30.74
+      },
+      {
+        "process": "Renderer",
+        "thread": "ThreadPoolForegroundWorker",
+        "busyMsPerSec": 2.02
+      },
+      {
+        "process": "GPU Process",
+        "thread": "Chrome_ChildIOThread",
+        "busyMsPerSec": 1.64
+      },
+      {
+        "process": "Renderer",
+        "thread": "Chrome_ChildIOThread",
+        "busyMsPerSec": 1.12
+      },
+      {
+        "process": "Browser",
+        "thread": "ThreadPoolForegroundWorker",
+        "busyMsPerSec": 0.7
+      }
+    ],
+    "pipelineReporterFrames": 480
+  },
+  "censusTracker": {
+    "total": 67,
+    "inViewport": 15,
+    "groups": {
+      ".glass": 6,
+      "tab bar": 1,
+      "task surface [data-task-id]": 60
+    },
+    "totalAreaMpx": 4.62,
+    "taskSurfaces": 60,
+    "domNodes": 2891
+  },
+  "switches": [
+    {
+      "view": "board",
+      "clickEventTiming": [
+        {
+          "name": "pointerdown",
+          "durMs": 432,
+          "inputDelayMs": 8,
+          "processingMs": 0
+        },
+        {
+          "name": "mousedown",
+          "durMs": 432,
+          "inputDelayMs": 8,
+          "processingMs": 0
+        },
+        {
+          "name": "pointerup",
+          "durMs": 432,
+          "inputDelayMs": 11,
+          "processingMs": 0
+        },
+        {
+          "name": "mouseup",
+          "durMs": 432,
+          "inputDelayMs": 11,
+          "processingMs": 0
+        },
+        {
+          "name": "click",
+          "durMs": 432,
+          "inputDelayMs": 11,
+          "processingMs": 311
+        }
+      ],
+      "switchWindow": {
+        "label": "switch → board (3 s incl. click)",
+        "windowMs": 3467,
+        "fps": 44.99,
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 33.4,
+          "max": 400,
+          "over33ms": 7,
+          "over50ms": 4
+        },
+        "appRafJsPerFrameMs": {
+          "framesWithAppCallbacks": 155,
+          "mean": 2.1,
+          "p50": 0.1,
+          "p95": 11.1,
+          "max": 24.5
+        },
+        "mainThreadMsPerSecond": {
+          "script": 217.31,
+          "task": 545.94,
+          "layout": 13.09,
+          "style": 79.52
+        },
+        "mainThreadMsPerFrame": {
+          "script": 4.83,
+          "task": 12.13,
+          "layout": 0.29,
+          "style": 1.77
+        },
+        "layoutCount": 171,
+        "styleRecalcCount": 165,
+        "longTasks": {
+          "count": 6,
+          "totalMs": 732,
+          "maxMs": 359
+        },
+        "domNodes": 6623,
+        "jsHeapMB": 31.92
+      },
+      "rest": {
+        "label": "board at rest (3 s)",
+        "windowMs": 3002,
+        "fps": 59.97,
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 16.8,
+          "max": 16.8,
+          "over33ms": 0,
+          "over50ms": 0
+        },
+        "appRafJsPerFrameMs": {
+          "framesWithAppCallbacks": 179,
+          "mean": 0.16,
+          "p50": 0.1,
+          "p95": 0.7,
+          "max": 0.8
+        },
+        "mainThreadMsPerSecond": {
+          "script": 12,
+          "task": 224.04,
+          "layout": 5.84,
+          "style": 9.79
+        },
+        "mainThreadMsPerFrame": {
+          "script": 0.2,
+          "task": 3.74,
+          "layout": 0.1,
+          "style": 0.16
+        },
+        "layoutCount": 180,
+        "styleRecalcCount": 180,
+        "longTasks": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "domNodes": 6623,
+        "jsHeapMB": 32.8
+      },
+      "census": {
+        "total": 11,
+        "inViewport": 11,
+        "groups": {
+          ".glass": 10,
+          "tab bar": 1
+        },
+        "totalAreaMpx": 2.7,
+        "taskSurfaces": 60,
+        "domNodes": 2855
+      },
+      "extra": {
+        "focusVolumes": 0,
+        "timelineRows": 60
+      },
+      "restTrace": {
+        "threads": [
+          {
+            "process": "Renderer",
+            "thread": "CrRendererMain",
+            "busyMsPerSec": 242.25
+          },
+          {
+            "process": "GPU Process",
+            "thread": "CrGpuMain",
+            "busyMsPerSec": 53.6
+          },
+          {
+            "process": "Renderer",
+            "thread": "Compositor",
+            "busyMsPerSec": 28
+          },
+          {
+            "process": "GPU Process",
+            "thread": "VizCompositorThread",
+            "busyMsPerSec": 26.21
+          },
+          {
+            "process": "Renderer",
+            "thread": "ThreadPoolForegroundWorker",
+            "busyMsPerSec": 1.72
+          },
+          {
+            "process": "GPU Process",
+            "thread": "Chrome_ChildIOThread",
+            "busyMsPerSec": 1.5
+          },
+          {
+            "process": "Renderer",
+            "thread": "Chrome_ChildIOThread",
+            "busyMsPerSec": 1.04
+          },
+          {
+            "process": "Browser",
+            "thread": "CrBrowserMain",
+            "busyMsPerSec": 0.97
+          }
+        ],
+        "pipelineReporterFrames": 360
+      }
+    },
+    {
+      "view": "timeline",
+      "clickEventTiming": [
+        {
+          "name": "pointerdown",
+          "durMs": 256,
+          "inputDelayMs": 5,
+          "processingMs": 0
+        },
+        {
+          "name": "mousedown",
+          "durMs": 256,
+          "inputDelayMs": 5,
+          "processingMs": 0
+        },
+        {
+          "name": "pointerup",
+          "durMs": 256,
+          "inputDelayMs": 7,
+          "processingMs": 0
+        },
+        {
+          "name": "mouseup",
+          "durMs": 256,
+          "inputDelayMs": 7,
+          "processingMs": 0
+        },
+        {
+          "name": "click",
+          "durMs": 256,
+          "inputDelayMs": 7,
+          "processingMs": 172
+        }
+      ],
+      "switchWindow": {
+        "label": "switch → timeline (3 s incl. click)",
+        "windowMs": 3271,
+        "fps": 55.33,
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 16.8,
+          "max": 216.6,
+          "over33ms": 3,
+          "over50ms": 1
+        },
+        "appRafJsPerFrameMs": {
+          "framesWithAppCallbacks": 180,
+          "mean": 0.55,
+          "p50": 0.1,
+          "p95": 2,
+          "max": 15.5
+        },
+        "mainThreadMsPerSecond": {
+          "script": 109,
+          "task": 544.17,
+          "layout": 13.92,
+          "style": 68.08
+        },
+        "mainThreadMsPerFrame": {
+          "script": 1.97,
+          "task": 9.84,
+          "layout": 0.25,
+          "style": 1.23
+        },
+        "layoutCount": 220,
+        "styleRecalcCount": 190,
+        "longTasks": {
+          "count": 2,
+          "totalMs": 238,
+          "maxMs": 186
+        },
+        "domNodes": 5633,
+        "jsHeapMB": 33.48
+      },
+      "rest": {
+        "label": "timeline at rest (3 s)",
+        "windowMs": 3001,
+        "fps": 59.97,
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 16.7,
+          "max": 16.8,
+          "over33ms": 0,
+          "over50ms": 0
+        },
+        "appRafJsPerFrameMs": {
+          "framesWithAppCallbacks": 179,
+          "mean": 0.18,
+          "p50": 0.1,
+          "p95": 0.7,
+          "max": 1
+        },
+        "mainThreadMsPerSecond": {
+          "script": 17.49,
+          "task": 269.57,
+          "layout": 7.93,
+          "style": 21.07
+        },
+        "mainThreadMsPerFrame": {
+          "script": 0.29,
+          "task": 4.49,
+          "layout": 0.13,
+          "style": 0.35
+        },
+        "layoutCount": 180,
+        "styleRecalcCount": 180,
+        "longTasks": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "domNodes": 5633,
+        "jsHeapMB": 34.48
+      },
+      "census": {
+        "total": 8,
+        "inViewport": 8,
+        "groups": {
+          ".glass": 7,
+          "tab bar": 1
+        },
+        "totalAreaMpx": 4.55,
+        "taskSurfaces": 60,
+        "domNodes": 1704
+      },
+      "extra": {
+        "focusVolumes": 0,
+        "timelineRows": 60
+      },
+      "restTrace": null
+    },
+    {
+      "view": "team",
+      "clickEventTiming": [
+        {
+          "name": "pointerdown",
+          "durMs": 120,
+          "inputDelayMs": 4,
+          "processingMs": 0
+        },
+        {
+          "name": "mousedown",
+          "durMs": 120,
+          "inputDelayMs": 4,
+          "processingMs": 0
+        },
+        {
+          "name": "pointerup",
+          "durMs": 120,
+          "inputDelayMs": 6,
+          "processingMs": 0
+        },
+        {
+          "name": "mouseup",
+          "durMs": 120,
+          "inputDelayMs": 6,
+          "processingMs": 1
+        },
+        {
+          "name": "click",
+          "durMs": 120,
+          "inputDelayMs": 6,
+          "processingMs": 74
+        }
+      ],
+      "switchWindow": {
+        "label": "switch → team (3 s incl. click)",
+        "windowMs": 3127,
+        "fps": 58.2,
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 16.8,
+          "max": 83.3,
+          "over33ms": 1,
+          "over50ms": 1
+        },
+        "appRafJsPerFrameMs": {
+          "framesWithAppCallbacks": 181,
+          "mean": 0.4,
+          "p50": 0.1,
+          "p95": 1.7,
+          "max": 4.3
+        },
+        "mainThreadMsPerSecond": {
+          "script": 62.37,
+          "task": 240.37,
+          "layout": 10.67,
+          "style": 36.54
+        },
+        "mainThreadMsPerFrame": {
+          "script": 1.07,
+          "task": 4.13,
+          "layout": 0.18,
+          "style": 0.63
+        },
+        "layoutCount": 229,
+        "styleRecalcCount": 193,
+        "longTasks": {
+          "count": 1,
+          "totalMs": 85,
+          "maxMs": 85
+        },
+        "domNodes": 764,
+        "jsHeapMB": 10.46
+      },
+      "rest": {
+        "label": "team at rest (3 s)",
+        "windowMs": 3001,
+        "fps": 59.97,
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 16.7,
+          "max": 16.8,
+          "over33ms": 0,
+          "over50ms": 0
+        },
+        "appRafJsPerFrameMs": {
+          "framesWithAppCallbacks": 179,
+          "mean": 0.13,
+          "p50": 0,
+          "p95": 0.6,
+          "max": 0.9
+        },
+        "mainThreadMsPerSecond": {
+          "script": 9.75,
+          "task": 92.7,
+          "layout": 4.06,
+          "style": 9.3
+        },
+        "mainThreadMsPerFrame": {
+          "script": 0.16,
+          "task": 1.55,
+          "layout": 0.07,
+          "style": 0.16
+        },
+        "layoutCount": 180,
+        "styleRecalcCount": 180,
+        "longTasks": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "domNodes": 764,
+        "jsHeapMB": 9.7
+      },
+      "census": {
+        "total": 8,
+        "inViewport": 8,
+        "groups": {
+          ".glass": 7,
+          "tab bar": 1
+        },
+        "totalAreaMpx": 0.51,
+        "taskSurfaces": 45,
+        "domNodes": 434
+      },
+      "extra": {
+        "focusVolumes": 0,
+        "timelineRows": 45
+      },
+      "restTrace": null
+    },
+    {
+      "view": "focus",
+      "clickEventTiming": [
+        {
+          "name": "pointerdown",
+          "durMs": 120,
+          "inputDelayMs": 3,
+          "processingMs": 0
+        },
+        {
+          "name": "mousedown",
+          "durMs": 120,
+          "inputDelayMs": 3,
+          "processingMs": 0
+        },
+        {
+          "name": "pointerup",
+          "durMs": 120,
+          "inputDelayMs": 4,
+          "processingMs": 0
+        },
+        {
+          "name": "mouseup",
+          "durMs": 120,
+          "inputDelayMs": 4,
+          "processingMs": 0
+        },
+        {
+          "name": "click",
+          "durMs": 120,
+          "inputDelayMs": 4,
+          "processingMs": 85
+        }
+      ],
+      "switchWindow": {
+        "label": "switch → focus (3 s incl. click)",
+        "windowMs": 3121,
+        "fps": 58.95,
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 16.7,
+          "max": 83.4,
+          "over33ms": 1,
+          "over50ms": 1
+        },
+        "appRafJsPerFrameMs": {
+          "framesWithAppCallbacks": 183,
+          "mean": 2.13,
+          "p50": 1.7,
+          "p95": 4.1,
+          "max": 8.2
+        },
+        "mainThreadMsPerSecond": {
+          "script": 171.19,
+          "task": 402.79,
+          "layout": 11.72,
+          "style": 78.56
+        },
+        "mainThreadMsPerFrame": {
+          "script": 2.9,
+          "task": 6.83,
+          "layout": 0.2,
+          "style": 1.33
+        },
+        "layoutCount": 250,
+        "styleRecalcCount": 225,
+        "longTasks": {
+          "count": 1,
+          "totalMs": 94,
+          "maxMs": 94
+        },
+        "domNodes": 506,
+        "jsHeapMB": 12.75
+      },
+      "rest": {
+        "label": "focus at rest (3 s)",
+        "windowMs": 3001,
+        "fps": 59.99,
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 16.7,
+          "max": 16.8,
+          "over33ms": 0,
+          "over50ms": 0
+        },
+        "appRafJsPerFrameMs": {
+          "framesWithAppCallbacks": 179,
+          "mean": 1.31,
+          "p50": 1.3,
+          "p95": 1.9,
+          "max": 2.1
+        },
+        "mainThreadMsPerSecond": {
+          "script": 81.32,
+          "task": 257.64,
+          "layout": 3.16,
+          "style": 69.75
+        },
+        "mainThreadMsPerFrame": {
+          "script": 1.36,
+          "task": 4.29,
+          "layout": 0.05,
+          "style": 1.16
+        },
+        "layoutCount": 180,
+        "styleRecalcCount": 180,
+        "longTasks": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "domNodes": 506,
+        "jsHeapMB": 12.46
+      },
+      "census": {
+        "total": 6,
+        "inViewport": 6,
+        "groups": {
+          ".glass": 5,
+          "tab bar": 1
+        },
+        "totalAreaMpx": 0.03,
+        "taskSurfaces": 60,
+        "domNodes": 355
+      },
+      "extra": {
+        "focusVolumes": 60,
+        "timelineRows": 60
+      },
+      "restTrace": {
+        "threads": [
+          {
+            "process": "Renderer",
+            "thread": "CrRendererMain",
+            "busyMsPerSec": 275.63
+          },
+          {
+            "process": "GPU Process",
+            "thread": "CrGpuMain",
+            "busyMsPerSec": 100.81
+          },
+          {
+            "process": "GPU Process",
+            "thread": "VizCompositorThread",
+            "busyMsPerSec": 26.85
+          },
+          {
+            "process": "Renderer",
+            "thread": "Compositor",
+            "busyMsPerSec": 24.73
+          },
+          {
+            "process": "Renderer",
+            "thread": "ThreadPoolForegroundWorker",
+            "busyMsPerSec": 16.93
+          },
+          {
+            "process": "Renderer",
+            "thread": "ThreadPoolForegroundWorker",
+            "busyMsPerSec": 4.76
+          },
+          {
+            "process": "Renderer",
+            "thread": "ThreadPoolForegroundWorker",
+            "busyMsPerSec": 4.48
+          },
+          {
+            "process": "Renderer",
+            "thread": "ThreadPoolForegroundWorker",
+            "busyMsPerSec": 4.07
+          },
+          {
+            "process": "Renderer",
+            "thread": "ThreadPoolForegroundWorker",
+            "busyMsPerSec": 3.15
+          },
+          {
+            "process": "Renderer",
+            "thread": "ThreadPoolForegroundWorker",
+            "busyMsPerSec": 3.15
+          },
+          {
+            "process": "Renderer",
+            "thread": "ThreadPoolForegroundWorker",
+            "busyMsPerSec": 2.81
+          },
+          {
+            "process": "Renderer",
+            "thread": "ThreadPoolForegroundWorker",
+            "busyMsPerSec": 1.79
+          },
+          {
+            "process": "Browser",
+            "thread": "CrBrowserMain",
+            "busyMsPerSec": 1.58
+          },
+          {
+            "process": "Renderer",
+            "thread": "ThreadPoolForegroundWorker",
+            "busyMsPerSec": 1.55
+          }
+        ],
+        "pipelineReporterFrames": 360
+      }
+    },
+    {
+      "view": "brief",
+      "clickEventTiming": [
+        {
+          "name": "pointerdown",
+          "durMs": 184,
+          "inputDelayMs": 3,
+          "processingMs": 0
+        },
+        {
+          "name": "mousedown",
+          "durMs": 184,
+          "inputDelayMs": 3,
+          "processingMs": 0
+        },
+        {
+          "name": "pointerup",
+          "durMs": 184,
+          "inputDelayMs": 4,
+          "processingMs": 0
+        },
+        {
+          "name": "mouseup",
+          "durMs": 184,
+          "inputDelayMs": 4,
+          "processingMs": 0
+        },
+        {
+          "name": "click",
+          "durMs": 184,
+          "inputDelayMs": 4,
+          "processingMs": 151
+        }
+      ],
+      "switchWindow": {
+        "label": "switch → brief (3 s incl. click)",
+        "windowMs": 3196,
+        "fps": 57.26,
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 16.8,
+          "max": 149.9,
+          "over33ms": 2,
+          "over50ms": 1
+        },
+        "appRafJsPerFrameMs": {
+          "framesWithAppCallbacks": 182,
+          "mean": 1.01,
+          "p50": 0.4,
+          "p95": 3.5,
+          "max": 6.9
+        },
+        "mainThreadMsPerSecond": {
+          "script": 122.75,
+          "task": 341.55,
+          "layout": 21.29,
+          "style": 39.49
+        },
+        "mainThreadMsPerFrame": {
+          "script": 2.14,
+          "task": 5.96,
+          "layout": 0.37,
+          "style": 0.69
+        },
+        "layoutCount": 266,
+        "styleRecalcCount": 241,
+        "longTasks": {
+          "count": 1,
+          "totalMs": 159,
+          "maxMs": 159
+        },
+        "domNodes": 1297,
+        "jsHeapMB": 18.93
+      },
+      "rest": {
+        "label": "brief at rest (3 s)",
+        "windowMs": 3001,
+        "fps": 59.98,
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 16.7,
+          "max": 16.8,
+          "over33ms": 0,
+          "over50ms": 0
+        },
+        "appRafJsPerFrameMs": {
+          "framesWithAppCallbacks": 179,
+          "mean": 0.19,
+          "p50": 0.1,
+          "p95": 0.7,
+          "max": 1
+        },
+        "mainThreadMsPerSecond": {
+          "script": 13.88,
+          "task": 108.81,
+          "layout": 4.38,
+          "style": 12.61
+        },
+        "mainThreadMsPerFrame": {
+          "script": 0.23,
+          "task": 1.81,
+          "layout": 0.07,
+          "style": 0.21
+        },
+        "layoutCount": 180,
+        "styleRecalcCount": 180,
+        "longTasks": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "domNodes": 1297,
+        "jsHeapMB": 19.99
+      },
+      "census": {
+        "total": 6,
+        "inViewport": 6,
+        "groups": {
+          ".glass": 5,
+          "tab bar": 1
+        },
+        "totalAreaMpx": 0.03,
+        "taskSurfaces": 0,
+        "domNodes": 690
+      },
+      "extra": {
+        "focusVolumes": 0,
+        "timelineRows": 0
+      },
+      "restTrace": null
+    },
+    {
+      "view": "cards",
+      "clickEventTiming": [
+        {
+          "name": "pointerdown",
+          "durMs": 352,
+          "inputDelayMs": 2,
+          "processingMs": 0
+        },
+        {
+          "name": "mousedown",
+          "durMs": 352,
+          "inputDelayMs": 2,
+          "processingMs": 0
+        },
+        {
+          "name": "pointerup",
+          "durMs": 352,
+          "inputDelayMs": 3,
+          "processingMs": 0
+        },
+        {
+          "name": "mouseup",
+          "durMs": 352,
+          "inputDelayMs": 3,
+          "processingMs": 0
+        },
+        {
+          "name": "click",
+          "durMs": 352,
+          "inputDelayMs": 3,
+          "processingMs": 276
+        }
+      ],
+      "switchWindow": {
+        "label": "switch → cards (3 s incl. click)",
+        "windowMs": 3373,
+        "fps": 52.78,
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 16.8,
+          "max": 316.6,
+          "over33ms": 3,
+          "over50ms": 2
+        },
+        "appRafJsPerFrameMs": {
+          "framesWithAppCallbacks": 177,
+          "mean": 0.88,
+          "p50": 0.1,
+          "p95": 3.3,
+          "max": 12.8
+        },
+        "mainThreadMsPerSecond": {
+          "script": 150.03,
+          "task": 483.54,
+          "layout": 13.21,
+          "style": 53.62
+        },
+        "mainThreadMsPerFrame": {
+          "script": 2.84,
+          "task": 9.16,
+          "layout": 0.25,
+          "style": 1.02
+        },
+        "layoutCount": 219,
+        "styleRecalcCount": 188,
+        "longTasks": {
+          "count": 3,
+          "totalMs": 412,
+          "maxMs": 291
+        },
+        "domNodes": 4536,
+        "jsHeapMB": 38.89
+      },
+      "rest": {
+        "label": "cards at rest (3 s)",
+        "windowMs": 3001,
+        "fps": 59.97,
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 16.8,
+          "max": 16.8,
+          "over33ms": 0,
+          "over50ms": 0
+        },
+        "appRafJsPerFrameMs": {
+          "framesWithAppCallbacks": 179,
+          "mean": 0.2,
+          "p50": 0.1,
+          "p95": 0.8,
+          "max": 0.9
+        },
+        "mainThreadMsPerSecond": {
+          "script": 14.98,
+          "task": 245.19,
+          "layout": 3.58,
+          "style": 13.32
+        },
+        "mainThreadMsPerFrame": {
+          "script": 0.25,
+          "task": 4.09,
+          "layout": 0.06,
+          "style": 0.22
+        },
+        "layoutCount": 180,
+        "styleRecalcCount": 180,
+        "longTasks": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "domNodes": 4536,
+        "jsHeapMB": 39.89
+      },
+      "census": {
+        "total": 67,
+        "inViewport": 15,
+        "groups": {
+          ".glass": 6,
+          "tab bar": 1,
+          "task surface [data-task-id]": 60
+        },
+        "totalAreaMpx": 4.62,
+        "taskSurfaces": 60,
+        "domNodes": 2891
+      },
+      "extra": {
+        "focusVolumes": 0,
+        "timelineRows": 60
+      },
+      "restTrace": null
+    }
+  ]
+}

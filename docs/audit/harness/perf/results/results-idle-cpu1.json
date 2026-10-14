@@ -1,0 +1,194 @@
+{
+  "idleEmpty": {
+    "label": "empty workspace, idle agent, 5 s",
+    "windowMs": 5003,
+    "fps": 59.97,
+    "frameGap": {
+      "p50": 16.7,
+      "p95": 16.8,
+      "max": 16.8,
+      "over33ms": 0,
+      "over50ms": 0
+    },
+    "appRafJsPerFrameMs": {
+      "framesWithAppCallbacks": 299,
+      "mean": 0.1,
+      "p50": 0.1,
+      "p95": 0.2,
+      "max": 0.8
+    },
+    "mainThreadMsPerSecond": {
+      "script": 6.62,
+      "task": 33.04,
+      "layout": 1.67,
+      "style": 5.52
+    },
+    "mainThreadMsPerFrame": {
+      "script": 0.11,
+      "task": 0.55,
+      "layout": 0.03,
+      "style": 0.09
+    },
+    "layoutCount": 300,
+    "styleRecalcCount": 300,
+    "longTasks": {
+      "count": 0,
+      "totalMs": 0,
+      "maxMs": 0
+    },
+    "domNodes": 159,
+    "jsHeapMB": 6.99
+  },
+  "idleEmptyTrace": {
+    "threads": [
+      {
+        "process": "GPU Process",
+        "thread": "CrGpuMain",
+        "busyMsPerSec": 68.51
+      },
+      {
+        "process": "Renderer",
+        "thread": "CrRendererMain",
+        "busyMsPerSec": 56.12
+      },
+      {
+        "process": "Renderer",
+        "thread": "Compositor",
+        "busyMsPerSec": 52.24
+      },
+      {
+        "process": "GPU Process",
+        "thread": "VizCompositorThread",
+        "busyMsPerSec": 31.26
+      },
+      {
+        "process": "Renderer",
+        "thread": "ThreadPoolForegroundWorker",
+        "busyMsPerSec": 6.63
+      },
+      {
+        "process": "GPU Process",
+        "thread": "Chrome_ChildIOThread",
+        "busyMsPerSec": 2.76
+      },
+      {
+        "process": "Browser",
+        "thread": "ThreadPoolForegroundWorker",
+        "busyMsPerSec": 2.56
+      },
+      {
+        "process": "Renderer",
+        "thread": "Chrome_ChildIOThread",
+        "busyMsPerSec": 2.23
+      },
+      {
+        "process": "Browser",
+        "thread": "CrBrowserMain",
+        "busyMsPerSec": 0.56
+      }
+    ],
+    "pipelineReporterFrames": 600
+  },
+  "idleEmptyAfter20s": {
+    "svg": true,
+    "ellipseAttrMutationsPerSec": 3000,
+    "appRafCallbacksPerSec": 60
+  },
+  "idleEmptyReduced": {
+    "label": "empty workspace, reduced motion, 5 s",
+    "windowMs": 5001,
+    "fps": 59.99,
+    "frameGap": {
+      "p50": 16.7,
+      "p95": 16.8,
+      "max": 16.8,
+      "over33ms": 0,
+      "over50ms": 0
+    },
+    "appRafJsPerFrameMs": {
+      "framesWithAppCallbacks": 299,
+      "mean": 0.11,
+      "p50": 0.1,
+      "p95": 0.2,
+      "max": 0.3
+    },
+    "mainThreadMsPerSecond": {
+      "script": 7.9,
+      "task": 38.55,
+      "layout": 1.91,
+      "style": 8.8
+    },
+    "mainThreadMsPerFrame": {
+      "script": 0.13,
+      "task": 0.64,
+      "layout": 0.03,
+      "style": 0.15
+    },
+    "layoutCount": 300,
+    "styleRecalcCount": 300,
+    "longTasks": {
+      "count": 0,
+      "totalMs": 0,
+      "maxMs": 0
+    },
+    "domNodes": 159,
+    "jsHeapMB": 6.11
+  },
+  "idleEmptyReducedMut": {
+    "svg": true,
+    "ellipseAttrMutationsPerSec": 3000,
+    "appRafCallbacksPerSec": 60
+  },
+  "compactDemo": {
+    "label": "demo project (4 tasks), agent compact, 5 s",
+    "windowMs": 5002,
+    "fps": 59.98,
+    "frameGap": {
+      "p50": 16.7,
+      "p95": 16.7,
+      "max": 16.8,
+      "over33ms": 0,
+      "over50ms": 0
+    },
+    "appRafJsPerFrameMs": {
+      "framesWithAppCallbacks": 299,
+      "mean": 0.07,
+      "p50": 0.1,
+      "p95": 0.2,
+      "max": 0.2
+    },
+    "mainThreadMsPerSecond": {
+      "script": 5.15,
+      "task": 33.75,
+      "layout": 1.62,
+      "style": 5.19
+    },
+    "mainThreadMsPerFrame": {
+      "script": 0.09,
+      "task": 0.56,
+      "layout": 0.03,
+      "style": 0.09
+    },
+    "layoutCount": 300,
+    "styleRecalcCount": 300,
+    "longTasks": {
+      "count": 0,
+      "totalMs": 0,
+      "maxMs": 0
+    },
+    "domNodes": 549,
+    "jsHeapMB": 9.36
+  },
+  "compactDemoMut": {
+    "svg": true,
+    "ellipseAttrMutationsPerSec": 3000,
+    "appRafCallbacksPerSec": 60
+  },
+  "compactDemoHidden": {
+    "hidden": true,
+    "vis": "hidden",
+    "svg": true,
+    "ellipseAttrMutationsPerSec": 0,
+    "appRafCallbacksPerSec": 0
+  }
+}

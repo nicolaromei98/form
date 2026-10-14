@@ -1,0 +1,130 @@
+{
+  "ab": [
+    {
+      "name": "baseline",
+      "mainTaskMsPerSec": 107.92,
+      "scriptMsPerSec": 7.67,
+      "layoutsPer4s": 241,
+      "fps": 59.97,
+      "threads": [
+        {
+          "process": "GPU Process",
+          "thread": "CrGpuMain",
+          "busyMsPerSec": 160.69
+        },
+        {
+          "process": "Renderer",
+          "thread": "CrRendererMain",
+          "busyMsPerSec": 91.95
+        },
+        {
+          "process": "GPU Process",
+          "thread": "VizCompositorThread",
+          "busyMsPerSec": 67.24
+        },
+        {
+          "process": "Renderer",
+          "thread": "Compositor",
+          "busyMsPerSec": 54.29
+        },
+        {
+          "process": "Renderer",
+          "thread": "ThreadPoolForegroundWorker",
+          "busyMsPerSec": 3.21
+        }
+      ]
+    },
+    {
+      "name": "no backdrop-filter on task cards",
+      "mainTaskMsPerSec": 103.99,
+      "scriptMsPerSec": 7.56,
+      "layoutsPer4s": 240,
+      "fps": 59.97,
+      "threads": [
+        {
+          "process": "Renderer",
+          "thread": "CrRendererMain",
+          "busyMsPerSec": 95.87
+        },
+        {
+          "process": "GPU Process",
+          "thread": "CrGpuMain",
+          "busyMsPerSec": 51.54
+        },
+        {
+          "process": "Renderer",
+          "thread": "Compositor",
+          "busyMsPerSec": 50.78
+        },
+        {
+          "process": "GPU Process",
+          "thread": "VizCompositorThread",
+          "busyMsPerSec": 26.29
+        },
+        {
+          "process": "Renderer",
+          "thread": "ThreadPoolForegroundWorker",
+          "busyMsPerSec": 3.58
+        }
+      ]
+    },
+    {
+      "name": "agent SVG hidden (loop still runs, nothing painted)",
+      "mainTaskMsPerSec": 22.22,
+      "scriptMsPerSec": 4.3,
+      "layoutsPer4s": 0,
+      "fps": 60.23,
+      "threads": [
+        {
+          "process": "Renderer",
+          "thread": "CrRendererMain",
+          "busyMsPerSec": 13.84
+        },
+        {
+          "process": "Renderer",
+          "thread": "Compositor",
+          "busyMsPerSec": 6.37
+        },
+        {
+          "process": "GPU Process",
+          "thread": "VizCompositorThread",
+          "busyMsPerSec": 2.79
+        },
+        {
+          "process": "Browser",
+          "thread": "CrBrowserMain",
+          "busyMsPerSec": 0.56
+        }
+      ]
+    },
+    {
+      "name": "both",
+      "mainTaskMsPerSec": 13.95,
+      "scriptMsPerSec": 5.19,
+      "layoutsPer4s": 0,
+      "fps": 59.97,
+      "threads": [
+        {
+          "process": "Renderer",
+          "thread": "CrRendererMain",
+          "busyMsPerSec": 20.18
+        },
+        {
+          "process": "Renderer",
+          "thread": "Compositor",
+          "busyMsPerSec": 8.98
+        },
+        {
+          "process": "GPU Process",
+          "thread": "VizCompositorThread",
+          "busyMsPerSec": 4.09
+        },
+        {
+          "process": "Browser",
+          "thread": "ThreadPoolForegroundWorker",
+          "busyMsPerSec": 1.23
+        }
+      ]
+    }
+  ]
+}

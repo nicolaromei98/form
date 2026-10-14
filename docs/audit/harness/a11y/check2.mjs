@@ -1,0 +1,16 @@
+const hex=(h,a=1)=>({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16),a});
+const rgba=(r,g,b,a=1)=>({r,g,b,a});
+const over=(f,b)=>({r:f.r*f.a+b.r*(1-f.a),g:f.g*f.a+b.g*(1-f.a),b:f.b*f.a+b.b*(1-f.a),a:1});
+const lin=c=>{c/=255;return c<=0.04045?c/12.92:((c+0.055)/1.055)**2.4};
+const L=c=>0.2126*lin(c.r)+0.7152*lin(c.g)+0.0722*lin(c.b);
+const R=(a,b)=>{const[x,y]=[L(a),L(b)].sort((p,q)=>q-p);return +((x+0.05)/(y+0.05)).toFixed(2)};
+const paper=hex("#e9e9e6"),lo=hex("#dcdcd8"),hi=hex("#f2f2ef");
+const glass=over(rgba(255,255,255,.52),paper),glassLo=over(rgba(255,255,255,.52),lo),glassHi=over(rgba(250,250,248,.92),paper);
+const sheet=hex("#fbfbf9"),bar=over(rgba(10,10,10,.075),glass),dimSurf=over(rgba(255,255,255,.286),paper);
+const light={paper,"paper-lo":lo,"paper-hi":hi,glass,"glass/paper-lo":glassLo,"glass-hi":glassHi,sheet,"dimmed card surface":dimSurf};
+const ink=hex("#0a0a0a"),inkHi=over(rgba(255,255,255,.075),hex("#161616"));
+const show=(name,fg,set)=>{const o=[];for(const[k,b]of Object.entries(set)){o.push(`${k} ${R(fg.a<1?over(fg,b):fg,b)}`)}console.log(name.padEnd(26),o.join(" | "))};
+for(const a of [0.58,0.6,0.62,0.66,0.7,0.72]) show(`ink ${a}`,rgba(10,10,10,a),light);
+for(const a of [0.46,0.5]) show(`ink ${a} (3:1 strokes)`,rgba(10,10,10,a),light);
+for(const a of [0.5,0.54,0.56,0.6]) show(`on-ink ${a}`,rgba(244,244,242,a),{ink,"ink-material light":inkHi});
+for(const c of ["#ff3b2f","#e8261b","#e0291f","#c0221a","#b81f17"]) show(c,hex(c),{...light,"timeline bar track":bar,"ink":ink});
