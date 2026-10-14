@@ -1,0 +1,4 @@
+{
+  "base": "A",
+  "note": "The baseline CI compares HEAD with (scripts/e2e/compare.mjs). A until the route move; then R, then B once the UI lane captures them (plan section 10.8 gates)."
+}

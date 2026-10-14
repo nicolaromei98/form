@@ -1,0 +1,233 @@
+{
+  "state": {
+    "doc": {
+      "tool": {
+        "id": "tool-rj1asm",
+        "kind": "project",
+        "template": "website",
+        "title": "New website",
+        "startDate": "2026-09-28",
+        "startDateIsSample": true,
+        "blocks": [
+          "header",
+          "metrics",
+          "collection"
+        ],
+        "views": [
+          "cards",
+          "board",
+          "timeline",
+          "team",
+          "focus",
+          "brief"
+        ]
+      },
+      "tasks": {
+        "t-research": {
+          "status": "done",
+          "priority": "low",
+          "progress": 100,
+          "estimate": 3,
+          "cost": null,
+          "parentId": null,
+          "emphasis": false,
+          "origin": "template",
+          "owner": "p-sara",
+          "id": "t-research",
+          "title": "Research"
+        },
+        "t-visual": {
+          "status": "review",
+          "priority": "high",
+          "progress": 85,
+          "estimate": 4,
+          "cost": null,
+          "parentId": null,
+          "emphasis": false,
+          "origin": "template",
+          "owner": "p-marta",
+          "id": "t-visual",
+          "title": "Visual Direction"
+        },
+        "t-ui": {
+          "status": "active",
+          "priority": "urgent",
+          "progress": 30,
+          "estimate": 6,
+          "cost": null,
+          "parentId": null,
+          "emphasis": false,
+          "origin": "template",
+          "owner": "p-marta",
+          "id": "t-ui",
+          "title": "UI Design"
+        },
+        "t-dev": {
+          "status": "todo",
+          "priority": "medium",
+          "progress": 0,
+          "estimate": 8,
+          "cost": null,
+          "parentId": null,
+          "emphasis": false,
+          "origin": "template",
+          "owner": "p-luca",
+          "id": "t-dev",
+          "title": "Development"
+        },
+        "p-fqymba": {
+          "id": "p-fqymba",
+          "title": "Wireframes & flows",
+          "status": "done",
+          "priority": "urgent",
+          "progress": 100,
+          "estimate": 1.5,
+          "cost": null,
+          "parentId": "t-ui",
+          "emphasis": false,
+          "origin": "agent",
+          "owner": null
+        },
+        "p-gz9lga": {
+          "id": "p-gz9lga",
+          "title": "Key screens",
+          "status": "todo",
+          "priority": "urgent",
+          "progress": 0,
+          "estimate": 2,
+          "cost": null,
+          "parentId": "t-ui",
+          "emphasis": false,
+          "origin": "agent",
+          "owner": null
+        },
+        "p-2nohcp": {
+          "id": "p-2nohcp",
+          "title": "Component library",
+          "status": "todo",
+          "priority": "urgent",
+          "progress": 0,
+          "estimate": 1.5,
+          "cost": null,
+          "parentId": "t-ui",
+          "emphasis": false,
+          "origin": "agent",
+          "owner": null
+        },
+        "p-6kvh32": {
+          "id": "p-6kvh32",
+          "title": "Prototype & handoff",
+          "status": "todo",
+          "priority": "urgent",
+          "progress": 0,
+          "estimate": 1,
+          "cost": null,
+          "parentId": "t-ui",
+          "emphasis": false,
+          "origin": "agent",
+          "owner": null
+        }
+      },
+      "order": [
+        "t-research",
+        "t-visual",
+        "t-ui",
+        "t-dev"
+      ],
+      "view": {
+        "representation": "cards",
+        "density": "comfortable",
+        "layout": "grid",
+        "columns": null,
+        "sort": "manual",
+        "hideDone": false,
+        "highlightUrgent": false,
+        "fields": {
+          "priority": true,
+          "estimate": true,
+          "progress": true
+        }
+      },
+      "proposal": null,
+      "mood": [],
+      "people": [
+        {
+          "id": "p-marta",
+          "name": "Marta",
+          "role": "Art director",
+          "capacity": 7
+        },
+        {
+          "id": "p-sara",
+          "name": "Sara",
+          "role": "Designer",
+          "capacity": 8
+        },
+        {
+          "id": "p-luca",
+          "name": "Luca",
+          "role": "Developer",
+          "capacity": 10
+        }
+      ],
+      "plan": null,
+      "brief": {
+        "edits": {},
+        "lines": []
+      }
+    },
+    "log": [
+      {
+        "at": 1791965340000,
+        "label": "edit",
+        "source": "direct"
+      },
+      {
+        "at": 1791965280000,
+        "label": "Accept them",
+        "source": "agent"
+      },
+      {
+        "at": 1791965220000,
+        "label": "Break this task into smaller steps",
+        "source": "agent"
+      },
+      {
+        "at": 1791965160000,
+        "label": "view → cards",
+        "source": "direct"
+      },
+      {
+        "at": 1791965100000,
+        "label": "view → brief",
+        "source": "direct"
+      },
+      {
+        "at": 1791965040000,
+        "label": "view → focus",
+        "source": "direct"
+      },
+      {
+        "at": 1791964980000,
+        "label": "view → team",
+        "source": "direct"
+      },
+      {
+        "at": 1791964920000,
+        "label": "view → timeline",
+        "source": "direct"
+      },
+      {
+        "at": 1791964860000,
+        "label": "view → board",
+        "source": "direct"
+      },
+      {
+        "at": 1791964800000,
+        "label": "Create a project tracker for my new website",
+        "source": "agent"
+      }
+    ]
+  },
+  "version": 1
+}
