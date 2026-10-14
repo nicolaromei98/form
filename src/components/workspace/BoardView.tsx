@@ -11,6 +11,12 @@ import { Clip, InkSkin, Reveal, useTaskSurface } from "./TaskCard";
 import { useReveal } from "./reveal";
 import { ShuffleText } from "../text/ShuffleText";
 
+/** A board card on its lane's glass. Dimmed (Q14), the surface, frame and shadow recede to 55% and the text stays */
+const CARD = "rgba(255,255,255,0.72)";
+const CARD_DIM = "rgba(255,255,255,0.4)";
+const CARD_SHADOW = "0 1px 0 rgba(255,255,255,0.9) inset, 0 10px 24px -18px rgba(0,0,0,0.3)";
+const CARD_SHADOW_DIM = "0 1px 0 rgba(255,255,255,0.495) inset, 0 10px 24px -18px rgba(0,0,0,0.165)";
+
 /** Representation: board — the same tasks, grouped into status lanes. */
 export function BoardView() {
   const doc = useForm((s) => s.doc);
@@ -91,13 +97,13 @@ function BoardCard({ task, number, spawnIndex, ref }: { task: Task; number: stri
       data-spawn={spawnIndex ?? undefined}
       onClick={onClick}
       initial={reveal != null ? { opacity: 0 } : false}
-      animate={{ backgroundColor: task.emphasis ? "#0c0c0c" : "rgba(255,255,255,0.72)", opacity: reveal != null ? 1 : dim ? 0.55 : 1 }}
+      animate={{ backgroundColor: task.emphasis ? "#0c0c0c" : dim ? CARD_DIM : CARD, opacity: 1 }}
       exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.2 } }}
       transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
       className={`${task.emphasis ? "tone-dark" : "tone-light"} group relative cursor-pointer ${
         selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""
       }`}
-      style={{ borderRadius: 22, boxShadow: "0 1px 0 rgba(255,255,255,0.9) inset, 0 10px 24px -18px rgba(0,0,0,0.3)" }}
+      style={{ borderRadius: 22, boxShadow: dim ? CARD_SHADOW_DIM : CARD_SHADOW }}
     >
       <InkSkin reveal={reveal} />
       <NumberBadge task={task} number={number} />

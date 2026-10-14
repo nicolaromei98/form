@@ -176,8 +176,16 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 /* Playwright                                                          */
 /* ------------------------------------------------------------------ */
 
+const hasFile = (commit, path) => spawnSync("git", ["cat-file", "-e", `${commit}:${path}`], { cwd: REPO }).status === 0;
+
 /** The route that renders the app in `commit`: "/demo" from the route move (plan step 3) on. */
-const appPath = (commit) => (spawnSync("git", ["cat-file", "-e", `${commit}:src/app/demo/page.tsx`], { cwd: REPO }).status === 0 ? "/demo" : "/");
+const appPath = (commit) => (hasFile(commit, "src/app/demo/page.tsx") ? "/demo" : "/");
+
+/**
+ * What agent-idle.spec.ts asserts for `commit`: the §9.1 criteria from the settling loop (plan
+ * step 5) on, otherwise v0's endless loop is recorded. E2E_AGENT_EXPECT in the environment wins.
+ */
+const agentExpect = (commit) => process.env.E2E_AGENT_EXPECT ?? (hasFile(commit, "src/components/agent/loop.ts") ? "settled" : "record");
 
 /** Runs this checkout's specs against one served build. Resolves to Playwright's exit code. */
 function playwright({ port, commit, out, snapshots, update }) {
@@ -185,11 +193,12 @@ function playwright({ port, commit, out, snapshots, update }) {
   const env = {
     E2E_BASE_URL: `http://localhost:${port}`,
     E2E_APP_PATH: appPath(commit),
+    E2E_AGENT_EXPECT: agentExpect(commit),
     E2E_OUT_DIR: out,
     E2E_SNAPSHOT_DIR: snapshots,
     E2E_ARTIFACTS_DIR: join(out, "artifacts"),
   };
-  console.log(`· playwright → ${env.E2E_BASE_URL}${env.E2E_APP_PATH} (${short(commit)}${update ? ", writing references" : ", comparing"})`);
+  console.log(`· playwright → ${env.E2E_BASE_URL}${env.E2E_APP_PATH} (${short(commit)}${update ? ", writing references" : ", comparing"}; agent ${env.E2E_AGENT_EXPECT})`);
   return new Promise((done) => {
     const child = spawn("npx", args, { cwd: REPO, env: { ...process.env, ...env }, stdio: "inherit" });
     children.add(child);

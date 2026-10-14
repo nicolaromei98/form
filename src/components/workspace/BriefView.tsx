@@ -446,7 +446,7 @@ function Editor({ initial, className, placeholder, onDone, onCancel }: { initial
       onKeyDown={onKeyDown}
       onInput={onInput}
       onBlur={onBlur}
-      className={`${className} -mx-2 rounded-[10px] bg-black/[0.04] px-2 outline-none empty:before:text-text-4 empty:before:content-[attr(data-placeholder)]`}
+      className={`${className} -mx-2 rounded-[10px] bg-black/[0.04] px-2 outline-none empty:before:text-text-3 empty:before:content-[attr(data-placeholder)]`}
     />
   );
 }

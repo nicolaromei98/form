@@ -1,0 +1,1197 @@
+{
+  "label": "T",
+  "ref": "01e67f170a4111010b72cdbd1d3c5134b5adde27",
+  "commit": "01e67f170a4111010b72cdbd1d3c5134b5adde27",
+  "appPath": "/demo",
+  "capturedAt": "2026-10-14T13:59:35.147Z",
+  "command": "node scripts/e2e/compare.mjs --capture 01e67f170a4111010b72cdbd1d3c5134b5adde27 --label T",
+  "environment": {
+    "os": "macOS 26.5.2 (Darwin 25.5.0 arm64)",
+    "node": "v22.13.0",
+    "playwright": "1.64.0",
+    "chromium": "156.0.8078.4",
+    "webkit": "27.2"
+  },
+  "result": {
+    "exitCode": 0,
+    "passed": 139,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 1,
+    "ms": 468627
+  },
+  "regenerate": "git tag phase1-baseline-t 01e67f170 (local), then the command above; same machine, same browsers for identical bytes",
+  "localCopy": "e2e/.out/baseline-T",
+  "stills": [
+    {
+      "path": "chromium-desktop/visual.spec.ts/board.png",
+      "bytes": 211599,
+      "sha256": "6b94c759d2fdf7c84b70a817da321d758f3e2ac2923c579be0cb46c02009dfe7",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/brief-client.png",
+      "bytes": 262821,
+      "sha256": "71d358ac07545e8db99860d61fc30c4cd3436254af0032e4d53e45055b1f6820",
+      "width": 1440,
+      "height": 1472
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/brief-short.png",
+      "bytes": 254082,
+      "sha256": "32c5aaa0610aa1038f53e72d63f8df4e4734d5ae523f88508d11c92b81a7f92f",
+      "width": 1440,
+      "height": 1357
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/brief-team.png",
+      "bytes": 278066,
+      "sha256": "adea75a58989820e65efe34d0a9da6ca3929bed3a87c0849734738e367cae7d5",
+      "width": 1440,
+      "height": 1575
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/caption-undo.png",
+      "bytes": 228880,
+      "sha256": "20096f2fc8c4780caed38eab1ea1f21c2d2bc9bc0e2d1ec8b1c36ccb8fec7885",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/composer.png",
+      "bytes": 178146,
+      "sha256": "0e163bb74d7e8f3deffea1ab1ae5260d8e5bf06e4d7ff660af0eb327db829fb6",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/empty.png",
+      "bytes": 177302,
+      "sha256": "35786b07a4a3a156e52f373ea35d62148dc27c88fafa8cf7e85153b1b89bf01d",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/focus.png",
+      "bytes": 230825,
+      "sha256": "68cb31ed23edf92a38eaca199fadafa6be4ef2b3bd3c8f0b0bc4a093ba421158",
+      "width": 1600,
+      "height": 1014
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/intro.png",
+      "bytes": 108395,
+      "sha256": "22f16eb91ad9587b4cba2e5a3d3ae7d9272931696579be080b3edeaa965ccaa9",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/moodboard.png",
+      "bytes": 299436,
+      "sha256": "aa1136f7e423ffe830443295149acca2aaacb12a8869d439d333fe0fea598e08",
+      "width": 1440,
+      "height": 1674
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/palette.png",
+      "bytes": 281836,
+      "sha256": "da5cbb5e64443d381fce658e4b1723e4710eeeb15a10939c61032e42d5f95ca0",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/proposal-accepted.png",
+      "bytes": 240566,
+      "sha256": "383fb12dd325d9c473c6fdbca6a9c53d852321f8f09c9b09d76889ef174f984b",
+      "width": 1440,
+      "height": 945
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/proposal.png",
+      "bytes": 246582,
+      "sha256": "ee3ca6c2d44345c2615c5fac6551fef5a605d9f1b8da8a031b29eef6b7a88595",
+      "width": 1440,
+      "height": 1035
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/team-balance-accepted.png",
+      "bytes": 213849,
+      "sha256": "e804163a9369d05fd92673b89c103b1c83a52aa82d0727a60f55746676f132e2",
+      "width": 1440,
+      "height": 937
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/team-balance-preview.png",
+      "bytes": 217051,
+      "sha256": "574a087ce4c796fe2c93937f53067065a52309c90538e0238c2515f6cbba9ac5",
+      "width": 1440,
+      "height": 1078
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/team.png",
+      "bytes": 218129,
+      "sha256": "6c663ca6c0052ada9e387f8cee5f8fcc1a6d067cb76cd9c26abedf6b3adb1539",
+      "width": 1440,
+      "height": 937
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/timeline-cleared-estimate.png",
+      "bytes": 219447,
+      "sha256": "b5f7b03e453995547fc1fe306208d9c6f67e54032a1d14ce6805faa4691b84f8",
+      "width": 1440,
+      "height": 949
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/timeline.png",
+      "bytes": 216183,
+      "sha256": "fddeefe5c01f39e1bbb638118c00895e1c5028de00116ded749dbf6ed0bfbd1a",
+      "width": 1440,
+      "height": 949
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/tracker-compact.png",
+      "bytes": 215755,
+      "sha256": "8c220d365ca95a522ea5b476feb9dead7cc97daf9878948ec36390d337c9068a",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/tracker-hide-done-empty.png",
+      "bytes": 211591,
+      "sha256": "48703e8c02aceed793a89c28f92622910571f191789be61ef1bc23ba88e75076",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/tracker-list.png",
+      "bytes": 202374,
+      "sha256": "dc56442462d4bd543a400f923fe8d70fca701ab940c1fce3fd91dbed02cdea20",
+      "width": 1440,
+      "height": 1676
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/tracker-urgent.png",
+      "bytes": 223394,
+      "sha256": "5f69361fb8cee92f8ccbfb48f29870f813015d6f04fc2b8d715dd381d4d73306",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/visual.spec.ts/tracker.png",
+      "bytes": 221281,
+      "sha256": "404ac3ea20791d445d36de5fef80fa5ead6ac6f5b1fd2df871b9e815dac283be",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/board.png",
+      "bytes": 488751,
+      "sha256": "7f4d5bdc78f864d315bdd79c8840a9a381cb38c77a2317f4b90ee0d417a4ea35",
+      "width": 1170,
+      "height": 3024
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/brief-client.png",
+      "bytes": 653124,
+      "sha256": "0ec131ea3ddd94548c1876490ec9579d3090ee2444f548d03a7dff36dc30cfa1",
+      "width": 1170,
+      "height": 5526
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/brief-short.png",
+      "bytes": 608294,
+      "sha256": "d578a6f1a29993239ba57e9b9caabf6b3050c8decb658e7ecae980395ddf1aed",
+      "width": 1170,
+      "height": 5037
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/brief-team.png",
+      "bytes": 698860,
+      "sha256": "7ea89e0a97386806118f4c3c84736bd806d9fe46c89871e63a48dec270ebfcd1",
+      "width": 1170,
+      "height": 5721
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/caption-undo.png",
+      "bytes": 642272,
+      "sha256": "1451532d272c68535933d882504c25ae08a4bce168233a25ababa98c1804b27e",
+      "width": 1170,
+      "height": 5370
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/composer.png",
+      "bytes": 463795,
+      "sha256": "39bd4ce1867a6e4c55b9c092884f25980d5e6be5366e7a1314976bb3a47b5784",
+      "width": 1170,
+      "height": 2532
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/empty.png",
+      "bytes": 441596,
+      "sha256": "09c22a53089535b4fa29d1e8049f71820732789b63d5717f37b98b045e24933c",
+      "width": 1170,
+      "height": 2532
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/focus.png",
+      "bytes": 616568,
+      "sha256": "22712e347255d85f1920460601e158fc5f74e61963dded3ad34f9d7c9ef134b8",
+      "width": 2022,
+      "height": 3597
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/intro.png",
+      "bytes": 326724,
+      "sha256": "de0d37f8f73d6eae5277d00dda986e4fc337d34c6cfbb3c5b1f4934243b3e469",
+      "width": 1170,
+      "height": 2532
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/moodboard.png",
+      "bytes": 766068,
+      "sha256": "5287e10ee654310caec138b2ff463ac85dec013b435ab061748b5f6d925c439e",
+      "width": 1170,
+      "height": 6975
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/palette.png",
+      "bytes": 623470,
+      "sha256": "7ef34ddba7bd39ec09bb375de3bb4bde5b0640a24aecd08fec8d1509531985a1",
+      "width": 1170,
+      "height": 5370
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/proposal-accepted.png",
+      "bytes": 660649,
+      "sha256": "c80c9b6da89530020f8ae3ef3b7a1a4826b1cb212e60b7b0da4b894e4fe80158",
+      "width": 1170,
+      "height": 5751
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/proposal.png",
+      "bytes": 688985,
+      "sha256": "da0f349c8de2e95eac384f28c48153e5756238334197a9df3a125af7cc909ef4",
+      "width": 1170,
+      "height": 6021
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/team-balance-accepted.png",
+      "bytes": 566082,
+      "sha256": "38fda3eb9cbcb7d3e6f8a99d65a7b730aade37082c93be3ad2714f786e72f5fa",
+      "width": 1170,
+      "height": 3774
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/team-balance-preview.png",
+      "bytes": 630679,
+      "sha256": "febd46bd6b3d9fe23877f00eb11da15ba1c64c3c64eda1a2b178eebee31c7051",
+      "width": 1170,
+      "height": 4335
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/team.png",
+      "bytes": 587132,
+      "sha256": "a5ff659c194e5ac4f1cdec15e5d416f2d4664ff928b91687327dc33cf7275ea9",
+      "width": 1170,
+      "height": 3774
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/timeline-cleared-estimate.png",
+      "bytes": 536657,
+      "sha256": "57f8b7d566eb14041c1d30b95b40721d03aa128c77bfdd43c9dacd4c89d81fbe",
+      "width": 1170,
+      "height": 3264
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/timeline.png",
+      "bytes": 528282,
+      "sha256": "301cacb69735860789e6ee8f4aa2e865e8e7ec196f0fc29f0450b0ada9f39380",
+      "width": 1170,
+      "height": 3219
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/tracker-compact.png",
+      "bytes": 560918,
+      "sha256": "d148bd788de531fe2f4c4e6cce6b5e72f82f19c5abe2dca300ce52340187014a",
+      "width": 1170,
+      "height": 2814
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/tracker-hide-done-empty.png",
+      "bytes": 551590,
+      "sha256": "1fcf4978aeeca3e021ce38714423948d6bc4c762167b3e577e5267e9a1236937",
+      "width": 1170,
+      "height": 2532
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/tracker-list.png",
+      "bytes": 615429,
+      "sha256": "4c6609489d2923f0610e76c5efc243c95a2d26a2bdaf26ac3922b5dd8ab7c51e",
+      "width": 1170,
+      "height": 5370
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/tracker-urgent.png",
+      "bytes": 631533,
+      "sha256": "2742e61f429476508a9cf654a008b5987e76ddb0726885795ff1515abdf71c7f",
+      "width": 1170,
+      "height": 5370
+    },
+    {
+      "path": "chromium-phone/visual.spec.ts/tracker.png",
+      "bytes": 617616,
+      "sha256": "ec80e20d24afad786cc33998ad3caa222fe37b9f21061c87dd6536b753708363",
+      "width": 1170,
+      "height": 5370
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/board.png",
+      "bytes": 524044,
+      "sha256": "d763f3dcb9a8e46c1842ce744285e215a4886660bc4046f677424743dc5ee2c0",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/brief-client.png",
+      "bytes": 495796,
+      "sha256": "a428c8a130cf55d040d8966b2fb1ae7fbe692dbde48d17f2434c5998c27d0a14",
+      "width": 1440,
+      "height": 1474
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/brief-short.png",
+      "bytes": 485588,
+      "sha256": "e79e1cadba0d1de781743e57dd5915f47127b838896768448a8c0d34880e287e",
+      "width": 1440,
+      "height": 1359
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/brief-team.png",
+      "bytes": 514144,
+      "sha256": "a3085c692bb06bb3236830a64280f1993ada175a1ed71357f6710adef155f8a4",
+      "width": 1440,
+      "height": 1578
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/caption-undo.png",
+      "bytes": 566396,
+      "sha256": "464db408a2e35c6c0a52867d1b34356cca50225677dc0b6921b8d841c5586e09",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/composer.png",
+      "bytes": 488429,
+      "sha256": "3f642e34a1fdbe61d74e1706a5df02814ae2b0573ee6d7093c6ae83de2c546e2",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/empty.png",
+      "bytes": 481540,
+      "sha256": "5e6ad29b88845a47bb7a9d64924aa2553bcd5e7953f0a9bda56cc6bd15ff8534",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/focus.png",
+      "bytes": 541017,
+      "sha256": "1cd65002891ca1624ecaee5a1972cc9a7092ca13537696f005789062055bec69",
+      "width": 1600,
+      "height": 1014
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/intro.png",
+      "bytes": 428898,
+      "sha256": "fd0f09d61844b578f9af72648d268338a7fe83064f36be8112ab26b3cfaa4807",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/moodboard.png",
+      "bytes": 627246,
+      "sha256": "2a71c06e55e5f49080e5888e003a912c89650207820c2992752bd6c20df887cf",
+      "width": 1440,
+      "height": 1674
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/palette.png",
+      "bytes": 574083,
+      "sha256": "951b9b172d18f9a1d4a56d890349a62df001da08131d1a5907279b623e2b7da5",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/proposal-accepted.png",
+      "bytes": 588085,
+      "sha256": "ecd17c3fd1af5f417dd56f86a8c031f82eb5d7143a366894962aefe6b7d89a55",
+      "width": 1440,
+      "height": 947
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/proposal.png",
+      "bytes": 602989,
+      "sha256": "604e6b8538f90dc2b51c8389d0be839fbeba36e63684b33c5291956da0a95ce9",
+      "width": 1440,
+      "height": 1037
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/team-balance-accepted.png",
+      "bytes": 530169,
+      "sha256": "93ac1263f9d68f883714399896615199f4f9829678e738171fa1f7efeb481d90",
+      "width": 1440,
+      "height": 938
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/team-balance-preview.png",
+      "bytes": 512355,
+      "sha256": "7be6158e799902c10f84e31c09dc08b7ad7248a76066acfe35c2ff585c79a9a4",
+      "width": 1440,
+      "height": 1079
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/team.png",
+      "bytes": 536373,
+      "sha256": "d9a79c30d61aeecfca0ce16b9911697ef5fb62c5f27e192fa21d42ab8b44245c",
+      "width": 1440,
+      "height": 938
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/timeline-cleared-estimate.png",
+      "bytes": 568231,
+      "sha256": "0e5d87bb41d7e1577c55cf02710781b06feb2d4657bb563e97743fc13d21b3e3",
+      "width": 1440,
+      "height": 950
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/timeline.png",
+      "bytes": 565303,
+      "sha256": "62b42cdf730cb3e791e1f9c0d1521ddcee743f9d2b84fc2ad3ac4d911130c771",
+      "width": 1440,
+      "height": 950
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/tracker-compact.png",
+      "bytes": 534968,
+      "sha256": "7261bf188a21c5e605fc4c70138f1b64c7fc02be1a08e5959c155f50487dd374",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/tracker-hide-done-empty.png",
+      "bytes": 517305,
+      "sha256": "b2cc4a675c2304ffdbcf4c8b2ed326b6bd2fd9d65fb9950d9e123d6c38a3a417",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/tracker-list.png",
+      "bytes": 555021,
+      "sha256": "e9cd9cd49ac9a65c3630f946423ba7625002a0619757b450a2eddad610116a44",
+      "width": 1440,
+      "height": 1676
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/tracker-urgent.png",
+      "bytes": 562621,
+      "sha256": "7e084fd44e82d6f110ba7170bef3873510a269c181c1cf668c3f8c585cf904f1",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "webkit-desktop/visual.spec.ts/tracker.png",
+      "bytes": 561672,
+      "sha256": "6b813becaa3df6cee794bf4516a6022aeab04af31f105861b30913d13cce1696",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/board.png",
+      "bytes": 1096518,
+      "sha256": "87abfc14e42588847715969c7a795d27c294d9fe7fea5ed37994ef76f9b98268",
+      "width": 1170,
+      "height": 3024
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/brief-client.png",
+      "bytes": 1075734,
+      "sha256": "21dc9c9eb5463ccf260856097ef8ab5a279f371e90f7c50277766083afec70c9",
+      "width": 1170,
+      "height": 5532
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/brief-short.png",
+      "bytes": 1019797,
+      "sha256": "e0b373c5d8197fc7ec6d64f48871281d187d7a52bd96140c036ae4ca52f38da0",
+      "width": 1170,
+      "height": 5043
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/brief-team.png",
+      "bytes": 1113485,
+      "sha256": "66873f1c747395862d3489938d6726dea332df76eb671824f1a9958d73ca1367",
+      "width": 1170,
+      "height": 5730
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/caption-undo.png",
+      "bytes": 1386177,
+      "sha256": "0e4ebd52d85d234f74dfb3d9fdf33d7f45f81eb3418dab082e5231ce6e2a16ce",
+      "width": 1170,
+      "height": 5370
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/composer.png",
+      "bytes": 1157689,
+      "sha256": "3da87bf828fcab563ddd2626b808442f6970dcbd615b01678a64f18b8ae2f7f2",
+      "width": 1170,
+      "height": 2532
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/empty.png",
+      "bytes": 1131949,
+      "sha256": "704df378cdd13f7fe66b732f313bb4c3f2a48f12823c029c78849a4d5e76d0f2",
+      "width": 1170,
+      "height": 2532
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/focus.png",
+      "bytes": 1315428,
+      "sha256": "c139a5a95dfe4248663a511ec9ef1b9e24c2c03a7da46ac36a3afca11d194a07",
+      "width": 2022,
+      "height": 3597
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/intro.png",
+      "bytes": 724499,
+      "sha256": "e16f5dedd6bef238295effb5c01b9f30e4897aa9b075ff8dd2dfae3a78af50a3",
+      "width": 1170,
+      "height": 2532
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/moodboard.png",
+      "bytes": 1499024,
+      "sha256": "d0269181698d1bb53a8444f422a521098c95c64ae916e4ffa3832a14fb2570ed",
+      "width": 1170,
+      "height": 6978
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/palette.png",
+      "bytes": 1156676,
+      "sha256": "1ffd1370465cf136693718901fa4cf641417d8a6f011df9fc97586a73a75664f",
+      "width": 1170,
+      "height": 5370
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/proposal-accepted.png",
+      "bytes": 1376184,
+      "sha256": "1e02f4484219aafa776549bbfbf85e64623f6f7f7fafffeedd0832c85421f4c4",
+      "width": 1170,
+      "height": 5757
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/proposal.png",
+      "bytes": 1404154,
+      "sha256": "a60f064f8e8903974ba0a20a7bf5274e7add46e2380da5485a4ee65e3fe1c7a5",
+      "width": 1170,
+      "height": 6027
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/team-balance-accepted.png",
+      "bytes": 1243486,
+      "sha256": "d136594f1842ea2f4b8d3b9655c28c05e8b3020213d74f83e3d5ec3222c950c1",
+      "width": 1170,
+      "height": 3777
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/team-balance-preview.png",
+      "bytes": 1253189,
+      "sha256": "5e62a0c286ed79d34cb5b8c5327ede77bc641a5110ccc7571a234cd3d39fbcea",
+      "width": 1170,
+      "height": 4338
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/team.png",
+      "bytes": 1263304,
+      "sha256": "27e130380c3b0c297ff014590de802b30cf32db4b3989136b8fac90861788a12",
+      "width": 1170,
+      "height": 3777
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/timeline-cleared-estimate.png",
+      "bytes": 1245812,
+      "sha256": "e386024a34bd54ccb1974971772d685bd11f258f1eef696e3353f06769b3f0db",
+      "width": 1170,
+      "height": 3267
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/timeline.png",
+      "bytes": 1226407,
+      "sha256": "752b5f834a0bfb8bbdef63c614393fb5b2f54aa78e782cfa101dd53e05926e61",
+      "width": 1170,
+      "height": 3222
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/tracker-compact.png",
+      "bytes": 1200361,
+      "sha256": "a70a2522e7e489c5c29d0cafc0f4e9d0026f94291ace7b21446f59fb7224d170",
+      "width": 1170,
+      "height": 2814
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/tracker-hide-done-empty.png",
+      "bytes": 1208751,
+      "sha256": "515a29de405ca22863804f57955a9a17a903f09c4e078ff37f4cffe1532e5d0e",
+      "width": 1170,
+      "height": 2532
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/tracker-list.png",
+      "bytes": 1323204,
+      "sha256": "dd2587c2eec3dd7677e4bc3c47ad427d516e9420e27ae857b7e2bb7bbbd0e5db",
+      "width": 1170,
+      "height": 5370
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/tracker-urgent.png",
+      "bytes": 1390882,
+      "sha256": "16e2f8c671011afe63a42deb03e76bfbb903887c581a266edf5eea84c1147478",
+      "width": 1170,
+      "height": 5370
+    },
+    {
+      "path": "webkit-phone/visual.spec.ts/tracker.png",
+      "bytes": 1325044,
+      "sha256": "777794401e7d669240bc332dab6c4529ad5324eb86fd8f8c3040c3a194e23ff3",
+      "width": 1170,
+      "height": 5370
+    }
+  ],
+  "frames": [
+    {
+      "path": "chromium-desktop/motion.spec.ts/add-view-0000ms.png",
+      "bytes": 220977,
+      "sha256": "aefecfe53bbce18031b3fd5d768425e3b60184419c7dad99a6fd771101fa881a",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/add-view-0120ms.png",
+      "bytes": 216170,
+      "sha256": "0bd62699f787e6a6f405ade25e2c3984663574b12f4ab563e4766e419eeccccd",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/add-view-0240ms.png",
+      "bytes": 215822,
+      "sha256": "13cdbf48ce998cd43534e3624748f8e2eec96e3101ee37cf8611d1677020f4fd",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/add-view-0480ms.png",
+      "bytes": 235423,
+      "sha256": "018fb53b291d4f7110ac879d0642b2e3bc5301a89d0f90a38f51dd9646e9f5cb",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/add-view-0900ms.png",
+      "bytes": 206659,
+      "sha256": "41beec0ae409ce997a853536cddf16f9aa7594dc3cf859c4dc54aa4bdc0609cf",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/add-view-1750ms.png",
+      "bytes": 221587,
+      "sha256": "93ccf3064448436a5b428e8269a23205cfc74e78b3a611894d059f8431470f5a",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-hover-0000ms.png",
+      "bytes": 177552,
+      "sha256": "0422660dbdc6d4a6ac0056acbaa8a7977c893357aaa907692667a34d2b343906",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-hover-0120ms.png",
+      "bytes": 177727,
+      "sha256": "37510efa5d394fe1f0fb0cd0b876302a23adf740999dc0ebe3e469e97a1060f4",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-hover-0240ms.png",
+      "bytes": 177767,
+      "sha256": "be245525354c5a09ea43672995a6a6496f8ca62703b7abeadeb0a135d1788472",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-hover-0480ms.png",
+      "bytes": 177254,
+      "sha256": "46f77c99d222cc5b0e9fb9b4ef1183570ce738af634d5311571d0c73d6a102d9",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-hover-0900ms.png",
+      "bytes": 176359,
+      "sha256": "21c9f4b08c2c5825321b722c1e121a63c412e21e9e3877f2a34540b2e364bae7",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-hover-1750ms.png",
+      "bytes": 176183,
+      "sha256": "9d6e9eb9a2ceadb7221566e34da6c411a6012f0571763e6bf72a69cbafc95842",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-input-0000ms.png",
+      "bytes": 176697,
+      "sha256": "79f44aaaffea895b3f8147610b012f093ba1c8e2be1c65e5b01fb1b31784184f",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-input-0120ms.png",
+      "bytes": 169971,
+      "sha256": "48978c367dd28adfe77533a89b24af64e26a869633c4e3ba3f60eb9e34168acb",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-input-0240ms.png",
+      "bytes": 165073,
+      "sha256": "2e871945e7e2958fcbcb360c78855843a7333661460bb539127dc85a10c56f59",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-input-0480ms.png",
+      "bytes": 178748,
+      "sha256": "85b314788b040b47901053e275a470ca9f3cabb27a3e2bf8ed8bb164b38c806b",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-input-0900ms.png",
+      "bytes": 178163,
+      "sha256": "f3f3379f92791049e9047b4f158701016d4b5ee3cc34e0b195a1eb89b007653b",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-input-1750ms.png",
+      "bytes": 178146,
+      "sha256": "0e163bb74d7e8f3deffea1ab1ae5260d8e5bf06e4d7ff660af0eb327db829fb6",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-press-0000ms.png",
+      "bytes": 176183,
+      "sha256": "9d6e9eb9a2ceadb7221566e34da6c411a6012f0571763e6bf72a69cbafc95842",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-press-0120ms.png",
+      "bytes": 176087,
+      "sha256": "f941c422911429ab5964d1b446ad07e7d1a4a8c44455605b66512988d31cde80",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-press-0240ms.png",
+      "bytes": 176336,
+      "sha256": "726dfde8653e87256d825710073eab4f64a6e57fa9fdc451fcc9f11e95d6886f",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-press-0480ms.png",
+      "bytes": 176875,
+      "sha256": "d20724de5732fc388d0a062d67d32655778d50add73d243ece8ef11351e7c586",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-press-0900ms.png",
+      "bytes": 176604,
+      "sha256": "be2b613bbcfbcb885cee503c96d1b789db45d02b359f75d3fb8b06a929886b8e",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-press-1750ms.png",
+      "bytes": 176697,
+      "sha256": "79f44aaaffea895b3f8147610b012f093ba1c8e2be1c65e5b01fb1b31784184f",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-processing-0000ms.png",
+      "bytes": 237697,
+      "sha256": "57ad55655773af5f431fc420e14172c37aef767998aa27f3ab5da16990553f98",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-processing-0120ms.png",
+      "bytes": 218451,
+      "sha256": "b16035556ecef4acc92d462b3ca113202034ad9d7fe61a7c26b25a622ae6cf8a",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-processing-0240ms.png",
+      "bytes": 218415,
+      "sha256": "92de76b09820054960ccb5b22129a14a01f118480abc606b6145c693f8f07973",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-processing-0480ms.png",
+      "bytes": 224589,
+      "sha256": "11115ec86a45de56063d0d5763fd074c19aed02ba5cc6955d11cafcb18318c00",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-processing-0900ms.png",
+      "bytes": 216498,
+      "sha256": "0cb650a979669971bd0a722cdf6f408bdfb22f096c95d77694e1643078839700",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/agent-processing-1750ms.png",
+      "bytes": 219615,
+      "sha256": "b54e56695c0fe948fa1d9527cc183624bca3c1a981dd2a86e6fa1a39fd804c93",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/caption-0000ms.png",
+      "bytes": 211465,
+      "sha256": "a91fb35cb6af5def78d3d460e411106ad7a0878110cba5e72fc391775bfb17f2",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/caption-0120ms.png",
+      "bytes": 204218,
+      "sha256": "a17b17dbd7772e54832594a844b31d749d44911544f94c2f8296b8c3171bbb38",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/caption-0240ms.png",
+      "bytes": 203012,
+      "sha256": "f26264ef91d0816c9ff216fa105d05619ba0220870e4a658bcd7a6e4a51ffe57",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/caption-0480ms.png",
+      "bytes": 197725,
+      "sha256": "b914bb04729153f69c05a97d6db74cddb86a5e577c36ffeeda05bde359e061ac",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/caption-0900ms.png",
+      "bytes": 206847,
+      "sha256": "690f3bc3a7b07c4f9fd9c30e1bbce7aed9584b378d4c1c018872a25defac2028",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/caption-1750ms.png",
+      "bytes": 217014,
+      "sha256": "b0e89a9b98c4a9c722d5a7aa04c4455a3b3a4a18e45bb3267dd2586394a26d8c",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/compact-toggle-0000ms.png",
+      "bytes": 226305,
+      "sha256": "791ac45216bca69efe21a0e9ffdc3795c0d3b5c1405edadef81ee3b05196627b",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/compact-toggle-0120ms.png",
+      "bytes": 221453,
+      "sha256": "cbd8c2ef62b79c8673ec5887a471b4690db861a49dc746127b170e9026271da6",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/compact-toggle-0240ms.png",
+      "bytes": 215338,
+      "sha256": "e03c146ef1fef4b836903d8743349160c122483876cd092521e1cc780e5b9c88",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/compact-toggle-0480ms.png",
+      "bytes": 212949,
+      "sha256": "c0b74a530118c841a0149f63006d367d59a8c46375579e8f9d9ff10dc0b58bd5",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/compact-toggle-0900ms.png",
+      "bytes": 215641,
+      "sha256": "bf8692062b85629230aaa81f4983f5223dcbd77a5169fa8dec9330541fa7bfeb",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/compact-toggle-1750ms.png",
+      "bytes": 215719,
+      "sha256": "c5cad122ad59148a1dfa91c8f81b0d36badc28ba1cc2633eb17900bf6dd2af9e",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/create-from-empty-0000ms.png",
+      "bytes": 178909,
+      "sha256": "151b8b4c923ba2511e0db7f64b6ee0f3df2f6df92180a517d890c219f510c283",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/create-from-empty-0120ms.png",
+      "bytes": 162915,
+      "sha256": "7f298974d3b3f6bd68fe2495f2ac3bfde00845fc1268b7cfe18dc90b8fd44ba5",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/create-from-empty-0240ms.png",
+      "bytes": 160812,
+      "sha256": "8a9839ef6e9083f88b37e379f02d2f6c2657043651acd1df0e3b644a854813c9",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/create-from-empty-0480ms.png",
+      "bytes": 188797,
+      "sha256": "80499f5df10c0ac76176e6b01712a1fc2701eac0be709a0d2066b4205d1c6c8c",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/create-from-empty-0900ms.png",
+      "bytes": 180402,
+      "sha256": "3f0dc7513b9ff4e325753788037a4803def647a32177bc060c35c4316794c279",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/create-from-empty-1750ms.png",
+      "bytes": 205423,
+      "sha256": "eec5c080d0e151ba3396a17e1974f22e77ac36400e2e4d975472e39f06e5a0e7",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/focus-enter-0000ms.png",
+      "bytes": 208121,
+      "sha256": "285fc6d544e8b8da0c132a9948abf242aa1c8295fe302241c5ab42a5c5958994",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/focus-enter-0120ms.png",
+      "bytes": 215065,
+      "sha256": "e2f446eb42c413df477ff5dadcc66ab472a602fd2fbfbb6487f02ac497bdf647",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/focus-enter-0240ms.png",
+      "bytes": 190143,
+      "sha256": "c5f0f50b67016de7e549b4da7483cfcef720bfa47b0806ead0ef42ffc5370615",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/focus-enter-0480ms.png",
+      "bytes": 211711,
+      "sha256": "79e0a0421543de05181a62c7224c7f63b3bd67726894793ff7a4522d05efd30a",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/focus-enter-0900ms.png",
+      "bytes": 233336,
+      "sha256": "a13fbe7b56c0796ec55477c0d119aaaf70049e9e09bb0d28e202e896d323b8fc",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/focus-enter-1750ms.png",
+      "bytes": 224128,
+      "sha256": "4a4525223d1b281a116a51a35b50b727ecfe9e8e3d658124bd11521f9c2ccce6",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/team-handover-0000ms.png",
+      "bytes": 230923,
+      "sha256": "83e619fd3a403a6c34d530f9c28c62db8107fe2d62aae37a7ff43b198b9ee47a",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/team-handover-0120ms.png",
+      "bytes": 240046,
+      "sha256": "fb0bf1e23a2a1c7b515701a5552525a7174db92e8e0b75bba74789efa22c63bb",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/team-handover-0240ms.png",
+      "bytes": 237737,
+      "sha256": "94992a2239dc8f56e5109808f764a34e08ca0815eed2543de6e3353dbd882b80",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/team-handover-0480ms.png",
+      "bytes": 213126,
+      "sha256": "d878ba4e27880a70a39b5a51be2fe39a0a83820a77e9af17ca6f29f01a3ef2e2",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/team-handover-0900ms.png",
+      "bytes": 216182,
+      "sha256": "0f1caacffd3432dc628fd8e3f5d9f26492b5afff5ed9dee07615bb51fa6dffd7",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/team-handover-1750ms.png",
+      "bytes": 217302,
+      "sha256": "c1b43ba3f37fab57ac766f921d7630f27fd2bf5844a9ca7a26da0379b31304e0",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/tracker-board-morph-0000ms.png",
+      "bytes": 218566,
+      "sha256": "5a4ece5f924c7a4309f544555786d67fa410c67f74c14cea9cb1b9b04517c43e",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/tracker-board-morph-0120ms.png",
+      "bytes": 239387,
+      "sha256": "110f6195b3bd7c0a7b61a3a0721535486bf108c4f85e93135bc116c3de491994",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/tracker-board-morph-0240ms.png",
+      "bytes": 224186,
+      "sha256": "b9163769e213dad3d5abca7ce754567c26b15bed48cc0739382f2257c3d61b3c",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/tracker-board-morph-0480ms.png",
+      "bytes": 220376,
+      "sha256": "936fab2369349a122b8c514281d0b7210ebc157432ab87fc9af44354f73607d6",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/tracker-board-morph-0900ms.png",
+      "bytes": 211496,
+      "sha256": "6d3f099b10a7d89fb4e80c42d6a9d6b5fa9cf4ecbdb15d15ada9965c86f8534b",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "chromium-desktop/motion.spec.ts/tracker-board-morph-1750ms.png",
+      "bytes": 211591,
+      "sha256": "f1d475d96025e13b7b1a98145bd972f346fcc49a5fe85a043c9839f8d4102989",
+      "width": 1440,
+      "height": 900
+    }
+  ],
+  "videos": [
+    {
+      "path": "chromium-desktop-v0-path.webm",
+      "bytes": 18836099,
+      "sha256": "aca524384fe6aabb3a0745f943414a88e8f298ef4c72a72b37c8f25bb47a990d"
+    },
+    {
+      "path": "webkit-desktop-v0-path.webm",
+      "bytes": 22164666,
+      "sha256": "bd7c4c11c08413c9ac20c1f6c0eda5734390e0cbd58bc171cbc593e55242dbfc"
+    }
+  ],
+  "agentIdle": {
+    "project": "chromium-desktop",
+    "restMs": 4000,
+    "windowMs": 2000,
+    "probes": [
+      {
+        "state": "empty workspace, idle ring",
+        "reducedMotion": false,
+        "mutationsPerSecond": 2998,
+        "rafPerSecond": 60
+      },
+      {
+        "state": "empty workspace, idle ring",
+        "reducedMotion": true,
+        "mutationsPerSecond": 2999,
+        "rafPerSecond": 60
+      },
+      {
+        "state": "demo project, agent docked",
+        "reducedMotion": false,
+        "mutationsPerSecond": 2972,
+        "rafPerSecond": 59
+      },
+      {
+        "state": "60-task tracker, agent docked",
+        "reducedMotion": false,
+        "mutationsPerSecond": 2898,
+        "rafPerSecond": 58,
+        "mainThreadMsPerSecond": {
+          "task": 54.6,
+          "script": 6.2,
+          "layout": 1.7,
+          "style": 3.8
+        }
+      },
+      {
+        "state": "60-task tracker, agent docked",
+        "reducedMotion": true,
+        "mutationsPerSecond": 2798,
+        "rafPerSecond": 56
+      },
+      {
+        "state": "demo project, tab hidden (simulated visibilitychange)",
+        "reducedMotion": false,
+        "hidden": true,
+        "mutationsPerSecond": 2999,
+        "rafPerSecond": 60
+      }
+    ]
+  }
+}

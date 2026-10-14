@@ -9,6 +9,8 @@ import { CostTag, EditableText, EstimateControl, NumberBadge, PriorityControl, P
 import { useReveal } from "./reveal";
 
 const GLASS = "rgba(255,255,255,0.52)";
+/** A dimmed card (Q14): the surface recedes to 55% of the glass, its text never does */
+const GLASS_DIM = "rgba(255,255,255,0.29)";
 const INK = "#0c0c0c";
 
 interface Props {
@@ -99,10 +101,9 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
   const emphasis = task.emphasis;
   const f = view.fields;
 
-  const surface = {
-    backgroundColor: emphasis ? INK : GLASS,
-    opacity: dim ? 0.55 : 1,
-  };
+  // Dimming lightens the surface, its frame and its shadow; the content keeps full contrast
+  const surface = { backgroundColor: emphasis ? INK : dim ? GLASS_DIM : GLASS };
+  const shadow = dim ? "var(--shadow-card-dim)" : "var(--shadow-card)";
 
   const row = variant === "row";
   const tall = hasSubs || hasProposal;
@@ -118,7 +119,7 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
       data-spawn={spawnIndex ?? undefined}
       onClick={onClick}
       initial={reveal != null ? { opacity: 0 } : false}
-      animate={{ ...surface, opacity: reveal != null ? 1 : surface.opacity }}
+      animate={{ ...surface, opacity: 1 }}
       transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
       className={`${emphasis ? "tone-dark" : "tone-light"} relative cursor-pointer backdrop-blur-[22px] ${row ? "" : "flex flex-col"} ${
         selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""
@@ -127,13 +128,13 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
         row
           ? {
               borderRadius: tall ? 28 : 31,
-              boxShadow: emphasis ? "0 24px 48px -26px rgba(0,0,0,0.55)" : "var(--shadow-card)",
+              boxShadow: emphasis ? "0 24px 48px -26px rgba(0,0,0,0.55)" : shadow,
               gridColumn: emphasis && cols > 1 ? "1 / -1" : undefined,
             }
           : {
               borderRadius: 28,
               minHeight: 272,
-              boxShadow: emphasis ? "0 30px 60px -30px rgba(0,0,0,0.6)" : "var(--shadow-card)",
+              boxShadow: emphasis ? "0 30px 60px -30px rgba(0,0,0,0.6)" : shadow,
               gridColumn: emphasis && cols > 1 ? `span ${Math.min(2, cols)}` : undefined,
             }
       }
@@ -180,7 +181,7 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
             <Reveal reveal={reveal} className="flex items-center justify-between gap-2 pr-4">
               <StatusControl task={task} />
               {highlight && (
-                <span className="t-micro flex items-center gap-1.5 text-signal">
+                <span className="t-micro flex items-center gap-1.5 text-signal-text">
                   <span className="h-[6px] w-[6px] rounded-full bg-signal" />
                   Urgent
                 </span>

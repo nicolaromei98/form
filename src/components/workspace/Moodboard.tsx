@@ -443,16 +443,34 @@ function Placeholder({ children }: { children: ReactNode }) {
   return <div className="t-data grid h-full w-full place-items-center bg-black/[0.05] p-3 text-center text-text-3">{children}</div>;
 }
 
-function ColorFace({ hex, name, width }: { hex: string; name: string | null; width: number }) {
+/** WCAG 2.x relative luminance of a #rrggbb colour */
+function luminance(hex: string) {
   const n = parseInt(hex.slice(1), 16);
-  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  const lin = (c: number) => (c / 255 <= 0.04045 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+}
+const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+
+/**
+ * The swatch label's ink (Q14): the off-black or the off-white, whichever contrasts more with the
+ * swatch; pure black or white for the few mid-tones where neither reaches 4.5:1.
+ */
+function labelInk(hex: string) {
+  const l = luminance(hex);
+  const dark = contrast(l, luminance("#0c0c0c"));
+  const light = contrast(l, luminance("#f4f3f0"));
+  if (Math.max(dark, light) >= 4.5) return dark >= light ? "#0c0c0c" : "#f4f3f0";
+  return contrast(l, 0) >= contrast(l, 1) ? "#000000" : "#ffffff";
+}
+
+function ColorFace({ hex, name, width }: { hex: string; name: string | null; width: number }) {
   return (
-    <div className="flex h-full w-full flex-col justify-end p-3" style={{ background: hex, color: lum > 0.6 ? "#0c0c0c" : "#f4f3f0" }}>
+    <div className="flex h-full w-full flex-col justify-end p-3" style={{ background: hex, color: labelInk(hex) }}>
       {/* Too small to label legibly: the chip speaks for itself */}
       {width >= 84 && (
         <>
           {name && <span className="t-body-s truncate">{name}</span>}
-          <span className="t-data uppercase opacity-80">{hex}</span>
+          <span className="t-data uppercase">{hex}</span>
         </>
       )}
     </div>
@@ -502,7 +520,7 @@ function NoteFace({ item, width, editing, onEditEnd }: { item: MoodItem; width: 
           onEditEnd();
           if (text !== (item.text ?? "")) commit([{ op: "updateMoodItem", id: item.id, patch: { text } }], "edit note");
         }}
-        className="h-full overflow-hidden leading-[1.3] tracking-[-0.015em] text-text outline-none empty:before:text-text-4 empty:before:content-[attr(data-placeholder)]"
+        className="h-full overflow-hidden leading-[1.3] tracking-[-0.015em] text-text outline-none empty:before:text-text-3 empty:before:content-[attr(data-placeholder)]"
       />
     </div>
   );

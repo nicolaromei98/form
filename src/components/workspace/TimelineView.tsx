@@ -19,6 +19,14 @@ import { ShuffleText } from "../text/ShuffleText";
 const BUILD = { header: 0.14, label: 0.18, bar: 0.26, step: 0.06 };
 
 /**
+ * A bar's track. Dimmed (Q14), only the track recedes, to half its ink; the progress fill, its
+ * label and the urgent dot keep full contrast.
+ */
+const TRACK = "rgba(10,10,10,0.075)";
+const TRACK_DIM = "rgba(10,10,10,0.0375)";
+const TRACK_INK = "rgba(10,10,10,0.2)";
+
+/**
  * Representation: timeline. Dates are derived — start date + estimates in
  * workflow order — and labelled as a sample until the user sets a start.
  */
@@ -123,7 +131,7 @@ export function TimelineView() {
                   ticks.map((t) => (
                     <span
                       key={`d${t.d}`}
-                      className={`t-data absolute bottom-0 text-center text-[11px] ${t.weekend ? "text-text-4" : "text-text-3"}`}
+                      className="t-data absolute bottom-0 text-center text-[11px] text-text-3"
                       style={{ left: X(t.d), width: dayW }}
                     >
                       {String(t.date.getDate()).padStart(2, "0")}
@@ -214,7 +222,7 @@ export function TimelineView() {
                                 >
                                   {item.estimate != null && slot && (
                                     <motion.div
-                                      className="absolute rounded-full border border-dashed border-text-3"
+                                      className="absolute rounded-full border border-dashed border-line-strong"
                                       initial={{ opacity: 0, x: -8 }}
                                       animate={{ opacity: 1, x: 0, transition: { delay: 0.1 + i * 0.06, ...move } }}
                                       style={{ left: left + 1, width: Math.max(10, w - 2), top: (subH - 14) / 2, height: 14 }}
@@ -405,8 +413,8 @@ function Bar({
           left: left + 1,
           width: w,
           clipPath: wipe(r, true),
-          opacity: reveal != null ? 1 : dim ? 0.5 : 1,
-          backgroundColor: task.emphasis ? "rgba(10,10,10,0.2)" : "rgba(10,10,10,0.075)",
+          opacity: 1,
+          backgroundColor: task.emphasis ? TRACK_INK : dim ? TRACK_DIM : TRACK,
           transitionEnd: { clipPath: "none" },
         }}
         transition={{
@@ -440,7 +448,7 @@ function Bar({
         )}
         {highlight && (
           <span className="absolute inset-y-0 right-2.5 flex items-center">
-            <span className="h-[7px] w-[7px] rounded-full bg-signal" />
+            <span className="h-[7px] w-[7px] rounded-full bg-signal-graphic" />
           </span>
         )}
       </motion.button>
