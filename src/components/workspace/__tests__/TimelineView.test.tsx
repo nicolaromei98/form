@@ -90,6 +90,18 @@ describe("TimelineView", () => {
     expect(host.querySelectorAll("button[data-task-id]")).toHaveLength(2);
   });
 
+  it("draws a project with no date at all on working days, without dates", () => {
+    const store = demoStore(["timeline"]);
+    const host = mount(store);
+    change(() => void store.getState().commit([{ op: "updateProject", field: "startDate", value: null }], { label: "edit" }));
+    const all = text(host);
+    expect(host.querySelectorAll("button[data-task-id]")).toHaveLength(4);
+    expect(all).not.toMatch(/\d\d\.\d\d–\d\d\.\d\d/);
+    expect(all).not.toContain("Today");
+    expect(all).toContain("Schedule · working days, from estimates and dependencies");
+    expect(all).not.toContain("sample date");
+  });
+
   it("draws the proposed steps where accepting puts them", () => {
     const store = demoStore(["timeline"]);
     const ui = taskByTitle(openProject(store), "UI Design");

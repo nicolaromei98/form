@@ -310,7 +310,7 @@ export function TimelineView() {
             <ShiftButton label="Start one week earlier" onClick={() => shiftStart(-7)} d="M6.5 2.5L3.5 5l3 2.5" />
             <span className="t-data rounded-full bg-white/70 px-2.5 py-1.5 text-text">
               {project.startDate === null ? "—" : fmtDateYear(project.startDate)}
-              {mode === "sample" && <span className="text-text-3"> · sample date</span>}
+              {project.startDate !== null && mode === "sample" && <span className="text-text-3"> · sample date</span>}
             </span>
             <ShiftButton label="Start one week later" onClick={() => shiftStart(7)} d="M3.5 2.5L6.5 5l-3 2.5" />
           </div>
