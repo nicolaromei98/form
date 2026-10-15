@@ -96,8 +96,8 @@ export const v2 = {
     const text = (await chart.innerText()).replace(/\s+/g, "");
     for (const r of ranges) expect(text, `ED-1: the timeline shows ${r}`).toContain(r);
   },
-  async timelineFooter(page: Page) {
-    expect(await textOf(page.locator("main .overflow-x-auto + div.mt-4 > span.t-data")), "ED-2").toBe("Sample schedule · working days, from estimates and dependencies");
+  async timelineFooter(page: Page, suffix = "") {
+    expect(await textOf(page.locator("main .overflow-x-auto + div.mt-4 > span.t-data")), "ED-2").toBe(`Sample schedule · working days, from estimates and dependencies${suffix}`);
   },
   /** ED-3: name → figure, as the row reads it ("10/6d +4d over") */
   async teamFigures(page: Page, expected: Record<string, string>) {

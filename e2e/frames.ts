@@ -27,6 +27,12 @@ export interface Sample {
   agent: string;
   /** The store phase, when the build exposes a store handle */
   phase: string | null;
+  /**
+   * Images still on their way: an `img` not complete, or the moodboard's pulsing placeholder while
+   * its blob is read from IndexedDB (real time, outside the fake clock). A capture taken meanwhile
+   * catches a running compositor animation, which changes how other layers rasterise their text.
+   */
+  loading: number;
 }
 
 declare global {
@@ -125,7 +131,8 @@ function instrument() {
         });
       const svg = [...document.querySelectorAll("svg")].find((s) => s.querySelector("filter#form-goo"));
       const handle = (window as unknown as { __form?: { getState?: () => { phase?: string } } }).__form;
-      return { mutations: state.mutations, last: state.last, pending, agent: svg?.innerHTML ?? "", phase: handle?.getState?.().phase ?? null };
+      const loading = document.querySelectorAll(".animate-pulse").length + [...document.images].filter((i) => !i.complete).length;
+      return { mutations: state.mutations, last: state.last, pending, agent: svg?.innerHTML ?? "", phase: handle?.getState?.().phase ?? null, loading };
     },
     drain: () =>
       new Promise<void>((resolve) => {

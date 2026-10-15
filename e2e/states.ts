@@ -103,7 +103,7 @@ export interface StateGate {
   /** The v2 values of what the masks hide, asserted on v2 builds before the capture */
   check?: (app: App) => Promise<void>;
   /** Checks that change the state, run on v2 builds after the capture (ED-12's determinism) */
-  after?: (app: App) => Promise<void>;
+  after?: (app: App, again: () => Promise<App>) => Promise<void>;
 }
 
 const demo: Seed = { doc: "docDemo" };
@@ -135,22 +135,21 @@ async function collage(app: App) {
 }
 
 /** ED-12: every tile inside the board, and the same layout after re-arranging and after a reload */
-async function collageChecks(app: App) {
+async function collageChecks(app: App, again: () => Promise<App>) {
   const first = await collage(app);
   expect(first.tiles.length, "ED-12: the five references are on the board").toBe(5);
   for (const t of first.tiles) {
     const inside = t.x >= -0.5 && t.y >= -0.5 && t.x + t.w <= first.width + 0.5 && t.y + t.h <= first.height + 0.5;
     expect(inside, `ED-12: ${t.id} at ${t.x},${t.y} ${t.w}×${t.h} inside the ${first.width}×${first.height} board`).toBe(true);
   }
-  // The arrangement is a function of the document: away and back gives the same collage…
-  await app.command("Arrange the moodboard as a grid");
-  await app.command("Arrange the moodboard as a collage");
-  await app.readyForStill();
-  expect(await collage(app), "ED-12: arranging the same document again gives the same collage").toEqual(first);
-  // …and so does a second load of the saved document
+  // The same document loaded again, in a fresh browser context, and arranged the same way: the
+  // same collage, so nothing but the document decides it…
+  const second = await again();
+  expect(await collage(second), "ED-12: a second load of the same document arranges the same collage").toEqual(first);
+  // …and a reload shows the collage as it was saved
   await app.reload();
   await app.readyForStill();
-  expect(await collage(app), "ED-12: a second load of the same document shows the same collage").toEqual(first);
+  expect(await collage(app), "ED-12: the saved collage after a reload").toEqual(first);
 }
 
 const TEAM_FIGURES = { Marta: "10/6d +4d over", Sara: "0/4d 4d free", Luca: "8/15d 7d free" };
@@ -227,7 +226,8 @@ export const STATES: State[] = [
         await v2.timelineRanges(app.page, ["28.09–30.09"]);
         // Visual Direction has no estimate: its successors can't be dated, and say whose estimate they need
         await expect(app.page.getByText("Needs Visual Direction's estimate", { exact: true }), "ED-1").toHaveCount(2);
-        await v2.timelineFooter(app.page);
+        // Visual Direction (no estimate) and the two tasks that wait on it
+        await v2.timelineFooter(app.page, " · 3 without dates");
       },
     },
   },

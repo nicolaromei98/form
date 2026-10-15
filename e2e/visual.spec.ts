@@ -3,8 +3,8 @@
 // 0 differing pixels (R vs A), or 0 outside the expected-difference masks (C vs B, step 19:
 // e2e/gate.ts, e2e/expected.ts, e2e/expected-diffs.md). On a v2 build, every masked region's value
 // is asserted as text or state.
-import { expect, test } from "@playwright/test";
-import { ENGINE } from "./env";
+import { expect, test, type BrowserContext } from "@playwright/test";
+import { BASE_URL, ENGINE } from "./env";
 import { changeCount, COUNTER, ENGINE_LABEL, HISTORY } from "./expected";
 import { gate, type Mask } from "./gate";
 import { open } from "./settle";
@@ -16,7 +16,7 @@ test.use({ reducedMotion: "reduce" });
 const WEEKENDS = "Schedule now skips weekends.";
 
 for (const state of STATES) {
-  test(`${state.id}: ${state.title}`, async ({ page }, testInfo) => {
+  test(`${state.id}: ${state.title}`, async ({ page, browser }, testInfo) => {
     const app = await open(page, state.seed);
     if (app.notice) testInfo.annotations.push({ type: "first-load notice", description: app.notice });
     if (ENGINE === "v2") expect(app.notice, "ED-10: the first-load caption").toBe(state.seed.doc ? WEEKENDS : null);
@@ -47,6 +47,34 @@ for (const state of STATES) {
     testInfo.annotations.push({ type: "gate", description: `${rec.mode}: ${rec.differing} differing of ${rec.compared} compared pixels; masked ${Object.keys(rec.masked).join(", ")}` });
     expect(rec.failures, `${state.id}: pixels outside the expected differences`).toEqual([]);
 
-    if (ENGINE === "v2" && g.after) await g.after(app);
+    if (ENGINE === "v2" && g.after) {
+      // The same state reached again from the same seed, in a fresh context with this project's device
+      const contexts: BrowserContext[] = [];
+      const again = async () => {
+        const u = testInfo.project.use;
+        const context = await browser.newContext({
+          viewport: u.viewport,
+          deviceScaleFactor: u.deviceScaleFactor,
+          isMobile: u.isMobile,
+          hasTouch: u.hasTouch,
+          userAgent: u.userAgent,
+          locale: "en-US",
+          timezoneId: "Europe/Rome",
+          colorScheme: "light",
+          reducedMotion: "reduce",
+          baseURL: BASE_URL,
+        });
+        contexts.push(context);
+        const second = await open(await context.newPage(), state.seed);
+        await state.reach(second);
+        await second.readyForStill();
+        return second;
+      };
+      try {
+        await g.after(app, again);
+      } finally {
+        for (const c of contexts) await c.close();
+      }
+    }
   });
 }

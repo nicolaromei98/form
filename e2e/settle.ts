@@ -198,12 +198,12 @@ export class App {
         await afterFrame(this.page);
       } else await sleep(step);
       const s = await sample(this.page);
-      const calm = s.mutations === prev.mutations && s.pending.length === 0 && (s.phase === null || s.phase === "rest") && (!agent || s.agent === prev.agent);
+      const calm = s.mutations === prev.mutations && s.pending.length === 0 && s.loading === 0 && (s.phase === null || s.phase === "rest") && (!agent || s.agent === prev.agent);
       quiet = calm ? quiet + step : 0;
       prev = s;
       if (quiet >= QUIET_MS && (this.mode === "natural" || spent % SETTLE_BLOCK_MS === 0)) return;
     }
-    throw new Error(`Never settled in ${timeout} ms: last change "${prev.last}", pending ${JSON.stringify(prev.pending)}, phase ${prev.phase}`);
+    throw new Error(`Never settled in ${timeout} ms: last change "${prev.last}", pending ${JSON.stringify(prev.pending)}, phase ${prev.phase}, loading ${prev.loading}`);
   }
 
   /** Runs the clock for `ms` (stepped) or waits for it (natural). */
