@@ -39,7 +39,7 @@ function normaliseOverride(value: CalendarOverride | null): CalendarOverride | n
   if (value.closures !== null) {
     const keys = (Object.keys(value.closures) as ClosureId[]).sort(compareKeys);
     if (keys.length > CLOSURES_MAX) return reject("limit", `A calendar holds at most ${CLOSURES_MAX} closures.`);
-    // Closure ids can only meet each other inside a project document, so being filed under its own id is enough
+    // A project's only closure ids are its override's, so a closure filed under its own id can't collide with anything
     closures = {};
     for (const key of keys) {
       const c = value.closures[key];
