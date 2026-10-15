@@ -44,9 +44,9 @@ export function capitalise(t: string): string {
   return v.charAt(0).toUpperCase() + v.slice(1);
 }
 
-/** A one-line title within `max` characters (the schemas refuse a trailing space) */
-export function lineOf(t: string, max: number): string {
-  return capitalise(t).slice(0, max).trimEnd();
+/** A one-line title within `max` characters (the schemas refuse a trailing space); `fallback` when nothing is left */
+export function lineOf(t: string, max: number, fallback = ""): string {
+  return capitalise(t).slice(0, max).trimEnd() || fallback;
 }
 
 /** Whether the whole command matched a regex (an anchored template, Q17) */

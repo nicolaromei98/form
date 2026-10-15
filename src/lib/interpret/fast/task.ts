@@ -58,7 +58,9 @@ export function entityEdits(cmd: Command, ctx: FastContext, target: Target, name
 
   // Rename
   const rename = clean.match(/\b(?:rename|retitle)\b.*?\bto\s+"?([^"]+?)"?$/i) ?? clean.match(/\bcall (?:it|this|that)\s+"?([^"]+?)"?$/i);
-  if (rename) fields.title = lineOf(rename[1], target.kind === "task" ? TASK_TITLE : STEP_TITLE);
+  // A title of spaces is no title (v0 stored an empty one)
+  const renamed = rename ? lineOf(rename[1], target.kind === "task" ? TASK_TITLE : STEP_TITLE) : "";
+  if (renamed) fields.title = renamed;
 
   // Status
   const statusVerb = /\b(mark|set|move|change|make|put|flag|is|it's)\b/.test(s) || /^(complete|finish|start|reopen)\b/.test(s);
@@ -127,7 +129,7 @@ export function entityEdits(cmd: Command, ctx: FastContext, target: Target, name
   // A new step
   const sub = clean.match(/\badd (?:a |an |another )?(?:sub-?task|step)\b(?:\s+(?:called|named|for))?\s*:?\s*"?([^"]*)"?$/i);
   if (sub && target.kind === "task") {
-    c.op(makeOp({ op: "addStep", taskId: target.task.id, stepId: ctx.mint("step"), title: lineOf(sub[1] || "New step", STEP_TITLE), estimateDays: null, after: "end" }));
+    c.op(makeOp({ op: "addStep", taskId: target.task.id, stepId: ctx.mint("step"), title: lineOf(sub[1], STEP_TITLE, "New step"), estimateDays: null, after: "end" }));
     handled = true;
   }
 

@@ -125,7 +125,7 @@ export function workspaceRules(
     c.op(
       addTaskOp({
         taskId: ctx.mint("task"),
-        title: lineOf(add[1] || "New task", TASK_TITLE),
+        title: lineOf(add[1], TASK_TITLE, "New task"),
         dependsOn: project.autoChain && last ? [last.id] : [],
       }),
     );
