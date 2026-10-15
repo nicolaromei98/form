@@ -244,3 +244,22 @@ Choices not covered by `docs/FORM-v1.md`, or confirmed from its section 3.2. Eac
   - **The four-part cap** counts " · " segments and never drops a refusal.
   - **Three captions exceed 120 characters.** All three are v0 wording and are listed, the longest being "Create a timeline for my project" at 126.
 - **Rejected:** a fixed notice for the sample dates, because a notice would let the parser assert something about the result.
+
+### 2026-10-15 · Wave 7 outcomes (step 18, component switchover)
+- **Context:** the seven component areas and the integration merged into `phase-1-domain`. Every component reads v2 through `lib/store/hooks`. The v0 lib, the Claude route and its SDK dependency are deleted. The components allow-list is enforced by lint.
+- **What was checked:**
+  - The v0 §15 path runs end to end on the production build in Chromium and WebKit; an asserted 20-step copy has no console errors.
+  - All 30 v0 fixtures load and migrate, and `form.workspace.v1` is never written.
+  - 2,449 tests pass.
+- **Real bug fixed:** Next's production minifier folded `const i = indexOf(d); return prefix[i]` in `planning/calendar.ts` into a read before the horizon grew. In the built app every task read "Too far out to date", while the unminified unit tests passed. Fixed. `calendar.minify.test.ts` runs the module through Next's own SWC minify and compares the results.
+- **Choice (accepted deviations):**
+  - **Allow-list.** Components may also import, as values, `domain/{limits,money,colours,dates}`, and anything under `lib/domain` and `lib/store/actions` as types. Everything else goes through hooks; useNextViews, useProposalCells, useWorkspacePeople, useCanAddPerson and useHasSamplePerson were added.
+  - **Focus lead.** `summaryOf` lives in `planning/format`, and FocusView uses it.
+  - **TextMotion** reads reduced motion from the new store.
+  - **CommandSheet** keeps v0's hint text, so its pixels match B.
+- **Open for step 19 (pixel gate C vs B), not covered by ED-1…ED-10:**
+  - **Undo button.** The top-bar Undo is disabled where B had it enabled, because tab switches are no longer history (Q6).
+  - **Collage.** The moodboard collage is laid out from item ids, which v2 mints differently, so positions differ.
+  - **Page heights** change where ED-4 and ED-5 shorten text, so full-page stills need clipped captures.
+  - **Harness hover.** The harness leaves the pointer near the dock after dismissing the ED-10 caption.
+  - **Random stream.** v2 mints ids without Math.random, so the seeded stream sits at a different offset (scramble glyphs, agent volumes).
