@@ -2,26 +2,28 @@
 
 import { motion } from "motion/react";
 import { move } from "@/lib/motion";
-import { CAPABILITIES, REQUIREMENT_HINT, type Requirement } from "./suggestions";
+import { usePalette } from "@/lib/store/hooks";
+import { REQUIREMENT_HINT } from "./suggestions";
 
 interface Props {
   /** What's typed in the field — the palette filters as you type */
   query: string;
-  hasTool: boolean;
-  hasSelection: boolean;
   origin: "top" | "bottom";
   maxHeight: number;
   onRun: (command: string) => void;
   onClose: () => void;
 }
 
-/** Command palette: every phrase demo mode understands, runnable in one click. */
-export function CommandSheet({ query, hasTool, hasSelection, origin, maxHeight, onRun, onClose }: Props) {
+/**
+ * Command palette: every phrase demo mode understands, runnable in one click. The groups come from
+ * the registry (`usePalette()`), each with whether what it needs (a project, a selection) is there.
+ */
+export function CommandSheet({ query, origin, maxHeight, onRun, onClose }: Props) {
+  const palette = usePalette();
   const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const groups = CAPABILITIES.map((g) => ({ ...g, items: g.items.filter((it) => tokens.every((t) => it.toLowerCase().includes(t))) })).filter(
-    (g) => g.items.length,
-  );
-  const available = (needs: Requirement) => needs === "none" || (hasTool && (needs === "tool" || hasSelection));
+  const groups = palette
+    .map((g) => ({ ...g, items: g.items.map((it) => it.phrase).filter((it) => tokens.every((t) => it.toLowerCase().includes(t))) }))
+    .filter((g) => g.items.length);
 
   return (
     <motion.div
@@ -53,7 +55,7 @@ export function CommandSheet({ query, hasTool, hasSelection, origin, maxHeight, 
 
       <div className="min-h-0 flex-1 overflow-y-auto border-t border-line px-3 pt-3 pb-1 sm:columns-2 sm:gap-x-2">
         {groups.map((g) => {
-          const enabled = available(g.needs);
+          const enabled = g.available;
           return (
             <section key={g.group} className="mb-3 break-inside-avoid">
               <div className="flex items-baseline justify-between gap-2 px-2 pb-1">

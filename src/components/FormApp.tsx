@@ -2,7 +2,7 @@
 
 import { MotionConfig, useReducedMotion } from "motion/react";
 import { useEffect, useSyncExternalStore } from "react";
-import { useForm } from "@/lib/store";
+import { useActions, useFormRuntime } from "@/lib/store/hooks";
 import { move } from "@/lib/motion";
 import { AgentLayer } from "./agent/AgentLayer";
 import { Workspace } from "./workspace/Workspace";
@@ -14,54 +14,45 @@ const isTyping = (el: EventTarget | null) =>
 
 export function FormApp() {
   const reduced = useReducedMotion();
-  const setReduced = useForm((s) => s.setReducedMotion);
-  const setEngine = useForm((s) => s.setEngine);
+  const actions = useActions();
 
-  useEffect(() => setReduced(!!reduced), [reduced, setReduced]);
+  // The store's runtime (plan §8.2): the view in the URL, today re-ticked at local midnight, a save
+  // before the page goes away, and the `window.__form` handle outside production builds
+  useFormRuntime();
 
-  // Development-only handle for automated verification of the demo flow
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "production") (window as unknown as { __form: typeof useForm }).__form = useForm;
-  }, []);
-
-  // Engine discovery: use Claude only if the server says a key is configured
-  useEffect(() => {
-    fetch("/api/interpret")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => j?.available && setEngine("claude"))
-      .catch(() => {});
-  }, [setEngine]);
+  useEffect(() => actions.setReducedMotion(!!reduced), [reduced, actions]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const st = useForm.getState();
+      // Read at the moment of the key press, without subscribing the app's root to it
+      const st = actions.peek();
       // The intro owns the keyboard while it's open
       if (st.intro) return;
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z" && !isTyping(e.target)) {
         e.preventDefault();
-        if (e.shiftKey) st.redo();
-        else st.undo();
+        if (e.shiftKey) actions.redo();
+        else actions.undo();
         return;
       }
       if (mod && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        if (st.composerOpen) st.closeComposer();
-        else st.openComposer();
+        if (st.composerOpen) actions.closeComposer();
+        else actions.openComposer();
         return;
       }
       if (isTyping(e.target)) return;
       if (e.key === "/") {
         e.preventDefault();
-        st.openComposer();
+        actions.openComposer();
       } else if (e.key === "Escape") {
-        if (st.composerOpen) st.closeComposer();
-        else if (st.selectedId) st.select(null);
+        if (st.composerOpen) actions.closeComposer();
+        else if (st.selectedTaskId) actions.select(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [actions]);
 
   return (
     <MotionConfig reducedMotion="user" transition={move}>
@@ -72,7 +63,7 @@ export function FormApp() {
         onClick={(e) => {
           // Only a click on empty space clears the Point & Ask selection
           if ((e.target as HTMLElement).closest("button, a, input, [data-interactive], [data-task-id], [role=menu], [role=switch], [role=tab]")) return;
-          useForm.getState().select(null);
+          actions.select(null);
         }}
       >
         <h1 className="sr-only">FORM — a living workspace that turns intention into interactive tools</h1>
@@ -84,7 +75,10 @@ export function FormApp() {
   );
 }
 
-/** Client-only root: workspace state lives in localStorage, so render after mount. */
+/**
+ * Client-only root: the demo lives in this browser's storage, so render after mount. The store
+ * (lib/store) is created and hydrated by the first hook that reads it, inside this tree.
+ */
 const noop = () => () => {};
 
 export function ClientRoot() {

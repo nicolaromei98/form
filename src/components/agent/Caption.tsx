@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect } from "react";
-import { useForm } from "@/lib/store";
+import { useActions, useCanUndo, useCaption, usePhase, useReducedMotion } from "@/lib/store/hooks";
 import { ease, move } from "@/lib/motion";
 import { RevealText } from "../text/TextMotion";
 import { useViewport } from "@/lib/useViewport";
@@ -20,12 +20,11 @@ interface Props {
 /** The agent's only verbal channel: a one-line caption of what changed. */
 export function Caption({ anchor, placement, composerOpen, lift = 0 }: Props) {
   const { w: vw, h: vh } = useViewport();
-  const caption = useForm((s) => s.caption);
-  const phase = useForm((s) => s.phase);
-  const dismiss = useForm((s) => s.dismissCaption);
-  const undo = useForm((s) => s.undo);
-  const canUndo = useForm((s) => s.past.length > 0);
-  const reduced = useForm((s) => s.reducedMotion);
+  const caption = useCaption();
+  const phase = usePhase();
+  const { dismissCaption: dismiss, undo } = useActions();
+  const canUndo = useCanUndo();
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     if (!caption) return;

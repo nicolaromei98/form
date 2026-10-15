@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useForm } from "@/lib/store";
+import { useActions, useProposal, useSelectedTask } from "@/lib/store/hooks";
 import type { Capsule, Circle } from "./geometry";
 import { AgentMark } from "./AgentMark";
 import { ShuffleText } from "../text/ShuffleText";
@@ -15,9 +15,10 @@ interface Props {
 
 /** State F — the agent contracted into a floating capsule, always reachable. */
 export function CompactPill({ visible, frame, hint = null }: Props) {
-  const selected = useForm((s) => (s.selectedId ? s.doc.tasks[s.selectedId] : null));
-  const proposal = useForm((s) => !!s.doc.proposal);
-  const open = useForm((s) => s.openComposer);
+  const selected = useSelectedTask();
+  // v0's `doc.proposal`: the steps proposed for a task (the reassign plan never re-keyed the label)
+  const proposal = useProposal()?.kind === "subtasks";
+  const { openComposer: open } = useActions();
   const { lead, body } = frame;
   const left = lead.cx - lead.r;
   const width = body.x + body.w - left;

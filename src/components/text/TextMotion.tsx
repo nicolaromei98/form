@@ -4,7 +4,7 @@ import gsap from "gsap";
 import { SplitText } from "gsap/SplitText";
 import { useGSAP } from "@gsap/react";
 import { useEffect, useRef, useState, type ElementType } from "react";
-import { useForm } from "@/lib/store";
+import { useReducedMotion } from "@/lib/store/hooks";
 
 gsap.registerPlugin(SplitText, useGSAP);
 
@@ -53,7 +53,7 @@ export function RevealText({
   as?: ElementType;
 }) {
   const ref = useRef<HTMLElement>(null);
-  const reduced = useForm((s) => s.reducedMotion);
+  const reduced = useReducedMotion();
   const words = text.split(" ");
   useGSAP(
     () => {
@@ -86,7 +86,7 @@ const NBSP = " ";
 
 /** Mono eyebrow decodes left to right; width never changes, so nothing reflows. */
 export function useDecode(text: string, delay: number, duration = 0.75) {
-  const reduced = useForm((s) => s.reducedMotion);
+  const reduced = useReducedMotion();
   const [out, setOut] = useState(() => (reduced ? text : text.replace(/./g, NBSP)));
   useEffect(() => {
     let raf = 0;
