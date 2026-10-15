@@ -1,7 +1,6 @@
-// Property generator for unassignTask: a stub until Phase 1 step 10a, which makes it
-// materialise payloads (src/lib/ops/registry/README.md). Until then the op is never generated.
-import type { OpGen } from "./_pick";
+// Property generator for unassignTask: any task, owned (applied) or not (a no-op), or a missing one.
+import { type OpGen, pickTask } from "./_pick";
 
-const gen: OpGen = () => null;
+const gen: OpGen = (s, state, mint) => ({ op: "unassignTask", taskId: pickTask(s, state, mint, 0) });
 
 export default gen;
