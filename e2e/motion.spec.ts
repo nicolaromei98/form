@@ -123,7 +123,7 @@ test("caption: accepting the balance", async ({ page }, testInfo) => {
     // ED-6: the accept caption is composed from the ops that applied, on the weekly figures (ED-3)
     const caption = await page.getByRole("status").locator("[aria-label]").first().getAttribute("aria-label");
     testInfo.annotations.push({ type: "caption", description: caption ?? "" });
-    expect(caption, "ED-6: the accept caption").toBe("UI Design → Sara");
+    expect(caption, "ED-6: the accept caption").toBe("1 task reassigned");
     // Undo hands the documents back with a restore fx
     await page.keyboard.press("ControlOrMeta+z");
     await app.settle();

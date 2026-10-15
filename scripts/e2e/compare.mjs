@@ -192,7 +192,7 @@ const agentExpect = (commit) => process.env.E2E_AGENT_EXPECT ?? (hasFile(commit,
 const engine = (commit) => (hasFile(commit, "src/lib/store/engine.ts") ? "v2" : "v0");
 
 /** Runs this checkout's specs against one served build. Resolves to Playwright's exit code. */
-function playwright({ port, commit, out, snapshots, update }) {
+function playwright({ port, commit, out, snapshots, update, reference }) {
   const args = ["playwright", "test", "--config", "e2e/playwright.config.ts", ...(update ? ["--update-snapshots=all"] : []), ...passthrough];
   const env = {
     E2E_BASE_URL: `http://localhost:${port}`,
@@ -202,6 +202,8 @@ function playwright({ port, commit, out, snapshots, update }) {
     E2E_OUT_DIR: out,
     E2E_SNAPSHOT_DIR: snapshots,
     E2E_ARTIFACTS_DIR: join(out, "artifacts"),
+    // The gate's retry protocol reaches a state again on the reference build (e2e/gate.ts)
+    ...(reference ? { E2E_REFERENCE_URL: reference } : {}),
   };
   console.log(`· playwright → ${env.E2E_BASE_URL}${env.E2E_APP_PATH} (${short(commit)}${update ? ", writing references" : ", comparing"}; ${env.E2E_ENGINE}; agent ${env.E2E_AGENT_EXPECT})`);
   return new Promise((done) => {
@@ -336,11 +338,13 @@ async function main() {
   console.log(`Comparing ${short(head)} (head) with ${short(base)} (base${gate.label ? `, baseline ${gate.label}` : ""})`);
 
   const [baseDir, headDir] = [await prepare(base, workdir), await prepare(head, workdir)];
-  if (!reuse) await serve(baseDir, PORTS.base, join(out, "base-server.log"));
+  // Served with --reuse-base too: the head run's retry protocol reaches states on it again
+  await serve(baseDir, PORTS.base, join(out, "base-server.log"));
   await serve(headDir, PORTS.head, join(out, "head-server.log"));
 
   const baseCode = reuse ? (stats(join(out, "base"))?.failed ? 1 : 0) : await playwright({ port: PORTS.base, commit: base, out: join(out, "base"), snapshots, update: true });
-  const headCode = await playwright({ port: PORTS.head, commit: head, out: join(out, "head"), snapshots, update: false });
+  const reference = appPath(base) === appPath(head) ? `http://localhost:${PORTS.base}` : undefined;
+  const headCode = await playwright({ port: PORTS.head, commit: head, out: join(out, "head"), snapshots, update: false, reference });
   const gated = gateSummary(join(out, "head"));
   const summary = {
     base: { commit: base, exitCode: baseCode, ...stats(join(out, "base")) },

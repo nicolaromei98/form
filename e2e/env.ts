@@ -12,6 +12,12 @@ if (PORT === 3417) throw new Error("Port 3417 is the dev server's; serve the bui
 export const BASE_URL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
 
 /**
+ * Where the reference build is served while the candidate is compared with it (compare.mjs keeps
+ * both servers up), for the gate's retry protocol (gate.ts); unset otherwise.
+ */
+export const REFERENCE_URL = process.env.E2E_REFERENCE_URL || null;
+
+/**
  * The route that renders the app: "/" up to the route move (plan step 3), "/demo" after it.
  * compare.mjs reads it from each served commit; otherwise this checkout decides.
  */

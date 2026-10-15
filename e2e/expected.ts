@@ -62,6 +62,8 @@ export const TEAM_LANES: Mask[] = [
   { ed: "ED-3", what: "load figures", target: (p) => p.locator("[data-team-row] div.flex-col.items-end") },
   // The capacity line overhangs the lane by 4 px and the segments cast a shadow below it
   { ed: "ED-3", what: "lanes", target: (p) => p.locator("[data-team-row] > div.relative:last-child"), pad: 12 },
+  // A segment handed over flies from one lane to the other (motion frames), sized by the lane's scale
+  { ed: "ED-3", what: "task segments", target: (p) => p.locator("[data-team-row] [data-task-id]"), pad: 12 },
 ];
 /** ED-3: the balance plan card's figure sentence */
 export const PLAN_FIGURES: Mask = { ed: "ED-3", what: "plan card figures", target: (p) => p.locator("p", { hasText: /over capacity\. .+ has room/ }) };

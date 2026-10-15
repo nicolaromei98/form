@@ -107,6 +107,8 @@ export interface GateRecord {
   /** Capture sizes (device pixels); with collapsed regions, also the page's own size in each build */
   sizes: { reference: string; actual: string; referencePage?: string; actualPage?: string };
   failures: string[];
+  /** The retry protocol's steps, when the first capture differed (see `gate`) */
+  retries?: string[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -220,17 +222,16 @@ function attach(testInfo: TestInfo, name: string, kind: string, png: Png | Buffe
 
 const size = (s: { width: number; height: number }) => `${s.width}×${s.height}`;
 
-/**
- * Captures `name` and compares it with the reference build's capture outside the expected
- * differences. Returns the record; the caller asserts `ok` (so a frame loop can finish first).
- */
-export async function gate(page: Page, testInfo: TestInfo, name: string, opts: GateOptions = {}): Promise<GateRecord> {
+interface Capture {
+  shot: Buffer;
+  sidecar: Sidecar;
+}
+
+/** One capture of the page as the gate compares it, with where its masks (and collapsed regions) were */
+async function capture(page: Page, opts: GateOptions): Promise<Capture> {
   const fullPage = opts.fullPage ?? true;
-  const ref = testInfo.snapshotPath(name);
-  const side = ref.replace(/\.png$/, ".gate.json");
   const collapsed = opts.collapse ?? [];
   const scale = await page.evaluate(() => devicePixelRatio);
-
   // With collapsed regions: the page as it is (its size, and where they were), then without them
   const sidecar = {} as Sidecar;
   if (collapsed.length) {
@@ -239,27 +240,86 @@ export async function gate(page: Page, testInfo: TestInfo, name: string, opts: G
     await collapse(page, collapsed);
   }
   const shot = await stableShot(page, fullPage, opts.once);
-  const shotPng = PNG.sync.read(shot);
-  sidecar.page = { width: shotPng.width, height: shotPng.height, scale, masks: await measure(page, opts.masks) };
+  const png = PNG.sync.read(shot);
+  sidecar.page = { width: png.width, height: png.height, scale, masks: await measure(page, opts.masks) };
   if (collapsed.length) await collapse(page, []);
+  return { shot, sidecar };
+}
+
+interface Comparison {
+  differing: number;
+  compared: number;
+  failure: string | null;
+  images?: { expected: Png; actual: Png; diff?: Buffer };
+}
+
+/** Two captures, compared with the union of their masks painted over both */
+function compare(ref: Capture, act: Capture, ratio: number): Comparison {
+  const e = PNG.sync.read(ref.shot);
+  const a = PNG.sync.read(act.shot);
+  if (e.width !== a.width || e.height !== a.height) return { differing: NaN, compared: 0, failure: `size changed: ${size(e)} → ${size(a)}`, images: { expected: e, actual: a } };
+  const rects = [...maskRects(ref.sidecar.page, e), ...maskRects(act.sidecar.page, a)];
+  paint(a, rects);
+  paint(e, rects);
+  const res = compareImages(PNG.sync.write(a), PNG.sync.write(e), { threshold: THRESHOLD, maxDiffPixels: 0 });
+  const total = a.width * a.height;
+  let maskedPx = 0;
+  for (let i = 0; i < a.data.length; i += 4) if (a.data[i] === 255 && a.data[i + 1] === 0 && a.data[i + 2] === 255 && a.data[i + 3] === 255) maskedPx++;
+  const pixels = res ? Number(/(\d+) pixels/.exec(res.errorMessage)?.[1] ?? NaN) : 0;
+  const differing = Number.isNaN(pixels) ? total : pixels;
+  const allowed = Math.floor(ratio * total);
+  return {
+    differing,
+    compared: total - maskedPx,
+    failure: differing > allowed ? `${differing} differing pixels outside the expected differences${allowed ? ` (allowed ${allowed})` : ""}` : null,
+    images: { expected: e, actual: a, diff: res?.diff },
+  };
+}
+
+/**
+ * Fresh captures for the retry protocol (stills only): the same state reached again from its seed in
+ * a new browser context, on the candidate build and, when its server is up (compare.mjs keeps it
+ * running), on the reference build.
+ */
+export interface Again {
+  candidate?: () => Promise<Page>;
+  reference?: () => Promise<Page>;
+}
+
+/**
+ * Captures `name` and compares it with the reference build's capture outside the expected
+ * differences. Returns the record; the caller asserts `ok` (so a frame loop can finish first).
+ *
+ * Retry protocol, for stills: Chromium's phone emulation now and then rasterises the text of a
+ * composited glass layer one device pixel off (the same build, the same state, two runs; seen on
+ * about 1 still in 50, never on desktop). When a still differs, the state is reached again in a
+ * fresh context on the candidate and, if that still differs, on the reference build too; the gate
+ * passes only if some reference capture and some candidate capture match exactly outside the
+ * expected differences. Every retry is recorded.
+ */
+export async function gate(page: Page, testInfo: TestInfo, name: string, opts: GateOptions = {}, again: Again = {}): Promise<GateRecord> {
+  const ref = testInfo.snapshotPath(name);
+  const side = ref.replace(/\.png$/, ".gate.json");
+  const mine = await capture(page, opts);
+  const { sidecar } = mine;
 
   const masked: Record<string, number> = {};
   for (const m of [...sidecar.page.masks, ...(sidecar.full?.collapsed ?? [])]) masked[m.ed] = (masked[m.ed] ?? 0) + Math.round(m.boxes.reduce((s, b) => s + b.w * b.h, 0));
   const rec: GateRecord = {
     name,
     project: testInfo.project.name,
-    mode: collapsed.length ? "collapsed" : "page",
+    mode: opts.collapse?.length ? "collapsed" : "page",
     ok: true,
     differing: 0,
     compared: 0,
     masked,
-    sizes: { reference: size(shotPng), actual: size(shotPng), ...(sidecar.full ? { referencePage: size(sidecar.full), actualPage: size(sidecar.full) } : {}) },
+    sizes: { reference: size(sidecar.page), actual: size(sidecar.page), ...(sidecar.full ? { referencePage: size(sidecar.full), actualPage: size(sidecar.full) } : {}) },
     failures: [],
   };
 
   if (isUpdate(testInfo) || !existsSync(ref) || !existsSync(side)) {
     mkdirSync(dirname(ref), { recursive: true });
-    writeFileSync(ref, shot);
+    writeFileSync(ref, mine.shot);
     writeFileSync(side, JSON.stringify(sidecar, null, 2) + "\n");
     if (!isUpdate(testInfo)) rec.failures.push(`No reference for ${name}: written now`);
     rec.ok = rec.failures.length === 0;
@@ -267,34 +327,45 @@ export async function gate(page: Page, testInfo: TestInfo, name: string, opts: G
     return rec;
   }
 
-  const refSide = JSON.parse(readFileSync(side, "utf8")) as Sidecar;
-  const refPng = PNG.sync.read(readFileSync(ref));
-  rec.sizes.reference = size(refPng);
-  if (refSide.full) rec.sizes.referencePage = size(refSide.full);
+  const theirs: Capture = { shot: readFileSync(ref), sidecar: JSON.parse(readFileSync(side, "utf8")) as Sidecar };
+  rec.sizes.reference = size(theirs.sidecar.page);
+  if (theirs.sidecar.full) rec.sizes.referencePage = size(theirs.sidecar.full);
+  const ratio = opts.maxDiffPixelRatio ?? 0;
+  let result = compare(theirs, mine, ratio);
 
-  if (refPng.width !== shotPng.width || refPng.height !== shotPng.height) {
-    rec.failures.push(`size changed: ${rec.sizes.reference} → ${rec.sizes.actual}`);
-    attach(testInfo, name, "expected", refPng);
-    attach(testInfo, name, "actual", shotPng);
-  } else {
-    const rects = [...maskRects(refSide.page, refPng), ...maskRects(sidecar.page, shotPng)];
-    paint(shotPng, rects);
-    paint(refPng, rects);
-    const res = compareImages(PNG.sync.write(shotPng), PNG.sync.write(refPng), { threshold: THRESHOLD, maxDiffPixels: 0 });
-    const total = shotPng.width * shotPng.height;
-    let maskedPx = 0;
-    for (let i = 0; i < shotPng.data.length; i += 4) if (shotPng.data[i] === 255 && shotPng.data[i + 1] === 0 && shotPng.data[i + 2] === 255 && shotPng.data[i + 3] === 255) maskedPx++;
-    rec.compared = total - maskedPx;
-    if (res) {
-      const pixels = Number(/(\d+) pixels/.exec(res.errorMessage)?.[1] ?? NaN);
-      rec.differing = Number.isNaN(pixels) ? total : pixels;
+  if (result.failure && (again.candidate || again.reference)) {
+    rec.retries = [`first capture: ${result.failure}`];
+    const candidates = [mine];
+    const references = [theirs];
+    if (again.candidate) {
+      const fresh = await capture(await again.candidate(), opts);
+      candidates.push(fresh);
+      const r = compare(theirs, fresh, ratio);
+      rec.retries.push(`candidate reached again: ${r.failure ?? "matches"}`);
+      if (!r.failure) result = r;
     }
-    const allowed = Math.floor((opts.maxDiffPixelRatio ?? 0) * total);
-    if (rec.differing > allowed) {
-      rec.failures.push(`${rec.differing} differing pixels outside the expected differences${allowed ? ` (allowed ${allowed})` : ""}`);
-      attach(testInfo, name, "expected", refPng);
-      attach(testInfo, name, "actual", shotPng);
-      if (res?.diff) attach(testInfo, name, "diff", res.diff);
+    if (result.failure && again.reference) {
+      const fresh = await capture(await again.reference(), opts);
+      references.push(fresh);
+      for (const [i, c] of candidates.entries()) {
+        const r = compare(fresh, c, ratio);
+        rec.retries.push(`reference reached again, against candidate capture ${i + 1}: ${r.failure ?? "matches"}`);
+        if (!r.failure) {
+          result = r;
+          break;
+        }
+      }
+    }
+  }
+
+  rec.differing = result.differing;
+  rec.compared = result.compared;
+  if (result.failure) {
+    rec.failures.push(result.failure);
+    if (result.images) {
+      attach(testInfo, name, "expected", result.images.expected);
+      attach(testInfo, name, "actual", result.images.actual);
+      if (result.images.diff) attach(testInfo, name, "diff", result.images.diff);
     }
   }
   rec.ok = rec.failures.length === 0;

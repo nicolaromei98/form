@@ -136,6 +136,8 @@ async function collage(app: App) {
 
 /** ED-12: every tile inside the board, and the same layout after re-arranging and after a reload */
 async function collageChecks(app: App, again: () => Promise<App>) {
+  // The gate took the board out of the layout for its capture: the board measures itself again first
+  await app.readyForStill();
   const first = await collage(app);
   expect(first.tiles.length, "ED-12: the five references are on the board").toBe(5);
   for (const t of first.tiles) {
