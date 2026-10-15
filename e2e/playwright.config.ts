@@ -47,6 +47,8 @@ export default defineConfig({
     colorScheme: "light",
     trace: "retain-on-failure",
     video: "off",
+    // Extra Chromium switches for a run (E2E_CHROMIUM_ARGS="--a --b"): both builds of a comparison get the same
+    ...(process.env.E2E_CHROMIUM_ARGS ? { launchOptions: { args: process.env.E2E_CHROMIUM_ARGS.split(" ").filter(Boolean) } } : {}),
   },
   projects,
   // Without E2E_BASE_URL, serve this checkout's production build (never the dev server on 3417)
