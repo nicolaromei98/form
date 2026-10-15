@@ -1,7 +1,8 @@
-// The golden parser corpus (plan §10.4): about 130 commands, each on a legacy fixture state
-// (parser-harness.ts). The 42 palette phrases, the v0 §9 examples, the registry's parser examples,
-// the audit's false-positive table (AUDIT §11, kept in /demo until Phase 5) and edge cases: the v0
-// clarify and unsupported answers, steps, no-ops, the "N weeks" rule and capacities.
+// The golden parser corpus (plan §10.4, "about 130 commands"; 212 here), each command on a legacy
+// fixture state (parser-harness.ts). The 42 palette phrases, the v0 §9 examples, the registry's
+// parser examples, the audit's false-positive table (AUDIT §11, kept in /demo until Phase 5) and
+// edge cases: the v0 clarify and unsupported answers, steps, no-ops, plural sentences, clamps, the
+// "N weeks" rule and capacities.
 import type { LegacyFixture } from "./parser-harness";
 
 export interface CorpusCase {
