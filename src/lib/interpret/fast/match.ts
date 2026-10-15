@@ -68,6 +68,32 @@ export function targetTitle(t: Target): string {
 
 const titleRe = (title: string) => new RegExp(`\\b${escapeRe(title)}\\b`);
 
+interface Named {
+  re: RegExp;
+  target: Target;
+}
+
+/** The titles a command can name, longest first, built once per tasks record (documents are immutable) */
+const NAMED = new WeakMap<object, readonly Named[]>();
+
+function namedIndex(project: ProjectDoc): readonly Named[] {
+  let index = NAMED.get(project.tasks);
+  if (!index) {
+    const list: (Named & { length: number })[] = [];
+    const add = (title: string, target: Target) => {
+      const t = title.toLowerCase().trim();
+      if (t.length >= 3) list.push({ re: titleRe(t), target, length: t.length });
+    };
+    const tasks = sortedByOrder(project.tasks);
+    for (const task of tasks) add(task.title, { kind: "task", task });
+    for (const task of tasks) for (const step of task.steps) add(step.title, { kind: "step", task, step });
+    // Stable: equally long titles keep the reading order
+    index = list.sort((a, b) => b.length - a.length);
+    NAMED.set(project.tasks, index);
+  }
+  return index;
+}
+
 /**
  * The longest task or step title named in the command (case-insensitive, at least 3 characters),
  * as v0's `findNamedTask`. Tasks are read in workflow order, then steps in task and step order
@@ -75,20 +101,8 @@ const titleRe = (title: string) => new RegExp(`\\b${escapeRe(title)}\\b`);
  * equally long titles wins.
  */
 export function findNamed(s: string, project: ProjectDoc): Target | null {
-  let best: Target | null = null;
-  let bestLength = 0;
-  const consider = (title: string, target: () => Target) => {
-    const t = title.toLowerCase().trim();
-    if (t.length < 3 || t.length <= bestLength) return;
-    if (titleRe(t).test(s)) {
-      best = target();
-      bestLength = t.length;
-    }
-  };
-  const tasks = sortedByOrder(project.tasks);
-  for (const task of tasks) consider(task.title, () => ({ kind: "task", task }));
-  for (const task of tasks) for (const step of task.steps) consider(step.title, () => ({ kind: "step", task, step }));
-  return best;
+  for (const named of namedIndex(project)) if (named.re.test(s)) return named.target;
+  return null;
 }
 
 /** The longest top-level task title named in the command */
