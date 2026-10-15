@@ -103,8 +103,11 @@ describe("level", () => {
     expect(levelOf(p)).toEqual([{ taskId: tid("Pinned"), pinnedStart: "2026-10-08", days: 2, why: "Anna is on First until 7 Oct, so this starts 8 Oct." }]);
   });
 
-  it("returns nothing without a date to pin", () => {
+  it("leaves a project without a start date alone", () => {
+    // No date at all: nothing to pin
     expect(levelOf(project([{ name: "Copy" }, { name: "Layout" }], { startDate: null }))).toEqual([]);
+    // The start is the earliest pin: delaying that task would move the whole project
+    expect(levelOf(project([{ name: "Copy", pinnedStart: d("2026-10-05") }, { name: "Layout", priority: "urgent" }], { startDate: null }))).toEqual([]);
   });
 
   it("reproduces the leveled schedule once the pins are applied, with no clash left", () => {

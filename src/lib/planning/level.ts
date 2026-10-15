@@ -24,8 +24,9 @@ import type { Schedule, ScheduledTiming } from "@/lib/planning/schedule";
  *   owner's days from the start; finished work holds none.
  * - Unowned tasks, milestones and tasks of archived or missing owners hold no days and are never
  *   delayed for a clash; they follow their predecessors.
- * - Unknown tasks (no estimate, or waiting on one) are left alone, as are projects without a
- *   date: a pin needs a date.
+ * - Unknown tasks (no estimate, or waiting on one) are left alone, and so are projects without a
+ *   start date: with no date at all a pin can't be placed, and when the start is the earliest pin
+ *   (plan §6.3) moving that pin would move the whole project.
  *
  * A move is returned only where a clash delays a task past where its predecessors would put it:
  * pinning those starts reproduces the leveled schedule, since everything else follows its
@@ -133,7 +134,7 @@ function clip(text: string): string {
 
 export function level(ws: Pick<WorkspaceDoc, "people">, plan: LevelPlan): LevelMove[] {
   const { project, schedule, calendar } = plan;
-  if (schedule.anchor.mode === "relative") return [];
+  if (project.startDate === null || schedule.anchor.mode === "relative") return [];
   const A = schedule.anchor.ordinal;
 
   // The scheduled tasks, by position in topological order
