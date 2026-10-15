@@ -13,6 +13,7 @@ import { fitsDoc, namesMissing, recordBytes } from "@/lib/ops/registry/_views";
  *
  * A key that names a task or a step the project no longer has is refused: removeTask and
  * removeStep delete the edits keyed to what they remove, and nothing may bring a dangling one back.
+ * An edit that would take the project past 1 MB is refused (`limit`).
  */
 
 /** One trimmed line of the user's words; "" hides the sentence */
@@ -29,9 +30,11 @@ export default defineOp({
     .strict(),
 
   reduce(d, op) {
-    if (namesMissing(op.key, d)) return reject("not_found", "That sentence's task isn't in this project anymore.");
+    // Read from the committed document, so the lookups create no drafts
+    const base = baseOf(d);
+    if (namesMissing(op.key, base)) return reject("not_found", "That sentence's task isn't in this project anymore.");
     const edits = d.brief.edits;
-    const committed = baseOf(d).brief.edits;
+    const committed = base.brief.edits;
     const existing = Object.hasOwn(committed, op.key) ? committed[op.key] : undefined;
     // Writing back FORM's own wording restores it
     if (op.text === op.basis.trim()) {

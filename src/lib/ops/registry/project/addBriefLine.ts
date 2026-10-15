@@ -10,7 +10,8 @@ import { fitsDoc, jsonBytes } from "@/lib/ops/registry/_views";
 /**
  * Adds a line in the user's own words to one audience's brief, under a section (plan §4.4 row 55).
  * The producer mints the line id; a taken one is refused (`duplicate_id`), never re-minted, so the
- * op isn't idempotent. Lines are appended; the brief holds at most 80 of them.
+ * op isn't idempotent. Lines are appended; the brief holds at most 80 of them, and a line that
+ * would take the project past 1 MB is refused (`limit`) rather than failing the commit gate.
  */
 export default defineOp({
   name: "addBriefLine",

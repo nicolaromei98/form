@@ -9,7 +9,8 @@ import { fitsDoc, jsonBytes } from "@/lib/ops/registry/_views";
 /**
  * Records that a brief was sent (plan §4.4 row 59). The body is a server row (`brief_snapshots`,
  * Phase 4); the project keeps only the reference, stamped with `ctx.now`. The producer mints the
- * snapshot id, so marking twice is a `duplicate_id`, never a second reference.
+ * snapshot id, so marking twice is a `duplicate_id`, never a second reference. At most 200
+ * references are kept, within the project's 1 MB (`limit`).
  */
 
 const AUDIENCE_LABEL = { client: "Client", team: "Team" } as const;

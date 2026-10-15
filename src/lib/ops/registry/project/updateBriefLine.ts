@@ -8,7 +8,8 @@ import { fitsDoc, jsonBytes, lineIndex } from "@/lib/ops/registry/_views";
 
 /**
  * Rewrites one of the user's own brief lines (plan §4.4 row 56). The text is never empty: an
- * emptied line becomes removeBriefLine at the producer. The same text again is a no-op.
+ * emptied line becomes removeBriefLine at the producer. The same text again is a no-op; a longer
+ * text that would take the project past 1 MB is refused (`limit`).
  */
 export default defineOp({
   name: "updateBriefLine",
