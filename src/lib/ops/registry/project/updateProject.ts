@@ -8,7 +8,7 @@ import type { ClosureId } from "@/lib/domain/schema/ids";
 import { type CalendarOverride, type ProjectDoc, ProjectDocSchema } from "@/lib/domain/schema/project";
 import type { Closure } from "@/lib/domain/schema/workspace";
 import { defineOp, isRejection, type Rejection, reject } from "@/lib/ops/registry/_contract";
-import { baseOf, ensureFreshId, mustActivePerson, part, setIfChanged, shortDate, title, unique } from "@/lib/ops/registry/_helpers";
+import { mustActivePerson, part, setIfChanged, shortDate, title, unique } from "@/lib/ops/registry/_helpers";
 import { count, ensureMember, weekdaysText } from "@/lib/ops/registry/_tasks";
 
 /**
@@ -32,23 +32,19 @@ const field = <F extends string, V extends z.ZodType>(f: F, value: V) =>
 const START_KEY = "project:start";
 
 /** The override as stored: sorted working days, closures re-filed in key order, null when it overrides nothing */
-function normaliseOverride(d: ProjectDoc, value: CalendarOverride | null): CalendarOverride | null | Rejection {
+function normaliseOverride(value: CalendarOverride | null): CalendarOverride | null | Rejection {
   if (value === null) return null;
   const workingDays = value.workingDays === null ? null : unique(value.workingDays).sort((a, b) => a - b);
   let closures: Record<ClosureId, Closure> | null = null;
   if (value.closures !== null) {
     const keys = (Object.keys(value.closures) as ClosureId[]).sort(compareKeys);
     if (keys.length > CLOSURES_MAX) return reject("limit", `A calendar holds at most ${CLOSURES_MAX} closures.`);
-    const kept = baseOf(d).calendarOverride?.closures ?? {};
+    // Closure ids can only meet each other inside a project document, so being filed under its own id is enough
     closures = {};
     for (const key of keys) {
       const c = value.closures[key];
       if (c.id !== key) return reject("invalid_payload", "A closure is filed under another closure's id.");
       if (c.from > c.to) return reject("invalid_payload", "A closure ends before it starts.");
-      if (!Object.hasOwn(kept, key)) {
-        const fresh = ensureFreshId(d, key);
-        if (fresh) return fresh;
-      }
       closures[key] = { id: c.id, from: c.from, to: c.to, label: c.label };
     }
   }
@@ -145,7 +141,7 @@ export default defineOp({
         setIfChanged(d, "autoChain", op.value);
         return;
       case "calendarOverride": {
-        const next = normaliseOverride(d, op.value);
+        const next = normaliseOverride(op.value);
         if (isRejection(next)) return next;
         setIfChanged(d, "calendarOverride", next);
         return;
