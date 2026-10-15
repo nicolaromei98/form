@@ -179,9 +179,9 @@ export function otherDoc(state: GenState, raw: unknown): AnyDoc | null {
    ------------------------------------------------------------------ */
 
 /**
- * One step in forty sends its op as many times as one command past the 12-op limit allows: the
- * runner refuses them all (`limit`) and nothing changes. System ops don't count toward the limit,
- * so a burst of rebalanceOrder runs in full.
+ * One step in forty sends its op 13 times in one command, one past the 12-op limit: the runner
+ * refuses them all (`limit`) and nothing changes. System ops don't count toward the limit, so a
+ * burst of rebalanceOrder runs in full.
  */
 const BURST = OPS_PER_COMMAND + 1;
 const isBurst = (step: StepIntent) => step.picks[4] % 40 === 17;
@@ -213,8 +213,9 @@ export interface RunResult {
 }
 
 /**
- * Plays a run: each step's intent becomes a raw op against the current state, then a one-op
- * command. `visit` sees every step that produced an op, before the state moves on.
+ * Plays a run: each step's intent becomes a raw op against the current state, then a command of
+ * that one op (or a burst of it). `visit` sees every step that produced an op, before the state
+ * moves on.
  */
 export function executeRun(run: Run, visit?: (record: StepRecord) => void): RunResult {
   const mint = seededMinter(run.steps.length + 1);
