@@ -1,7 +1,18 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as RPointerEvent,
+  type ReactNode,
+  type Ref,
+} from "react";
 import { createPortal } from "react-dom";
 import { PRIORITY_LABEL, PRIORITY_ORDER, STATUS_LABEL, STATUS_ORDER } from "@/lib/domain/labels";
 import { ESTIMATE_MAX_DAYS } from "@/lib/domain/limits";
@@ -337,16 +348,32 @@ export function EstimateControl({
   // Once there is an estimate the empty stepper has done its job: clearing it later shows "+ Duration" again
   if (open && days !== null) setOpen(false);
 
+  // Opening or closing the empty stepper from the keyboard moves focus to what replaced the button
+  const handoff = useRef(false);
+  const add = useRef<HTMLButtonElement>(null);
+  const longer = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!handoff.current) return;
+    handoff.current = false;
+    (open ? longer : add).current?.focus();
+  }, [open]);
+  const toggle = (next: boolean, keyboard: boolean) => {
+    handoff.current = keyboard;
+    setOpen(next);
+  };
+
   const set = (value: number) => commit([{ op: "updateTask", taskId: asTaskId(task.id), field: "estimateDays", value }], { label: "duration" });
 
   if (days === null && !open) {
     return (
       <button
+        ref={add}
         type="button"
         data-interactive
         onClick={(e) => {
           e.stopPropagation();
-          setOpen(true);
+          // A click from the keyboard has no pointer detail
+          toggle(true, e.detail === 0);
         }}
         className="focus-ring t-data cursor-pointer rounded-full border border-dashed border-[var(--c-line)] px-2.5 py-1 text-[var(--c-fg-3)] transition-colors hover:text-[var(--c-fg)]"
       >
@@ -354,10 +381,10 @@ export function EstimateControl({
       </button>
     );
   }
-  const step = (d: number) => {
+  const step = (d: number, keyboard: boolean) => {
     if (days === null) {
       if (d > 0) set(0.5);
-      else setOpen(false);
+      else toggle(false, keyboard);
       return;
     }
     const inc = days < 2 || (days === 2 && d < 0) ? 0.5 : 1;
@@ -366,20 +393,31 @@ export function EstimateControl({
   };
   return (
     <div className="group flex items-center" data-interactive onClick={(e) => e.stopPropagation()}>
-      <StepButton label="Shorter" onClick={() => step(-1)}>
+      <StepButton label="Shorter" onClick={(e) => step(-1, e.detail === 0)}>
         <path d="M3 6h6" />
       </StepButton>
       <span className="t-data min-w-[28px] text-center text-[var(--c-fg-2)]">{fmtDays(days)}</span>
-      <StepButton label="Longer" onClick={() => step(1)}>
+      <StepButton ref={longer} label="Longer" onClick={(e) => step(1, e.detail === 0)}>
         <path d="M3 6h6M6 3v6" />
       </StepButton>
     </div>
   );
 }
 
-function StepButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
+function StepButton({
+  label,
+  onClick,
+  children,
+  ref,
+}: {
+  label: string;
+  onClick: (e: ReactMouseEvent) => void;
+  children: ReactNode;
+  ref?: Ref<HTMLButtonElement>;
+}) {
   return (
     <button
+      ref={ref}
       type="button"
       aria-label={label}
       onClick={onClick}
