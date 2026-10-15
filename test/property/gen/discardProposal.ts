@@ -1,7 +1,10 @@
-// Property generator for discardProposal: a stub until Phase 1 step 10e, which makes it
-// materialise payloads (src/lib/ops/registry/README.md). Until then the op is never generated.
-import type { OpGen } from "./_pick";
+// Property generator for discardProposal: the pending proposal, or an id that is no longer
+// pending (1 time in 10, and whenever nothing is pending), which is a no-op.
+import { activeProject, type OpGen } from "./_pick";
 
-const gen: OpGen = () => null;
+const gen: OpGen = (s, state, mint) => {
+  const pending = activeProject(state)?.proposal ?? null;
+  return { op: "discardProposal", proposalId: pending !== null && s.picks[0] % 10 !== 0 ? pending.id : mint("proposal") };
+};
 
 export default gen;
