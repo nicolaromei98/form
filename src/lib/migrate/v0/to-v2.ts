@@ -13,6 +13,7 @@ import { stepSeed } from "@/lib/ops/build";
 import { emptyIdMap, type IdMap, IdMapBuilder, rewriteBriefKey } from "@/lib/migrate/v0/idmap";
 import type { V0Source } from "@/lib/migrate/v0/read";
 import {
+  count,
   isRecord,
   type SalvageNotes,
   salvageV0,
@@ -163,14 +164,14 @@ export function migrateV0(raw: unknown, o: MigrateV0Options): MigrateV0Result {
 
 /** "Reset demo" leaves no project: whatever else is stored has nowhere to go */
 function dropWithoutProject(v0: V0Doc, notes: SalvageNotes): void {
-  const leftovers: [number, string][] = [
-    [v0.tasks.length, "tasks"],
-    [v0.people.length, "people"],
-    [v0.mood.length, "moodboard items"],
-    [v0.brief.edits.length + v0.brief.lines.length, "brief edits and lines"],
-    [v0.proposal || v0.plan ? 1 : 0, "pending proposal"],
+  const leftovers: [number, string, string][] = [
+    [v0.tasks.length, "task", "tasks"],
+    [v0.people.length, "person", "people"],
+    [v0.mood.length, "moodboard item", "moodboard items"],
+    [v0.brief.edits.length + v0.brief.lines.length, "brief edit or line", "brief edits and lines"],
+    [(v0.proposal ? 1 : 0) + (v0.plan ? 1 : 0), "pending proposal", "pending proposals"],
   ];
-  for (const [count, what] of leftovers) if (count > 0) notes.dropped(`${count} ${what}`, "the v0 document has no project to hold them");
+  for (const [n, one, many] of leftovers) if (n > 0) notes.dropped(count(n, one, many), "the v0 document has no project to hold them");
 }
 
 /** Where every v0 task goes */
@@ -369,7 +370,8 @@ class Migration {
     if (tasks.length > TASKS_MAX) {
       const cut = tasks.splice(TASKS_MAX);
       const stepCount = cut.reduce((n, t) => n + steps.get(t.id)!.length, 0);
-      notes.dropped(`the last ${cut.length} tasks${stepCount ? ` and their ${stepCount} steps` : ""}`, `a project holds at most ${TASKS_MAX} tasks`);
+      const withSteps = stepCount ? ` with ${count(stepCount, "step", "steps")}` : "";
+      notes.dropped(`the last ${count(cut.length, "task", "tasks")}${withSteps}`, `a project holds at most ${TASKS_MAX} tasks`);
     }
     return { tasks, chainLength: Math.min(chain.length, tasks.length), steps };
   }
@@ -617,7 +619,7 @@ class Migration {
       else moves.push({ type: "owner", taskId: task.id, from: task.ownerId, to, why: "" });
     }
     if (moves.length > PROPOSAL_ITEMS_MAX) {
-      notes.dropped(`${moves.length - PROPOSAL_ITEMS_MAX} workload moves`, `a proposal holds at most ${PROPOSAL_ITEMS_MAX}`);
+      notes.dropped(count(moves.length - PROPOSAL_ITEMS_MAX, "workload move", "workload moves"), `a proposal holds at most ${PROPOSAL_ITEMS_MAX}`);
       moves.length = PROPOSAL_ITEMS_MAX;
     }
     if (moves.length === 0) {
@@ -642,7 +644,7 @@ class Migration {
     const edits = Object.keys(project.brief.edits).length;
     if (edits > 0) {
       project.brief.edits = {};
-      this.notes.dropped(`${edits} brief edits`, "the project would pass 1 MB");
+      this.notes.dropped(count(edits, "brief edit", "brief edits"), "the project would pass 1 MB");
       bytes = docBytes(project);
     }
     const ordered = sortedByOrder(project.tasks);
@@ -664,16 +666,22 @@ class Migration {
       bytes = docBytes(project);
     }
     if (removed === 0) return;
-    this.notes.dropped(`the last ${removed} tasks`, "the project would pass 1 MB");
+    this.notes.dropped(`the last ${count(removed, "task", "tasks")}`, "the project would pass 1 MB");
     const exists = (id: TaskId) => Object.hasOwn(project.tasks, id);
-    if (project.viewConfig.focusPin !== null && !exists(project.viewConfig.focusPin)) project.viewConfig.focusPin = null;
+    if (project.viewConfig.focusPin !== null && !exists(project.viewConfig.focusPin)) {
+      project.viewConfig.focusPin = null;
+      this.notes.dropped("the focus pin", "its task was among the last ones");
+    }
     const p = project.proposal;
     if (p?.kind === "subtasks" && !exists(p.taskId)) project.proposal = null;
     if (p?.kind === "reassign") {
       const moves = p.moves.filter((m) => exists(m.taskId));
       project.proposal = moves.length > 0 ? { ...p, moves } : null;
     }
-    if (project.proposal === null) this.ids.dropProposal();
+    if (p && project.proposal === null) {
+      this.ids.dropProposal();
+      this.notes.dropped("the pending proposal", "its tasks were among the last ones");
+    }
   }
 
   /** Both outputs pass the strict schemas and the invariants, and every person they name exists */

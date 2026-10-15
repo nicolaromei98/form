@@ -251,7 +251,8 @@ export function detectV0(raw: unknown): boolean {
    Coercion helpers
    ------------------------------------------------------------------ */
 
-const SHOW_MAX = 80;
+/** Long enough for a whole task title (140) */
+const SHOW_MAX = 150;
 
 /** A short description of a stored value for the report: never the whole of a long value */
 export function show(value: unknown): string {
@@ -264,6 +265,11 @@ export function show(value: unknown): string {
   if (Array.isArray(value)) return `a list of ${value.length}`;
   if (typeof value === "object") return "an object";
   return typeof value;
+}
+
+/** "1 task", "3 tasks" */
+export function count(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
 }
 
 const isNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
@@ -578,7 +584,7 @@ function salvageProposal(raw: unknown, notes: SalvageNotes): V0Proposal | null {
     items.push({ id: typeof id === "string" ? id : "", title, estimate: r.estimate("estimate") });
   });
   if (items.length > PROPOSAL_ITEMS_MAX) {
-    notes.dropped(`${items.length - PROPOSAL_ITEMS_MAX} breakdown items`, `a breakdown holds at most ${PROPOSAL_ITEMS_MAX}`);
+    notes.dropped(count(items.length - PROPOSAL_ITEMS_MAX, "breakdown item", "breakdown items"), `a breakdown holds at most ${PROPOSAL_ITEMS_MAX}`);
     items.length = PROPOSAL_ITEMS_MAX;
   }
   if (items.length === 0) {
@@ -665,7 +671,7 @@ function salvageMood(raw: unknown, notes: SalvageNotes): V0MoodItem[] {
     out.push({ id: typeof id === "string" ? id : "", kind, box, asset, hex, text });
   });
   if (out.length > MOOD_MAX) {
-    notes.dropped(`${out.length - MOOD_MAX} moodboard items`, `a moodboard holds at most ${MOOD_MAX}; the last ones added go`);
+    notes.dropped(count(out.length - MOOD_MAX, "moodboard item", "moodboard items"), `a moodboard holds at most ${MOOD_MAX}; the last ones added go`);
     out.length = MOOD_MAX;
   }
   return out;
@@ -745,7 +751,7 @@ function salvageBrief(raw: unknown, notes: SalvageNotes): V0Doc["brief"] {
     brief.lines.push({ id: typeof id === "string" ? id : "", audience, section: r.enumOf("section", BriefSection.options, "note"), text });
   });
   if (brief.lines.length > BRIEF_LINES_MAX) {
-    notes.dropped(`${brief.lines.length - BRIEF_LINES_MAX} brief lines`, `a brief holds at most ${BRIEF_LINES_MAX}`);
+    notes.dropped(count(brief.lines.length - BRIEF_LINES_MAX, "brief line", "brief lines"), `a brief holds at most ${BRIEF_LINES_MAX}`);
     brief.lines.length = BRIEF_LINES_MAX;
   }
   return brief;
