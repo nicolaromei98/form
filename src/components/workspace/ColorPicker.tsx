@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type KeyboardEvent, type PointerEvent as RPointerEvent } from "react";
-import { normaliseHex } from "@/lib/mood";
+import { normaliseHex } from "@/lib/domain/colours";
 import { ShuffleText } from "../text/ShuffleText";
 
 /**
