@@ -55,6 +55,21 @@ A later part with the same key replaces the earlier one in place:
 - `taskState(id)` is shared by status and progress.
 - `show(view)` is the local show caption. setView's brief options use it too, so "Now make it for the team" reads as the brief's own caption.
 - `viewAdded(view)` is addView's part. Its text must be `"{VIEW_LABEL} view added"`, so `announceView` folds it into the show caption ("Team view added · Marta over capacity").
+- `member(id)` is addMember's part, which a person added to the team in the same command implies.
+
+### The caption policy (DECISIONS, wave 5)
+
+The caption is the agent's only voice, so `ops/caption.ts` keeps it to one short line. An op's caption stays the honest template of its own change; the composer then:
+
+1. **groups** parts that carry the same `group.template` into one, with the names joined: write them with `groupPart("{names} added to the team · …", name)` ("Giulia and Paolo added to the team · capacity not set");
+2. **drops implied parts**: a part's `implies` lists the keys it makes redundant (addPerson and restorePerson imply `member(id)`);
+3. lets a **demo expansion** the producer names (`Command.expansion`: "sampleTeam", "demoProject") speak for the ops it ran ("Sample team added · Marta, Sara and Luca · Marta over capacity");
+4. keeps **side-effect views** quiet: a `show` intent with `reveal: true` says nothing, and the `show(view)` parts of that view are dropped; a view the command created says "{View} view added" once, after the change;
+5. puts **no-op parts first**, even when something else applied ("The moodboard is already empty · …");
+6. (createProject) says "sample dates, sequenced from estimates" on a timeline born on an unconfirmed start;
+7. keeps at most **four " · " parts** (`CAPTION_PARTS`), the refusal suffix always included.
+
+`test/golden/captions.golden.test.ts` holds every corpus and palette caption to four parts and 120 characters, with reasoned exceptions.
 
 ### Unit tests
 

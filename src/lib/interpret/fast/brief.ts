@@ -48,9 +48,10 @@ export function briefEdit(cmd: Command, project: ProjectDoc | null, local: Local
   const inBrief = local.activeView === "brief";
   const current = project.viewConfig.brief.audience;
   const audience = audienceOf(s, current);
-  // The brief comes on screen, in the audience the command names
+  // The brief comes on screen, in the audience the command names: a side effect of the edit, so
+  // the line or the reset speaks, not the brief's own status (caption policy rule 4)
   const show = (c: Collector) => {
-    if (!inBrief) c.show("brief");
+    c.reveal("brief", local.activeView);
     if (audience !== current) c.op(makeOp({ op: "setView", patch: { briefAudience: audience } }));
   };
 

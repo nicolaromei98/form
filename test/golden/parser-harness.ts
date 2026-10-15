@@ -22,11 +22,16 @@ import type { ProjectDoc } from "@/lib/domain/schema/project";
 import type { WorkspaceDoc } from "@/lib/domain/schema/workspace";
 import { type FastContext, type FastResult, fastParse, paletteKey, toCommand } from "@/lib/interpret/fast";
 import { migrateV0 } from "@/lib/migrate";
+import { makeOp } from "@/lib/ops/build";
 import type { CaptionPlanning } from "@/lib/ops/caption-env";
 import { type CommandResult, type DocsState, runCommand } from "@/lib/ops/command";
-import { paletteEntries } from "@/lib/ops/palette";
+import { LOCAL_INTENTS } from "@/lib/ops/local-intents";
+import { paletteEntries, paletteGroups } from "@/lib/ops/palette";
+import { OP_NAMES, REGISTRY } from "@/lib/ops/registry";
+import { isExempt, type ParserExample } from "@/lib/ops/registry/_contract";
 import { laneLoads, planProject, weeklyLoad } from "@/lib/planning";
-import { FIXTURE_NOW, FIXTURE_TODAY } from "../fixtures/v2/build";
+import { FIXTURE_NOW, FIXTURE_TODAY, taskByTitle } from "../fixtures/v2/build";
+import { namedFixture } from "../fixtures/v2/named";
 import { interpretDemo } from "../legacy/v0/lib/interpret/demo";
 import { breakdownFor as legacyBreakdownFor } from "../legacy/v0/lib/interpret/library";
 import { applyOperations } from "../legacy/v0/lib/ops";
@@ -98,6 +103,77 @@ export function run(s: V2State, cmd: Parameters<typeof runCommand>[1]): CommandR
     newId: () => `00000000-0000-4000-8000-${String(++n).padStart(12, "0")}`,
     planning: PLANNING,
   });
+}
+
+/* ------------------------------------------------------------------
+   Palette phrases and parser examples on the named fixtures (plan §10.5)
+   ------------------------------------------------------------------ */
+
+/** What the store does for a control word (plan §8.1): reset deletes the active project */
+export const CONTROL_OWNER: Readonly<Record<string, string>> = { reset: "deleteProject" };
+
+/**
+ * Examples that talk about something the fixture doesn't hold yet: the commands that make it,
+ * run first. "Mark QA pass done" needs the step "Add a step called QA pass" creates.
+ */
+export const PALETTE_GIVEN: Readonly<Record<string, readonly string[]>> = {
+  "Mark QA pass done": ["Add a step called QA pass"],
+  "Delete the QA pass step": ["Add a step called QA pass"],
+};
+
+export interface PaletteCase {
+  say: string;
+  /** The op or local intent ("local:show") the phrase belongs to */
+  owner: string;
+  example: ParserExample;
+  /** A palette phrase (else a parser example) */
+  palette: boolean;
+}
+
+/** The 42 palette phrases, then every op's and local intent's parser examples */
+export function paletteCases(): PaletteCase[] {
+  const out: PaletteCase[] = [];
+  for (const g of paletteGroups("demo")) {
+    for (const item of g.items) out.push({ say: item.phrase, owner: item.owner, example: { say: item.phrase, fixture: item.fixture }, palette: true });
+  }
+  for (const name of OP_NAMES) {
+    const parser = REGISTRY.get(name)!.parser;
+    if (!isExempt(parser)) for (const ex of parser.examples) out.push({ say: ex.say, owner: name, example: ex, palette: false });
+  }
+  for (const def of Object.values(LOCAL_INTENTS)) {
+    if (!isExempt(def.parser)) for (const ex of def.parser.examples) out.push({ say: ex.say, owner: `local:${def.kind}`, example: ex, palette: false });
+  }
+  return out;
+}
+
+/** An example's named fixture as the parser sees it, with the example's selection */
+export function namedState(example: ParserExample): V2State {
+  const f = namedFixture(example.fixture);
+  const project = f.projectId !== null ? f.projects[f.projectId] : null;
+  const selected = example.selected && project ? taskByTitle(project, example.selected).id : f.selectedTaskId;
+  const local = { activeView: project ? project.views[0] : ("cards" as const), selectedTaskId: selected, timelineZoom: "day" as const };
+  return { docs: { workspace: f.workspace, projects: f.projects }, projectId: f.projectId, local };
+}
+
+/** Runs a parse as the store would: a reset deletes the active project, other control words do nothing here */
+export function applyParse(state: V2State, result: FastResult, say: string): { state: V2State; run: CommandResult | null } {
+  if (result.status !== "matched") return { state, run: null };
+  if ("control" in result) {
+    if (result.control !== "reset" || state.projectId === null) return { state, run: null };
+    const r = run(state, { ops: [makeOp({ op: "deleteProject", projectId: state.projectId })], local: [], notes: [], notices: [], source: "direct", text: say });
+    return { state: { docs: r.state, projectId: r.projectId, local: r.local }, run: r };
+  }
+  const cmd = toCommand(result, say);
+  if (!cmd) return { state, run: null };
+  const r = run(state, cmd);
+  return { state: { docs: r.state, projectId: r.projectId, local: r.local }, run: r };
+}
+
+/** A palette case's state after the commands it is given, and its parse there */
+export function parsePaletteCase(c: PaletteCase): { state: V2State; result: FastResult } {
+  let state = namedState(c.example);
+  for (const given of PALETTE_GIVEN[c.say] ?? []) state = applyParse(state, fastParse(given, fastContext(state, 3)), given).state;
+  return { state, result: fastParse(c.say, fastContext(state, 5)) };
 }
 
 /* ------------------------------------------------------------------

@@ -7,7 +7,7 @@ import type { PersonId, StepId, TaskId } from "@/lib/domain/schema/ids";
 import type { IsoDate, OrderKey, Place, ViewKind } from "@/lib/domain/schema/primitives";
 import type { ProjectDoc, Step, Task } from "@/lib/domain/schema/project";
 import type { Person, WorkspaceDoc } from "@/lib/domain/schema/workspace";
-import { type AnyDoc, fitText, type Rejection, reject } from "@/lib/ops/registry/_contract";
+import { type AnyDoc, type CaptionPart, fitText, type Rejection, reject } from "@/lib/ops/registry/_contract";
 
 /**
  * Helpers every op recipe writes through (plan §5.4). They keep recipes deterministic and their
@@ -233,12 +233,42 @@ export function part(text: string, key?: string, tone?: "done" | "proposal") {
   return { text: fitText(text), ...(key ? { key } : {}), ...(tone ? { tone } : {}) };
 }
 
+/** Puts names into a group template ("{names} added to the team") */
+export function fillNames(template: string, names: string): string {
+  return template.split("{names}").join(names);
+}
+
+/**
+ * A caption part said about one entity that groups with the same template said about others in
+ * the same command (caption policy rule 1): "Giulia added to the team · capacity not set" alone,
+ * "Giulia and Paolo added to the team · capacity not set" together.
+ */
+export function groupPart(
+  template: string,
+  name: string,
+  o: { plural?: string; key?: string; implies?: readonly string[] } = {},
+): CaptionPart {
+  return {
+    ...part(fillNames(template, name), o.key),
+    group: { template, name, ...(o.plural ? { plural: o.plural } : {}) },
+    ...(o.implies?.length ? { implies: o.implies } : {}),
+  };
+}
+
+/**
+ * What a timeline says while its start is unconfirmed (plan §1.3: the sample schedule): its
+ * dates are samples, sequenced from the estimates. The Timeline show caption and a timeline
+ * birth say it (caption policy rule 6).
+ */
+export const SAMPLE_DATES = "sample dates, sequenced from estimates";
+
 /**
  * Caption keys shared across ops and local intents (plan §5.9). A later part with the same key
  * replaces the earlier one in place:
  * - `taskState(id)`: status and progress of one task ("Mark it done at 40%" reads "UI Design → Done");
  * - `show(v)`: the local show caption, which also takes over the brief options of setView;
- * - `viewAdded(v)`: addView's part, which `announceView` folds into the show part.
+ * - `viewAdded(v)`: addView's part, which `announceView` folds into the show part;
+ * - `member(id)`: addMember's part, implied by a person added to the team in the same command.
  */
 export const captionKey = {
   taskState: (id: TaskId) => `task:${id}:state`,
@@ -246,4 +276,5 @@ export const captionKey = {
   show: (v: ViewKind) => `show:${v}`,
   viewAdded: (v: ViewKind) => `view:${v}:added`,
   viewOption: (option: string) => `view-option:${option}`,
+  member: (id: PersonId) => `member:${id}`,
 } as const;

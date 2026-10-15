@@ -162,7 +162,7 @@ describe("changes from v0 (plan §8.4)", () => {
   });
 
   it("opens a side-effect view only when it isn't on screen", () => {
-    expect(matched(parse("Sara has 3 days a week", "demo", { view: "cards" })).local).toEqual([{ kind: "show", view: "team" }]);
+    expect(matched(parse("Sara has 3 days a week", "demo", { view: "cards" })).local).toEqual([{ kind: "show", view: "team", reveal: true }]);
     const onTeam = namedFixture("demo");
     const p = onTeam.projects[onTeam.projectId!];
     const withTeam = { ...onTeam, projects: { [p.id]: { ...p, views: ["cards", "team"] as ProjectDoc["views"] } } };
@@ -191,6 +191,45 @@ describe("changes from v0 (plan §8.4)", () => {
   it("keeps a title of spaces out of a rename, and names an empty new task", () => {
     expect(parse('Rename it to "  "', "demoSelected").status).toBe("none");
     expect(opOf(parse('Add a task called "  "', "demo"), "addTask")).toMatchObject({ title: "New task" });
+  });
+});
+
+describe("what the caption policy needs from the parser (DECISIONS, wave 5)", () => {
+  const local = (say: string, fixture: FixtureName, o?: Parameters<typeof ctxOf>[1]) => matched(parse(say, fixture, o)).local;
+
+  it("tells a view the command asks for from one that opens as a side effect (rule 4)", () => {
+    expect(local("Show the team workload", "demo")).toEqual([{ kind: "show", view: "team" }]);
+    expect(local("Assign Development to Sara", "demo")).toEqual([{ kind: "show", view: "team", reveal: true }]);
+    expect(local("Who's overloaded?", "demo")).toEqual([{ kind: "show", view: "team", reveal: true }]);
+    expect(local("Write a status update for the client", "demo")).toEqual([{ kind: "show", view: "brief" }]);
+    expect(local("Add to the brief: homepage preview on Friday", "demo")).toEqual([{ kind: "show", view: "brief", reveal: true }]);
+    expect(local("Reset the brief", "demo")).toEqual([{ kind: "show", view: "brief", reveal: true }]);
+    // The brief and the team don't show proposals or blocks: the tasks come back, quietly
+    expect(local("Break UI Design into smaller steps", "demo", { view: "team" })).toEqual([{ kind: "show", view: "cards", reveal: true }]);
+    expect(local("Add a progress indicator", "demo", { view: "brief" })).toEqual([{ kind: "show", view: "cards", reveal: true }]);
+    // A view the sentence names is its intent
+    expect(local("Show this project as a timeline", "demo")).toEqual([{ kind: "show", view: "timeline" }]);
+  });
+
+  it("names the demo expansion its ops came from, and the runner's command carries it (rule 3)", () => {
+    const team = matched(parse("Add a sample team", "demoNoTeam"));
+    expect(team.expansion).toBe("sampleTeam");
+    expect(toCommand(team, "Add a sample team")?.expansion).toBe("sampleTeam");
+    expect(matched(parse("Create a timeline for my project", "empty")).expansion).toBe("demoProject");
+    expect(matched(parse("Assign Development to Sara", "demo")).expansion).toBeUndefined();
+    expect(toCommand(matched(parse("Assign Development to Sara", "demo")), "Assign Development to Sara")).not.toHaveProperty("expansion");
+  });
+
+  it("hides the progress bars and the indicator only where they show, so no no-op speaks for nothing (rule 5)", () => {
+    const f = namedFixture("demo");
+    const p = f.projects[f.projectId!];
+    expect(p.viewConfig.fields.progress).toBe(true);
+    expect(ops(parse("Hide the progress", "demo")).map((o) => o.op)).toEqual(["setView"]);
+    const both = { ...f, projects: { [p.id]: { ...p, blocks: [...p.blocks, "progress"] as ProjectDoc["blocks"] } } };
+    expect(ops(fastParse("Hide the progress", ctxOf(both))).map((o) => o.op)).toEqual(["setView", "removeBlock"]);
+    const neither = { ...f, projects: { [p.id]: { ...p, viewConfig: { ...p.viewConfig, fields: { ...p.viewConfig.fields, progress: false } } } } };
+    expect(ops(fastParse("Hide the progress", ctxOf(neither))).map((o) => o.op)).toEqual(["removeBlock"]);
+    expect(captionOf("Hide the progress", neither)).toBe("The progress indicator is already hidden");
   });
 });
 

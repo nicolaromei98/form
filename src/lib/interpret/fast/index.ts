@@ -10,6 +10,7 @@ import { breakdown, entityEdits, notUnderstood } from "@/lib/interpret/fast/task
 import { team } from "@/lib/interpret/fast/team";
 import { exitFocus, focus, removeView } from "@/lib/interpret/fast/view";
 import type { Op } from "@/lib/ops/build";
+import type { Expansion } from "@/lib/ops/caption";
 import type { Command as RunnerCommand } from "@/lib/ops/command";
 import type { LocalIntent } from "@/lib/ops/local-intents";
 import type { NoticeKey } from "@/lib/ops/notices";
@@ -40,6 +41,8 @@ export type FastResult =
       notes: QueryNote[];
       notices: NoticeKey[];
       reply?: { tone: "clarify"; text: string };
+      /** The ops came from a /demo expansion, which the caption speaks for as one (caption policy rule 3) */
+      expansion?: Expansion;
     }
   | { status: "matched"; confidence: 1; control: "undo" | "redo" | "reset" }
   | { status: "none"; reply: { tone: "unsupported"; text: string } };
@@ -57,8 +60,17 @@ function finish(r: FamilyResult, s: string, ctx: FastContext): FastResult {
     case "clarify":
       return { status: "matched", confidence: confidenceOf(s, ctx.palette, r.tier), ops: [], local: [], notes: [], notices: [], reply: { tone: "clarify", text: r.text } };
     case "intent": {
-      const { ops, local, notes, notices, reply } = r.intent;
-      return { status: "matched", confidence: confidenceOf(s, ctx.palette, r.tier), ops, local, notes, notices, ...(reply ? { reply } : {}) };
+      const { ops, local, notes, notices, reply, expansion } = r.intent;
+      return {
+        status: "matched",
+        confidence: confidenceOf(s, ctx.palette, r.tier),
+        ops,
+        local,
+        notes,
+        notices,
+        ...(reply ? { reply } : {}),
+        ...(expansion ? { expansion } : {}),
+      };
     }
   }
 }
@@ -141,6 +153,7 @@ export function toCommand(result: FastResult, text: string, source: RunnerComman
     notes: result.notes,
     notices: result.notices,
     ...(result.reply ? { reply: result.reply } : {}),
+    ...(result.expansion ? { expansion: result.expansion } : {}),
     source,
     text,
   };

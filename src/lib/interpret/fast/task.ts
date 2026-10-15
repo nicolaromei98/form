@@ -3,7 +3,7 @@ import type { Priority, Status } from "@/lib/domain/schema/primitives";
 import type { ProjectDoc } from "@/lib/domain/schema/project";
 import { clarify, type Collector, type FamilyResult, type FastContext } from "@/lib/interpret/fast/context";
 import { type Command, lineOf, parseAmount, parseDays, type Target, targetTitle, toHalfDays } from "@/lib/interpret/fast/match";
-import { showHome } from "@/lib/interpret/fast/view";
+import { revealHome } from "@/lib/interpret/fast/view";
 import { makeOp, type Op, updateTaskOp } from "@/lib/ops/build";
 
 /**
@@ -28,7 +28,7 @@ export function breakdown(s: string, ctx: FastContext, project: ProjectDoc, targ
   if (target.kind === "step") return clarify("Steps can't be nested further in this build.");
   const items = ctx.breakdown(target.task).map((step) => ({ stepId: ctx.mint("step"), title: lineOf(step.title, STEP_TITLE), estimateDays: step.estimateDays }));
   // The brief and the team view don't show proposals: bring the tasks back so the steps can be reviewed
-  if (ctx.local.activeView === "brief" || ctx.local.activeView === "team") showHome(c, project);
+  if (ctx.local.activeView === "brief" || ctx.local.activeView === "team") revealHome(c, project, ctx.local.activeView);
   c.op(makeOp({ op: "proposeSubtasks", proposalId: ctx.mint("proposal"), taskId: target.task.id, items, source: "parser" }));
   return c.result("keyword");
 }

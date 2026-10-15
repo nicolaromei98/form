@@ -87,11 +87,11 @@ export function team(cmd: Command, ctx: FastContext, project: ProjectDoc): Famil
   // The change happens on the Team view: opened when it isn't on screen
   const toTeam = () => c.reveal("team", ctx.local.activeView);
 
-  // Sample team
+  // Sample team: the expansion speaks as one, for the Team view too (caption policy rule 3)
   if (/\b(sample|demo|example) team\b/.test(s)) {
     c.op(...ctx.demo.sampleTeam(ctx.ws, project));
     toTeam();
-    return c.result("keyword");
+    return c.expands("sampleTeam").result("keyword");
   }
 
   // Add people: "add Giulia and Paolo to the team (as designers) (with 5 days)"

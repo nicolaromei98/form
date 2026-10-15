@@ -13,16 +13,21 @@ import type {
   ParserFamily,
   TransportSpec,
 } from "@/lib/ops/registry/_contract";
-import { captionKey, joinNames, part, title } from "@/lib/ops/registry/_helpers";
+import { captionKey, joinNames, part, SAMPLE_DATES, title } from "@/lib/ops/registry/_helpers";
 
 /**
  * Local intents (plan §1.2, Q6): show a view, select a task, zoom the timeline. They change only
  * the local view state, so they are never ops: never in a commit, the undo stack or Activity. A
  * command carries them next to its ops, and the runner applies them after the commits.
+ *
+ * A show is either the command's intent ("Show the team workload") or a reveal: the view comes on
+ * screen as a side effect of a change ("Assign Development to Sara" opens the Team). A reveal
+ * moves the tab the same way but says nothing of the view: no status sentence, only "{View} view
+ * added" when the command created the view (caption policy rule 4).
  */
 
 export const LocalIntentSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("show"), view: ViewKind }).strict(),
+  z.object({ kind: z.literal("show"), view: ViewKind, reveal: z.literal(true).optional() }).strict(),
   z.object({ kind: z.literal("select"), taskId: TaskId.nullable() }).strict(),
   z.object({ kind: z.literal("zoom"), zoom: TimelineZoom }).strict(),
 ]);
@@ -80,6 +85,19 @@ export function applyLocal(local: LocalViewState, intent: LocalIntent): LocalVie
 const NO_TEAM = "Team · no one yet. Use the sample team, or say 'add Giulia to the team'";
 
 /**
+ * What the Team view says about its members after the command: "Marta over capacity", "everyone
+ * within capacity", or null when the project has no active member.
+ */
+export function teamStatus(env: CaptionEnv): string | null {
+  const project = env.project();
+  const ws = env.workspace();
+  const members = project ? project.memberIds.filter((id) => typeof resolvePerson(id, ws) === "object") : [];
+  if (members.length === 0) return null;
+  const over = env.overloads();
+  return over.length ? `${joinNames(over.map((o) => o.name))} over capacity` : "everyone within capacity";
+}
+
+/**
  * What showing a view says (plan §4.4, local intents), from the after state. The part is keyed
  * `show:{view}`, so `announceView` can turn "Team · …" into "Team view added · …".
  */
@@ -92,17 +110,14 @@ export function showCaption(view: ViewKind, env: CaptionEnv): CaptionPart {
       return part(VIEW_LABEL[view], key);
     case "timeline": {
       const bits = ["Timeline"];
-      if (project?.startDate && !project.startConfirmed) bits.push("sample dates, sequenced from estimates");
+      if (project?.startDate && !project.startConfirmed) bits.push(SAMPLE_DATES);
       const unsized = project ? Object.values(project.tasks).filter((t) => t.kind === "task" && t.estimateDays === null).length : 0;
       if (unsized > 0) bits.push(`${unsized} task${unsized > 1 ? "s need" : " needs"} a duration`);
       return part(bits.join(" · "), key);
     }
     case "team": {
-      const ws = env.workspace();
-      const members = project ? project.memberIds.filter((id) => typeof resolvePerson(id, ws) === "object") : [];
-      if (members.length === 0) return part(NO_TEAM, key);
-      const over = env.overloads();
-      return part(over.length ? `Team · ${joinNames(over.map((o) => o.name))} over capacity` : "Team · everyone within capacity", key);
+      const status = teamStatus(env);
+      return part(status === null ? NO_TEAM : `Team · ${status}`, key);
     }
     case "focus": {
       const focus = env.focus();
@@ -123,11 +138,11 @@ export function showCaption(view: ViewKind, env: CaptionEnv): CaptionPart {
 
 const ZOOM_TEXT = { day: "days", week: "weeks", month: "months" } as const;
 
-/** A local intent's caption part, or null (selection says nothing) */
+/** A local intent's caption part, or null (a selection and a reveal say nothing) */
 export function localCaption(intent: LocalIntent, env: CaptionEnv): CaptionPart | null {
   switch (intent.kind) {
     case "show":
-      return showCaption(intent.view, env);
+      return intent.reveal ? null : showCaption(intent.view, env);
     case "select":
       return null;
     case "zoom":

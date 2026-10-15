@@ -44,8 +44,10 @@ export function create(cmd: Command, ctx: FastContext): FamilyResult | null {
   const startAs: BirthView = birth === "board" || birth === "timeline" ? birth : "cards";
 
   const c = new Collector(project);
-  // A moodboard lives inside a project: asking for one creates the project around it
+  // A moodboard lives inside a project: asking for one creates the project around it. The
+  // expansion's caption is the project's (caption policy rule 3)
   c.op(...ctx.demo.createProject({ workspace: ctx.ws, project }, { title, startAs, wantsMoodboard: wantsMood, replace: project !== null }, ctx.mint));
+  c.expands("demoProject");
   if (!(isWeb || !subject || wantsMood)) c.notice("demoOneTemplate");
   return c.result("keyword");
 }

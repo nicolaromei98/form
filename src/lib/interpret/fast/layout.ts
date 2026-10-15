@@ -5,7 +5,7 @@ import type { SortKey } from "@/lib/domain/schema/primitives";
 import type { ProjectDoc } from "@/lib/domain/schema/project";
 import { clarify, type Collector, type FamilyResult, type FastContext } from "@/lib/interpret/fast/context";
 import { type Command, lineOf, PLURAL, type Target } from "@/lib/interpret/fast/match";
-import { showHome, viewIn } from "@/lib/interpret/fast/view";
+import { revealHome, viewIn } from "@/lib/interpret/fast/view";
 import { addTaskOp, makeOp, setViewOp } from "@/lib/ops/build";
 
 /**
@@ -17,9 +17,12 @@ import { addTaskOp, makeOp, setViewOp } from "@/lib/ops/build";
 
 const NUMBER: Readonly<Record<string, number>> = { one: 1, single: 1, two: 2, three: 3, four: 4 };
 
-/** Shows the tracker when the layout options need it and the sentence named no view (v0) */
+/**
+ * Brings the tracker on screen when the layout options need it and the sentence named no view
+ * (v0): a side effect, so the option speaks and not the view (caption policy rule 4).
+ */
 function toCards(c: Collector, local: LocalViewState, named: boolean): void {
-  if (local.activeView !== "cards" && !named) c.show("cards");
+  if (!named) c.reveal("cards", local.activeView);
 }
 
 /** Runs the workspace rules; an answer when one returns early (the sort clarify) */
@@ -103,7 +106,13 @@ export function workspaceRules(
   }
   if (/\bprogress\b/.test(s) && !/\bby progress\b/.test(s) && !/\d\s*%/.test(s)) {
     if (hideVerb.test(s)) {
-      c.op(setViewOp({ fields: { progress: false } }), makeOp({ op: "removeBlock", block: "progress" }));
+      // The bars and the indicator together, each only when it shows: an op that would change
+      // nothing would speak first as a no-op (caption policy rule 5). With neither shown, the
+      // indicator's no-op says so.
+      const bars = vc.fields.progress;
+      const indicator = project.blocks.includes("progress");
+      if (bars) c.op(setViewOp({ fields: { progress: false } }));
+      if (indicator || !bars) c.op(makeOp({ op: "removeBlock", block: "progress" }));
     } else if (showVerb.test(s)) {
       if (!vc.fields.progress) c.op(setViewOp({ fields: { progress: true } }));
       else if (!project.blocks.includes("progress")) c.op(makeOp({ op: "addBlock", block: "progress" }));
@@ -134,6 +143,6 @@ export function workspaceRules(
   // Focus and the brief hide the metrics and progress blocks: show the tasks so an added block is visible
   const quiet = local.activeView === "focus" || local.activeView === "brief";
   const addsBlock = c.ops.some((o) => o.op === "addBlock" && (o.block === "metrics" || o.block === "progress"));
-  if (quiet && addsBlock && !c.shows) showHome(c, project);
+  if (quiet && addsBlock && !c.shows) revealHome(c, project, local.activeView);
   return null;
 }

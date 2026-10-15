@@ -79,7 +79,7 @@ describe("createDemoProject", () => {
     expect(project).toMatchObject({ title: "New website", kind: "website", status: "active", startDate: "2026-09-28", startConfirmed: false, views: ["timeline"] });
     expect(sortedByOrder(project.tasks).map((t) => t.title)).toEqual(["Research", "Visual Direction", "UI Design", "Development"]);
     expect(r.local.activeView).toBe("timeline");
-    expect(r.caption?.text).toBe("Timeline created · 4 tasks");
+    expect(r.caption?.text).toBe("Timeline created · 4 tasks · sample dates, sequenced from estimates");
   });
 
   it("replaces the open project, brings back missing and archived sample people, and adds the moodboard", () => {
