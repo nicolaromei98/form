@@ -14,7 +14,7 @@ const DESKTOP = { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 }
 /** The iPhone 13 preset (touch, DSF 3) at the plan's 390×844; the preset's own viewport leaves out the browser chrome. */
 const PHONE = { ...devices["iPhone 13"], viewport: { width: 390, height: 844 } };
 
-const CHROMIUM_ONLY = /(motion|agent-idle|a11y)\.spec\.ts$/;
+const CHROMIUM_ONLY = /(motion|agent-idle|a11y|perf)\.spec\.ts$/;
 
 const projects: Project[] = [
   { name: "chromium-desktop", use: { ...devices["Desktop Chrome"], ...DESKTOP } },

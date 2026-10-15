@@ -123,6 +123,23 @@ export async function prepare(page: Page, seed: Seed) {
   });
 }
 
+/**
+ * Waits for the app to mount. ClientRoot renders the app after mount; its sr-only h1 is the first
+ * thing it draws. On the stepped clock React's work waits on fake timers, so the clock moves a
+ * frame at a time until then.
+ */
+async function mounted(page: Page, mode: ClockMode) {
+  const h1 = page.locator("main h1");
+  if (mode === "stepped") {
+    for (let i = 0; !(await h1.count()); i++) {
+      if (i > 600) throw new Error("The app never mounted");
+      await page.clock.runFor(16);
+      await sleep(20);
+    }
+  } else await h1.waitFor({ state: "attached", timeout: 30_000 });
+  await page.evaluate(() => document.fonts.ready);
+}
+
 /** Opens the app seeded with `seed`, on the frozen clock, and waits until it has settled. */
 export async function open(page: Page, seed: Seed, mode: ClockMode = "stepped"): Promise<App> {
   await prepare(page, seed);
@@ -135,23 +152,23 @@ export async function open(page: Page, seed: Seed, mode: ClockMode = "stepped"):
     await page.addInitScript(frameGrid, { origin: installed, frozen: Date.parse(FROZEN_TIME) });
   } else await page.clock.install({ time: FROZEN_TIME });
   await page.goto(APP_PATH, { waitUntil: "load" });
-  // ClientRoot renders the app after mount; its sr-only h1 is the first thing it draws. On the
-  // stepped clock React's work waits on fake timers, so the clock moves a frame at a time until then
-  const h1 = page.locator("main h1");
-  if (mode === "stepped") {
-    for (let i = 0; !(await h1.count()); i++) {
-      if (i > 600) throw new Error("The app never mounted");
-      await page.clock.runFor(16);
-      await sleep(20);
-    }
-  } else await h1.waitFor({ state: "attached", timeout: 30_000 });
-  await page.evaluate(() => document.fonts.ready);
+  await mounted(page, mode);
   const app = new App(page, mode);
   if (mode === "stepped") await startFrameControl(page);
   await app.settle();
   await app.firstLoadNotice();
+  if (mode === "stepped" && !(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches))) await app.alignClock();
   return app;
 }
+
+/**
+ * With full motion (motion frames), where every stepped open ends on the fake clock: OPEN_MS after
+ * the frozen time, whatever the build did on the way. A v2 build dismisses its first-load caption
+ * (ED-10), which takes whole settle blocks a v0 build doesn't spend, and the agent's breathing and
+ * settling run on that clock: aligned, both builds meet each trigger with the agent in the same
+ * phase (settled, by then, since nothing touches it).
+ */
+export const OPEN_MS = 24_000;
 
 export class App {
   /** The one-off first-load caption, when the build shows one (v2: "Schedule now skips weekends.") */
@@ -208,6 +225,30 @@ export class App {
     const label = await caption.first().locator("[aria-label]").first().getAttribute("aria-label");
     this.notice = label ?? (await caption.first().innerText());
     await this.dismissCaption();
+    // The Dismiss button sits by the dock: a pointer left there hovers the composer's chips and
+    // keeps the agent awake, which a build without the caption never sees. Parked where every
+    // build's pointer starts, the agent can settle again
+    await this.page.mouse.move(0, 0);
+    await this.settle({ agent: true });
+  }
+
+  /** Loads the page again, as a user's reload would: storage keeps what the app saved. */
+  async reload() {
+    await this.page.reload({ waitUntil: "load" });
+    await mounted(this.page, this.mode);
+    if (this.mode === "stepped") await startFrameControl(this.page);
+    await this.settle();
+  }
+
+  /** Runs the stepped clock to OPEN_MS after the frozen time, then settles (see OPEN_MS). */
+  async alignClock() {
+    const elapsed = await this.page.evaluate((frozen) => Date.now() - frozen, Date.parse(FROZEN_TIME));
+    if (elapsed > OPEN_MS) throw new Error(`Opening took ${elapsed} ms of fake time, past OPEN_MS (${OPEN_MS}): raise it`);
+    for (let left = OPEN_MS - elapsed; left > 0; left -= 500) {
+      await this.page.clock.runFor(Math.min(500, left));
+      await afterFrame(this.page);
+    }
+    await this.settle({ agent: true });
   }
 
   async dismissCaption() {
