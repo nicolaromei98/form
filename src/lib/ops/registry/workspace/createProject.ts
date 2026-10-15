@@ -17,7 +17,7 @@ import {
 import { type TaskSeed, TaskSeedSchema } from "@/lib/domain/schema/template";
 import type { WorkspaceDoc } from "@/lib/domain/schema/workspace";
 import { defineOp, isRejection, type Rejection, reject } from "@/lib/ops/registry/_contract";
-import { baseOf, ensureFreshId, mustActivePerson, part, title, unique } from "@/lib/ops/registry/_helpers";
+import { baseOf, ensureFreshId, mustActivePerson, part, SAMPLE_DATES, title, unique } from "@/lib/ops/registry/_helpers";
 import { backwardsRange, fitsDoc, normaliseDays, recordBytes, tasksText } from "@/lib/ops/registry/_workspace";
 
 /**
@@ -32,6 +32,10 @@ import { backwardsRange, fitsDoc, normaliseDays, recordBytes, tasksText } from "
  * never has to: dependencies name earlier seeds only, statuses are coherent, people exist and are
  * on the team. Milestones are normalised (estimate 0, allocation 1, no steps), and members,
  * tags and dependencies are deduplicated, as addTask does. A seed's owner joins the members.
+ *
+ * A project born as a timeline on an unconfirmed start says its dates are samples ("Timeline
+ * created · 4 tasks · sample dates, sequenced from estimates"), as the Timeline itself does
+ * (caption policy rule 6).
  */
 
 const Schema = z
@@ -193,7 +197,11 @@ export default defineOp({
 
   spawn: (op, ctx) => buildProject(op, ctx.workspace.id, ctx.now),
 
-  caption: ({ op }) => part(`${VIEW_LABEL[op.draft.startAs]} created · ${op.tasks.length === 0 ? "no tasks yet" : tasksText(op.tasks.length)}`),
+  caption({ op }) {
+    const { startAs, startDate, startConfirmed } = op.draft;
+    const sample = startAs === "timeline" && startDate !== null && !startConfirmed && op.tasks.length > 0;
+    return part(`${VIEW_LABEL[startAs]} created · ${op.tasks.length === 0 ? "no tasks yet" : tasksText(op.tasks.length)}${sample ? ` · ${SAMPLE_DATES}` : ""}`);
+  },
   // A fresh project id is either created or refused
   noopCaption: () => null,
   undoable: true,

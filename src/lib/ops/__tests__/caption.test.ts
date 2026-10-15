@@ -1,8 +1,9 @@
 // The caption composer (plan §5.9): keys, announceView, the 280-character cut after every
 // suffix, tones, local show captions from the after state, query notes and notices.
 import { describe, expect, it } from "vitest";
+import { seededMinter } from "@/lib/domain/ids";
 import type { PersonId, TaskId } from "@/lib/domain/schema/ids";
-import { announceView, composeCaption, joinParts, mergeKeys } from "@/lib/ops/caption";
+import { announceView, capParts, composeCaption, dropImplied, groupParts, joinParts, mergeKeys } from "@/lib/ops/caption";
 import { type CaptionPlanning, makeCaptionEnv } from "@/lib/ops/caption-env";
 import { showCaption } from "@/lib/ops/local-intents";
 import { renderNote } from "@/lib/ops/queries";
@@ -50,6 +51,38 @@ describe("parts", () => {
     expect(announceView([{ text: "Board", key: captionKey.show("board") }], ["board"])[0].text).toBe("Board view added");
     expect(announceView([], ["timeline"]).map((p) => p.text)).toEqual(["Timeline view added"]);
   });
+
+  it("announces an added view with no show part once, after the change; a silent one not at all (rule 4)", () => {
+    const added = { text: "Team view added", key: captionKey.viewAdded("team") };
+    const change = { text: "Development → Sara" };
+    expect(announceView([added, change], ["team"]).map((p) => p.text)).toEqual(["Development → Sara", "Team view added"]);
+    expect(announceView([added, change], ["team"], new Set(["team" as const])).map((p) => p.text)).toEqual(["Development → Sara"]);
+  });
+
+  it("drops the parts another part implies (rule 2)", () => {
+    const joins = { text: "Giulia joins the project", key: captionKey.member("per_giulia000000000" as PersonId) };
+    const added = { text: "Giulia added to the team · capacity not set", implies: [joins.key] };
+    expect(dropImplied([added, joins, { text: "Paolo joins the project", key: "member:per_paolo0000000000" }]).map((p) => p.text)).toEqual([
+      "Giulia added to the team · capacity not set",
+      "Paolo joins the project",
+    ]);
+  });
+
+  it("says one template across entities once, with the names joined and the verb agreeing (rule 1)", () => {
+    const join = (name: string) => ({ text: `${name} joins the project`, group: { template: "{names} joins the project", plural: "{names} join the project", name } });
+    expect(groupParts([join("Giulia"), { text: "Other" }, join("Paolo")]).map((p) => p.text)).toEqual(["Giulia and Paolo join the project", "Other"]);
+    expect(groupParts([join("A"), join("B"), join("C"), join("D")])[0].text).toBe("A, B and 2 others join the project");
+    expect(groupParts([join("Giulia")])[0].text).toBe("Giulia joins the project");
+    const added = (name: string, rest: string) => ({ text: `${name} added · ${rest}`, group: { template: `{names} added · ${rest}`, name } });
+    expect(groupParts([added("Giulia", "4"), added("Paolo", "5")]).map((p) => p.text)).toEqual(["Giulia added · 4", "Paolo added · 5"]);
+  });
+
+  it("keeps at most four parts, cutting the first that doesn't fit at its own boundary, and always the refusal (rule 7)", () => {
+    expect(capParts(["a · b", "c", "d · e"])).toEqual(["a · b", "c", "d"]);
+    expect(capParts(["a", "b", "c", "d", "e"])).toEqual(["a", "b", "c", "d"]);
+    expect(capParts(["a · b · c", "d · e"], "Couldn't apply one change: x")).toEqual(["a · b · c", "Couldn't apply one change: x"]);
+    expect(capParts(["a · b · c · d · e"], "Couldn't apply that: x · y · z · w")).toEqual(["a", "Couldn't apply that: x · y · z · w"]);
+  });
 });
 
 describe("composeCaption", () => {
@@ -63,6 +96,62 @@ describe("composeCaption", () => {
     expect(notes).toEqual({ text: "Progress is already visible", tone: "info", undoable: false });
     const notice = composeCaption({ outcomes: [], local: [], addedViews: [], notes: [], notices: ["weekendsNow"], env: e, historyEntry: false });
     expect(notice?.text).toBe("Schedule now skips weekends.");
+  });
+
+  it("says what was already true first, even when a view applied around it (rule 5)", () => {
+    const s = demo();
+    const dev = taskByTitle(projectOf(s), "Development").id;
+    const r = run(s, [{ op: "addView", view: "team" }, { op: "assignTask", taskId: dev, personId: DEMO_PEOPLE.luca }], {
+      local: [{ kind: "show", view: "team", reveal: true }],
+    });
+    expect(r.caption).toEqual({ text: "Development is already with Luca · Team view added", tone: "done", undoable: true });
+  });
+
+  it("lets a view opened as a side effect say only that it was added; asked for, it says its status (rule 4)", () => {
+    const s = demo();
+    const p = planning({ over: { [DEMO_PEOPLE.marta]: 4 } });
+    const ui = taskByTitle(projectOf(s), "UI Design").id;
+    const assign = [{ op: "addView", view: "team" }, { op: "assignTask", taskId: ui, personId: DEMO_PEOPLE.sara }];
+    const reveal = run(s, assign, { local: [{ kind: "show", view: "team", reveal: true }], ctx: { planning: p } });
+    expect(reveal.caption?.text).toBe("UI Design → Sara · Sara 0/5d · Team view added");
+    expect(reveal.local.activeView).toBe("team");
+    const asked = run(s, [{ op: "addView", view: "team" }], { local: [{ kind: "show", view: "team" }], ctx: { planning: p } });
+    expect(asked.caption?.text).toBe("Team view added · Marta over capacity");
+    // The brief options a revealed brief takes say nothing either
+    const line = { op: "addBriefLine", lineId: seededMinter(1)("briefLine"), audience: "team", section: "note", text: "Standup moved to 10." };
+    const brief = run(s, [line, { op: "addView", view: "brief" }, { op: "setView", patch: { briefAudience: "team" } }], {
+      local: [{ kind: "show", view: "brief", reveal: true }],
+    });
+    expect(brief.caption?.text).toBe("Added to the team brief · Note · Brief view added");
+  });
+
+  it("lets the sample team speak as one, for the Team view it opens (rule 3)", () => {
+    const f = deepFreeze(namedFixture("demoNoTeam"));
+    const s: TestState = { workspace: f.workspace, projects: f.projects, projectId: f.projectId };
+    const sample = [
+      ["marta", "Marta", 2],
+      ["sara", "Sara", 4],
+      ["luca", "Luca", 5],
+    ] as const;
+    const people = sample.map(([key, name, days]) => ({
+      op: "addPerson",
+      personId: DEMO_PEOPLE[key],
+      name,
+      role: null,
+      email: null,
+      capacityDaysPerWeek: days,
+      dayRateCents: null,
+    }));
+    const members = sample.map(([key]) => ({ op: "addMember", personId: DEMO_PEOPLE[key] }));
+    const ui = taskByTitle(projectOf(s), "UI Design").id;
+    const ops = [...people, ...members, { op: "assignTask", taskId: ui, personId: DEMO_PEOPLE.marta }, { op: "addView", view: "team" }];
+    const local = [{ kind: "show" as const, view: "team" as const, reveal: true as const }];
+    const p = planning({ over: { [DEMO_PEOPLE.marta]: 4 } });
+    const r = run(s, ops, { local, expansion: "sampleTeam", ctx: { planning: p } });
+    expect(r.outcomes.filter((o) => o.result.kind === "rejected")).toEqual([]);
+    expect(r.caption?.text).toBe("Sample team added · Marta, Sara and Luca · Marta over capacity");
+    // Without the expansion, every op speaks for itself, up to four parts
+    expect(run(s, ops, { local, ctx: { planning: p } }).caption?.text).toBe("Marta added to the team · 2 days a week · Sara added to the team · 4 days a week");
   });
 
   it("appends refusals after the applied parts and keeps the whole within 280", () => {

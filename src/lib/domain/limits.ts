@@ -44,6 +44,8 @@ export const COMMAND_TEXT = 500;
 export const CAPTION_PART = 140;
 /** A whole caption, cut at a part boundary (plan §5.9) */
 export const CAPTION_TEXT = 280;
+/** The " · " parts a caption shows at most: one short line (caption policy rule 7) */
+export const CAPTION_PARTS = 4;
 /** A user id from the auth provider (Phase 2) */
 export const USER_ID = 64;
 export const TIMEZONE_LENGTH = 64;

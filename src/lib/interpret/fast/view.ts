@@ -81,7 +81,10 @@ export function exitFocus(s: string, project: ProjectDoc): FamilyResult | null {
   return collect(project, (c) => c.show(homeView(project.views)));
 }
 
-/** The home view, shown: where proposals and added blocks can be seen */
-export function showHome(c: Collector, project: ProjectDoc): void {
-  c.show(homeView(project.views));
+/**
+ * Brings the home view on screen as a side effect, where proposals and added blocks can be seen.
+ * The change speaks, not the view (caption policy rule 4).
+ */
+export function revealHome(c: Collector, project: ProjectDoc, active: ViewKind): void {
+  c.reveal(homeView(project.views), active);
 }

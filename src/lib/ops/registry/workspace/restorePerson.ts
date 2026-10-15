@@ -2,13 +2,14 @@ import { z } from "zod";
 import { compareKeys } from "@/lib/domain/order";
 import { PersonId } from "@/lib/domain/schema/ids";
 import { defineOp, isRejection, reject } from "@/lib/ops/registry/_contract";
-import { baseOf, part, setIfChanged, title } from "@/lib/ops/registry/_helpers";
+import { baseOf, captionKey, groupPart, setIfChanged, title } from "@/lib/ops/registry/_helpers";
 import { activeNamed, mustPerson } from "@/lib/ops/registry/_workspace";
 
 /**
  * Brings an archived person back into the team (plan §4.4 row 8): Settings "Restore", and the
  * demo's sample-team expansion when a sample person was removed. Their open tasks read as theirs
- * again. Refused while another active person has the same name (W2).
+ * again. Refused while another active person has the same name (W2). Like addPerson, several are
+ * said once, and their joining the project in the same command goes without saying.
  */
 export default defineOp({
   name: "restorePerson",
@@ -25,7 +26,11 @@ export default defineOp({
     setIfChanged(d.people[op.personId], "archived", false);
   },
 
-  caption: ({ op, after }) => part(`${title(after.people[op.personId].name)} is back in the team`),
+  caption: ({ op, after }) =>
+    groupPart("{names} is back in the team", title(after.people[op.personId].name), {
+      plural: "{names} are back in the team",
+      implies: [captionKey.member(op.personId)],
+    }),
   noopCaption: ({ op, before }) => `${title(before.people[op.personId].name)} is already in the team`,
   undoable: true,
   activity: "show",

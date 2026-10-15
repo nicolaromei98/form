@@ -4,7 +4,7 @@ import { PersonId } from "@/lib/domain/schema/ids";
 import { Cents, halfDays, Line } from "@/lib/domain/schema/primitives";
 import type { Person } from "@/lib/domain/schema/workspace";
 import { defineOp, reject } from "@/lib/ops/registry/_contract";
-import { baseOf, ensureFreshId, part, title } from "@/lib/ops/registry/_helpers";
+import { baseOf, captionKey, ensureFreshId, groupPart, title } from "@/lib/ops/registry/_helpers";
 import { activeNamed, capacityText, fitsDoc, nextPersonOrder, recordBytes } from "@/lib/ops/registry/_workspace";
 
 /**
@@ -12,6 +12,9 @@ import { activeNamed, capacityText, fitsDoc, nextPersonOrder, recordBytes } from
  * capacity is nullable. The Team "Add person" button sends a visible 5; a command that names no
  * capacity sends null, and the caption says so, so FORM can ask for it. A name an active person
  * already has (trimmed, case-insensitive, the W2 rule) is a no-op: "Giulia is already in the team".
+ * People added with the same capacity in one command are said once ("Giulia and Paolo added to
+ * the team · capacity not set"), and their joining the project in that command goes without
+ * saying (caption policy rules 1 and 2).
  */
 export default defineOp({
   name: "addPerson",
@@ -54,7 +57,7 @@ export default defineOp({
 
   caption({ op }) {
     const capacity = op.capacityDaysPerWeek === null ? "capacity not set" : capacityText(op.capacityDaysPerWeek);
-    return part(`${title(op.name)} added to the team · ${capacity}`);
+    return groupPart(`{names} added to the team · ${capacity}`, title(op.name), { implies: [captionKey.member(op.personId)] });
   },
   noopCaption: ({ op, before }) => `${title(activeNamed(before, op.name)?.name ?? op.name)} is already in the team`,
   undoable: true,

@@ -7,7 +7,7 @@ import type { IsoDate, OrderKey, Timestamp, ViewKind } from "@/lib/domain/schema
 import type { ProjectDoc } from "@/lib/domain/schema/project";
 import type { WorkspaceDoc } from "@/lib/domain/schema/workspace";
 import { addedViews as viewsAdded, homeView } from "@/lib/domain/views";
-import { type Caption, composeCaption, type OpOutcome } from "@/lib/ops/caption";
+import { type Caption, composeCaption, type Expansion, type OpOutcome } from "@/lib/ops/caption";
 import { type CaptionPlanning, makeCaptionEnv } from "@/lib/ops/caption-env";
 import { applyLocal, type LocalIntent } from "@/lib/ops/local-intents";
 import type { NoticeKey } from "@/lib/ops/notices";
@@ -40,6 +40,8 @@ export interface Command {
   text: string | null;
   /** false for direct edits: no caption unless something is refused or a proposal resolves (v0 parity) */
   caption?: boolean;
+  /** The demo expansion the producer ran, so its ops speak as one (caption policy rule 3) */
+  expansion?: Expansion;
 }
 
 export interface CommandCtx {
@@ -255,6 +257,7 @@ export function runCommand(state: DocsState, cmd: Command, ctx: CommandCtx): Com
     env,
     historyEntry: changed,
     quiet: cmd.caption === false,
+    ...(cmd.expansion ? { expansion: cmd.expansion } : {}),
   });
 
   return { state: after, changed, groupId, commits, spawned, local, projectId, caption, outcomes, addedViews: added };

@@ -5,6 +5,7 @@ import type { BirthView, IsoDate, ViewKind } from "@/lib/domain/schema/primitive
 import type { ProjectDoc } from "@/lib/domain/schema/project";
 import type { WorkspaceDoc } from "@/lib/domain/schema/workspace";
 import { makeOp, type Op } from "@/lib/ops/build";
+import type { Expansion } from "@/lib/ops/caption";
 import type { LocalIntent } from "@/lib/ops/local-intents";
 import type { NoticeKey } from "@/lib/ops/notices";
 import type { QueryNote } from "@/lib/ops/queries";
@@ -81,6 +82,8 @@ export interface Intent {
   notices: NoticeKey[];
   /** A question back (v0 wording), shown instead of the caption; any ops still apply */
   reply?: { tone: "clarify"; text: string };
+  /** The demo expansion the ops came from, so the caption speaks for it as one (caption policy rule 3) */
+  expansion?: Expansion;
 }
 
 export type FamilyResult =
@@ -116,6 +119,7 @@ export class Collector {
   readonly notes: QueryNote[] = [];
   readonly notices: NoticeKey[] = [];
   private readonly views: Set<ViewKind>;
+  private expansion: Expansion | null = null;
 
   constructor(project: Pick<ProjectDoc, "views"> | null) {
     this.views = new Set(project?.views ?? []);
@@ -126,22 +130,37 @@ export class Collector {
     return this;
   }
 
-  /** Shows a view, adding it to the project first when it isn't there yet */
-  show(view: ViewKind): this {
+  /** Adds a view the project doesn't have yet (plan §4.5) */
+  private ensureView(view: ViewKind): void {
     if (!this.views.has(view)) {
       this.ops.push(makeOp({ op: "addView", view }));
       this.views.add(view);
     }
+  }
+
+  /** Shows a view as the command's intent ("Show the team workload"): the view says its status */
+  show(view: ViewKind): this {
+    this.ensureView(view);
     this.local.push({ kind: "show", view });
     return this;
   }
 
   /**
    * Brings a view on screen as a side effect of a change ("assign …" opens the team): nothing when
-   * it is already the active view, so its caption doesn't repeat (v0's silent setRepresentation).
+   * it is already the active view (v0's silent setRepresentation). A reveal says nothing of the
+   * view, only "{View} view added" when the command creates it (caption policy rule 4).
    */
   reveal(view: ViewKind, active: ViewKind): this {
-    return view === active ? this : this.show(view);
+    if (view === active) return this;
+    this.ensureView(view);
+    this.local.push({ kind: "show", view, reveal: true });
+    return this;
+  }
+
+  /** The ops came from a demo expansion: the caption speaks for it as one (caption policy rule 3) */
+  expands(expansion: Expansion): this {
+    this.expansion = expansion;
+    return this;
   }
 
   note(note: QueryNote): this {
@@ -165,7 +184,14 @@ export class Collector {
   }
 
   intent(reply?: Intent["reply"]): Intent {
-    return { ops: [...this.ops], local: [...this.local], notes: [...this.notes], notices: [...this.notices], ...(reply ? { reply } : {}) };
+    return {
+      ops: [...this.ops],
+      local: [...this.local],
+      notes: [...this.notes],
+      notices: [...this.notices],
+      ...(reply ? { reply } : {}),
+      ...(this.expansion ? { expansion: this.expansion } : {}),
+    };
   }
 
   result(tier: Tier, reply?: Intent["reply"]): FamilyResult {

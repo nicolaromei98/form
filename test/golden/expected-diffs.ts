@@ -6,7 +6,9 @@
 // The document state is the same as v0's (lowered) everywhere but in three commands: "N weeks"
 // (plan §1.3), the 250-day estimate limit, and a weekly capacity past 7 (plan §8.4). Everything
 // else is wording: captions now come only from the ops that applied, the local intents, typed
-// query notes and fixed notices (plan §1.3, §5.9), never from the parser.
+// query notes and fixed notices (plan §1.3, §5.9), never from the parser, and they follow the
+// caption policy (DECISIONS, "Wave 5 outcomes and the caption policy"): one short line of at most
+// four parts, with no part a view says of itself when it only opens as a side effect.
 import type { LegacyFixture } from "./parser-harness";
 
 export interface ObservedDiff {
@@ -25,25 +27,22 @@ export const R = {
   // ED-6: honest no-ops (AUDIT #6). v0 claimed a change, added an Undo and a history entry for a
   // document deep-equal to the one before; v2's op is a no-op and says what is already true.
   honestNoop: "Honest no-op (AUDIT #6, ED-6): nothing changes, so the op's no-op caption says what is already true, with no Undo.",
-  // A no-op's caption shows only when nothing applied (plan §5.9 item 4); the view the command adds applies
-  noopBehindView:
-    "Honest no-op behind an added view (plan §5.9 item 4): the op changes nothing, and the view the command adds is what applied, so its caption speaks instead of the no-op's.",
-  // The local show of the view the command opens composes its own part (plan §4.4 local intents)
-  viewSpeaks:
-    "The view the command opens says its own caption (plan §4.4, local show): after the change, from the after-state, as every show does in v2.",
+  // Caption policy rule 5: the no-op speaks first, then what applied around it
+  noopFirst:
+    "Honest no-op first (AUDIT #6; caption policy rule 5): the board is already empty, and the moodboard the command brought on screen says it was added; v0 showed it without saying so.",
   // ED-3: the Phase 1 Team lane, weekly capacities 2/4/5 (plan §6.5, DECISIONS §13 item 18)
   weeklyLoad: "Weekly load (ED-3, plan §6.5): over and free are summed week by week against 2/4/5 days a week, so the figures and the roomiest person change.",
   // ED-6, Q3: capacity is days per week, null when a command names none
   capacity: "Capacity is days a week (Q3, ED-6): the wording says so, a command that names none leaves it unset, and a figure past 7 asks back (plan §8.4).",
-  // People are workspace records; the project's members are its Team rows (plan §6.5)
-  peopleJoin:
-    "People join the workspace and the project (plan §6.5: Team rows are members): addPerson and addMember each say their part. ED-6 capacity wording applies.",
-  // The demo's sample-team expansion (plan §4.5) is ops, each with its caption
+  // Caption policy rules 1 and 2, with the capacity wording
+  peopleAdded:
+    "Capacity is days a week and a command that names none leaves it unset (Q3, ED-6). People added alike are said once, and their joining the project goes without saying (caption policy rules 1 and 2).",
+  // Caption policy rule 3: the demo's sample-team expansion (plan §4.5) speaks as one
   sampleTeam:
-    "The sample team is the demo expansion (plan §4.5): addMember for each sample person, then their template tasks; every op says its part, with the weekly figures (ED-3).",
+    "The sample team speaks as one (caption policy rule 3, the review's wording): its people, then the team's status after the change on the weekly figures (ED-3), which says what the Team view it opens shows.",
   // The registry's own caption for the op (plan §4.4)
   opCaption: "The op's registry caption (plan §4.4) replaces v0's parser prose for the same change.",
-  // removeTask bridges dependencies and says so (plan §4.4 row 28)
+  // removeTask bridges dependencies (plan §4.4 row 28)
   bridge: "removeTask bridges dependencies (plan §1.3, §4.4 row 28), and its caption names the new link.",
   // Status wins (plan §4.5, DECISIONS §13 item 13)
   statusWins: "One op per field, status last (plan §4.5): Done sets 100%, so the progress part is replaced by the status part (same caption key).",
@@ -56,28 +55,19 @@ export const R = {
   // Steps are a level of their own (plan §3.4): no priority
   stepFields:
     "Steps have a title, done and an estimate only (plan §3.4, §4.5): v0 stored a priority on a step and nothing showed it; v2 has no field for it, so the command isn't understood.",
-  // createProject's caption, and no show for a new project (seed.ts createDemoProject)
-  createCaption:
-    "createProject's caption (plan §4.4 row 16). The new project opens on the view it was born as without a show (the runner opens a spawned project at home, plan §5.7); the Timeline footer labels the sample schedule (ED-2).",
   // addBlock's caption for the moodboard (plan §4.4 row 51)
   moodboardCaption: "addBlock's moodboard caption (plan §4.4 row 51), as v0 said it when the board was asked for alone.",
   // The local show caption has no "everything back" (plan §4.4 local intents)
   showHome: "Showing the home view says its name (plan §4.4 local show); \"everything back\" was v0 parser prose.",
   // Op parts come before the local intents' parts (plan §5.9 item 1)
   partOrder: "Caption parts in plan §5.9 order: the ops' parts, then the local intents': the option first, then the view.",
+  // Caption policy rule 4: a view that opens as a side effect adds no part
+  sideEffectView:
+    "A view that opens as a side effect says nothing of itself (caption policy rule 4): the tasks come back so the new indicator shows, and the indicator speaks.",
 } as const;
 
 export const EXPECTED_DIFFS: readonly ExpectedDiff[] = [
   /* ---------- Create ---------- */
-  {
-    fixture: "empty",
-    say: "Create a timeline for my project",
-    caption: {
-      v0: "Timeline created · 4 tasks · sample dates, sequenced from estimates · Demo mode ships one template (website) — rename anything",
-      v2: "Timeline created · 4 tasks · Demo mode ships one template (website) — rename anything",
-    },
-    why: R.createCaption,
-  },
   {
     fixture: "empty",
     say: "Create a moodboard for my brand",
@@ -96,6 +86,7 @@ export const EXPECTED_DIFFS: readonly ExpectedDiff[] = [
   { fixture: "demo", say: "Remove the highlight", caption: { v0: "Highlight off", v2: "Nothing is highlighted" }, why: R.honestNoop },
   { fixture: "demo", say: "Show priorities", caption: { v0: "Priority visible", v2: "The view already looks like that" }, why: R.honestNoop },
   { fixture: "demo", say: "Show the metrics", caption: { v0: "Metrics added", v2: "The metrics are already shown" }, why: R.honestNoop },
+  { fixture: "demoBrief", say: "Add a progress indicator", caption: { v0: "Project progress indicator added · Tracker", v2: "Project progress indicator added" }, why: R.sideEffectView },
 
   /* ---------- Task edits ---------- */
   { fixture: "demo", say: "Delete UI Design", caption: { v0: "UI Design removed", v2: "UI Design removed · Development now follows Visual Direction" }, why: R.bridge },
@@ -143,15 +134,6 @@ export const EXPECTED_DIFFS: readonly ExpectedDiff[] = [
     caption: { v0: "4 steps proposed for UI Design. Review them on the task.", v2: "4 steps proposed for UI Design · no estimates. Review them on the task." },
     why: R.breakdown,
   },
-  {
-    fixture: "demoTeamView",
-    say: "Break UI Design into smaller steps",
-    caption: {
-      v0: "4 steps proposed for UI Design · fits its 6d estimate. Review them on the task.",
-      v2: "4 steps proposed for UI Design · fits its 6d estimate. Review them on the task. · Tracker",
-    },
-    why: R.viewSpeaks,
-  },
   { fixture: "demoProposal", say: "Accept them", caption: { v0: "4 steps added", v2: "4 steps added to UI Design" }, why: R.opCaption },
   { fixture: "demoProposal", say: "yes", caption: { v0: "4 steps added", v2: "4 steps added to UI Design" }, why: R.opCaption },
   { fixture: "demoProposal", say: "Keep them", caption: { v0: "4 steps added", v2: "4 steps added to UI Design" }, why: R.opCaption },
@@ -160,7 +142,7 @@ export const EXPECTED_DIFFS: readonly ExpectedDiff[] = [
   {
     fixture: "demo",
     say: "Who's overloaded?",
-    caption: { v0: "Marta is 3d over · most room: Sara (8d free) · Team view added", v2: "Team view added · Marta over capacity · Marta is 4d over · most room: Luca (7d free)" },
+    caption: { v0: "Marta is 3d over · most room: Sara (8d free) · Team view added", v2: "Marta is 4d over · most room: Luca (7d free) · Team view added" },
     why: R.weeklyLoad,
   },
   {
@@ -168,7 +150,7 @@ export const EXPECTED_DIFFS: readonly ExpectedDiff[] = [
     say: "Balance the workload",
     caption: {
       v0: "Marta is 3d over · 1 handover proposed. Review it on the team. · Team view added",
-      v2: "Marta is 4d over capacity · 1 handover proposed. Review it on the team. · Team view added · Marta over capacity",
+      v2: "Marta is 4d over capacity · 1 handover proposed. Review it on the team. · Team view added",
     },
     why: R.weeklyLoad,
   },
@@ -177,62 +159,38 @@ export const EXPECTED_DIFFS: readonly ExpectedDiff[] = [
     say: "Even out the workload",
     caption: {
       v0: "Marta is 3d over · 1 handover proposed. Review it on the team. · Team view added",
-      v2: "Marta is 4d over capacity · 1 handover proposed. Review it on the team. · Team view added · Marta over capacity",
+      v2: "Marta is 4d over capacity · 1 handover proposed. Review it on the team. · Team view added",
     },
     why: R.weeklyLoad,
   },
   {
     fixture: "demo",
     say: "Assign Development to Sara",
-    caption: { v0: "Development → Sara · Sara 8/8d · Team view added", v2: "Development → Sara · Sara is now 1d over · Team view added · Marta and Sara over capacity" },
+    caption: { v0: "Development → Sara · Sara 8/8d · Team view added", v2: "Development → Sara · Sara is now 1d over · Team view added" },
     why: R.weeklyLoad,
   },
   {
     fixture: "demoSelected",
     say: "Give it to Luca",
-    caption: { v0: "UI Design → Luca · Luca is now 4d over · Team view added", v2: "UI Design → Luca · Luca 14/20d · Team view added · everyone within capacity" },
+    caption: { v0: "UI Design → Luca · Luca is now 4d over · Team view added", v2: "UI Design → Luca · Luca 14/20d · Team view added" },
     why: R.weeklyLoad,
   },
   {
     fixture: "demo",
-    say: "Give UI Design to Sara",
-    caption: { v0: "UI Design → Sara · Sara 6/8d · Team view added", v2: "UI Design → Sara · Sara 6/8d · Team view added · everyone within capacity" },
-    why: R.viewSpeaks,
-  },
-  {
-    fixture: "demoSelected",
-    say: "Give it to Sara",
-    caption: { v0: "UI Design → Sara · Sara 6/8d · Team view added", v2: "UI Design → Sara · Sara 6/8d · Team view added · everyone within capacity" },
-    why: R.viewSpeaks,
-  },
-  {
-    fixture: "demo",
-    say: "Unassign Visual Direction",
-    caption: { v0: "Visual Direction unassigned · Team view added", v2: "Visual Direction unassigned · Team view added · Marta over capacity" },
-    why: R.viewSpeaks,
-  },
-  {
-    fixture: "demo",
-    say: "Assign Development to Luca",
-    caption: { v0: "Development is already with Luca · Team view added", v2: "Team view added · Marta over capacity" },
-    why: R.noopBehindView,
-  },
-  {
-    fixture: "demo",
     say: "Remove Luca from the team",
-    caption: { v0: "Luca removed · 1 task now unassigned · Team view added", v2: "Luca removed · 1 task unassigned · Team view added · Marta over capacity" },
-    why: `${R.opCaption} ED-6 lists "Luca removed · 1 task unassigned". ${R.viewSpeaks}`,
+    caption: { v0: "Luca removed · 1 task now unassigned · Team view added", v2: "Luca removed · 1 task unassigned · Team view added" },
+    why: `${R.opCaption} ED-6 lists "Luca removed · 1 task unassigned".`,
   },
   {
     fixture: "demo",
     say: "Set Marta's capacity to 4 days a week",
-    caption: { v0: "Marta · 4d of capacity · Team view added", v2: "Marta · 4 days a week · Team view added · Marta over capacity" },
+    caption: { v0: "Marta · 4d of capacity · Team view added", v2: "Marta · 4 days a week · Team view added" },
     why: R.capacity,
   },
   {
     fixture: "demo",
     say: "Sara has 3 days a week",
-    caption: { v0: "Sara · 3d of capacity · Team view added", v2: "Sara · 3 days a week · Team view added · Marta over capacity" },
+    caption: { v0: "Sara · 3d of capacity · Team view added", v2: "Sara · 3 days a week · Team view added" },
     why: R.capacity,
   },
   {
@@ -245,75 +203,33 @@ export const EXPECTED_DIFFS: readonly ExpectedDiff[] = [
   {
     fixture: "demo",
     say: "Add Giulia and Paolo to the team",
-    caption: {
-      v0: "Giulia and Paolo added to the team · 10d each by default · Team view added",
-      v2: "Giulia added to the team · capacity not set · Paolo added to the team · capacity not set · Giulia joins the project · Paolo joins the project · Team view added · Marta over capacity",
-    },
-    why: R.peopleJoin,
+    caption: { v0: "Giulia and Paolo added to the team · 10d each by default · Team view added", v2: "Giulia and Paolo added to the team · capacity not set · Team view added" },
+    why: R.peopleAdded,
   },
   {
     fixture: "demo",
     say: "Add Giulia and Paolo to the team as designers with 4 days",
-    caption: {
-      v0: "Giulia and Paolo added to the team · 4d each · Team view added",
-      v2: "Giulia added to the team · 4 days a week · Paolo added to the team · 4 days a week · Giulia joins the project · Paolo joins the project · Team view added · Marta over capacity",
-    },
-    why: R.peopleJoin,
+    caption: { v0: "Giulia and Paolo added to the team · 4d each · Team view added", v2: "Giulia and Paolo added to the team · 4 days a week · Team view added" },
+    why: R.peopleAdded,
   },
   {
     fixture: "demo",
     say: "Add Giulia to the team as a designer",
-    caption: { v0: "Giulia added to the team · 10d by default · Team view added", v2: "Giulia added to the team · capacity not set · Giulia joins the project · Team view added · Marta over capacity" },
-    why: R.peopleJoin,
+    caption: { v0: "Giulia added to the team · 10d by default · Team view added", v2: "Giulia added to the team · capacity not set · Team view added" },
+    why: R.peopleAdded,
   },
   {
     fixture: "demoNoTeam",
     say: "Add a sample team",
-    caption: {
-      v0: "Sample team added · Marta, Sara and Luca · Team view added",
-      v2: "Marta joins the project · Sara joins the project · Luca joins the project · Research → Sara · Sara 0/4d · Visual Direction → Marta · Marta is now 4d over · UI Design → Marta · Marta is now 4d over · Development → Luca · Luca 8/15d · Team view added · Marta over capacity",
-    },
+    caption: { v0: "Sample team added · Marta, Sara and Luca · Team view added", v2: "Sample team added · Marta, Sara and Luca · Marta over capacity" },
     why: R.sampleTeam,
   },
 
-  /* ---------- Brief ---------- */
-  {
-    fixture: "demo",
-    say: "Add to the brief: homepage preview on Friday",
-    caption: { v0: "Added to the client brief · Note · Brief view added", v2: "Added to the client brief · Note · Brief view added · for the client · composed from the project, nothing invented" },
-    why: R.viewSpeaks,
-  },
-  {
-    fixture: "demo",
-    say: "Add to the brief under risks: fonts still unlicensed",
-    caption: { v0: "Added to the client brief · Risks · Brief view added", v2: "Added to the client brief · Risks · Brief view added · for the client · composed from the project, nothing invented" },
-    why: R.viewSpeaks,
-  },
-  {
-    fixture: "demo",
-    say: "Add to the team brief: standup moved to 10",
-    caption: { v0: "Added to the team brief · Note · Brief view added", v2: "Added to the team brief · Note · Brief view added · for the team · composed from the project, nothing invented" },
-    why: R.viewSpeaks,
-  },
-  {
-    fixture: "demo",
-    say: "Add to the team brief under risks: copy is late",
-    caption: { v0: "Added to the team brief · Risks · Brief view added", v2: "Added to the team brief · Risks · Brief view added · for the team · composed from the project, nothing invented" },
-    why: R.viewSpeaks,
-  },
-  {
-    fixture: "demo",
-    say: "Reset the brief",
-    caption: { v0: "The client brief is already FORM's version · Brief view added", v2: "Brief view added · for the client · composed from the project, nothing invented" },
-    why: R.noopBehindView,
-  },
-  {
-    fixture: "demo",
-    say: "Reset the team brief",
-    caption: { v0: "The team brief is already FORM's version · Brief view added", v2: "Brief view added · for the team · composed from the project, nothing invented" },
-    why: R.noopBehindView,
-  },
-
   /* ---------- Moodboard ---------- */
-  { fixture: "demo", say: "Clear the moodboard", caption: { v0: "The moodboard is already empty", v2: "Moodboard added · drop, paste or browse images" }, why: R.noopBehindView },
+  {
+    fixture: "demo",
+    say: "Clear the moodboard",
+    caption: { v0: "The moodboard is already empty", v2: "The moodboard is already empty · Moodboard added · drop, paste or browse images" },
+    why: R.noopFirst,
+  },
 ];

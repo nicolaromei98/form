@@ -108,6 +108,27 @@ export interface CaptionPart {
   /** A later part with the same key replaces this one in place (plan §5.9) */
   key?: string;
   tone?: "done" | "proposal";
+  /**
+   * Caption policy rule 1 (DECISIONS, wave 5): one template said about several entities in one
+   * command is said once, with the names joined ("Giulia and Paolo added to the team · capacity
+   * not set"). `text` is the part for this entity alone.
+   */
+  group?: CaptionGroup;
+  /**
+   * Caption policy rule 2: the keys of parts this one makes redundant in the same command
+   * ("Giulia added to the team" implies "Giulia joins the project").
+   */
+  implies?: readonly string[];
+}
+
+/** A part's template across entities (caption policy rule 1) */
+export interface CaptionGroup {
+  /** The template with `{names}` where the names go; parts group when their templates are equal */
+  template: string;
+  /** The template for two or more names, when the verb agrees ("{names} join the project") */
+  plural?: string;
+  /** This part's entity, as the text names it */
+  name: string;
 }
 
 /**

@@ -413,8 +413,17 @@ describe("addPerson", () => {
     expect(captionOf(s, person({ capacityDaysPerWeek: 5 }))).toBe("Giulia added to the team · 5 days a week");
     expect(captionOf(s, person({ capacityDaysPerWeek: 1 }))).toBe("Giulia added to the team · 1 day a week");
     expect(captionOf(s, person({ capacityDaysPerWeek: 0.5 }))).toBe("Giulia added to the team · 0.5 days a week");
-    expect(run(s, [person({ name: "Giulia" }), person({ name: "Paolo" })]).caption?.text).toBe(
-      "Giulia added to the team · capacity not set · Paolo added to the team · capacity not set",
+  });
+
+  it("says people added alike once, and their joining the project goes without saying (caption policy rules 1 and 2)", () => {
+    const s = demo();
+    const [giulia, paolo] = [person({ name: "Giulia" }), person({ name: "Paolo" })];
+    expect(run(s, [giulia, paolo]).caption?.text).toBe("Giulia and Paolo added to the team · capacity not set");
+    const joining = [giulia, paolo, { op: "addMember", personId: giulia.personId }, { op: "addMember", personId: paolo.personId }];
+    expect(run(s, joining).caption?.text).toBe("Giulia and Paolo added to the team · capacity not set");
+    // Different capacities are different sentences
+    expect(run(s, [giulia, person({ name: "Paolo", capacityDaysPerWeek: 4 })]).caption?.text).toBe(
+      "Giulia added to the team · capacity not set · Paolo added to the team · 4 days a week",
     );
   });
 
@@ -832,7 +841,16 @@ describe("createProject", () => {
     expect(research).toMatchObject({ status: "done", progress: 100, completedAt: FIXTURE_NOW, order: nKeys(4)[0], ownerId: sara });
     expect(ui).toMatchObject({ status: "active", progress: 30, completedAt: null, dependsOn: [visual.id], order: nKeys(4)[2] });
     expect(dev.dependsOn).toEqual([ui.id]);
-    expect(captionOf(s, op)).toBe("Timeline created · 4 tasks");
+    // Born as a timeline on an unconfirmed start: its dates are samples (caption policy rule 6)
+    expect(captionOf(s, op)).toBe("Timeline created · 4 tasks · sample dates, sequenced from estimates");
+  });
+
+  it("says the dates are samples only on a timeline birth with an unconfirmed start and tasks", () => {
+    const s = demo();
+    expect(captionOf(s, create({ startAs: "timeline", startDate: "2026-09-28", startConfirmed: true }, demoSeeds()))).toBe("Timeline created · 4 tasks");
+    expect(captionOf(s, create({ startAs: "board", startDate: "2026-09-28" }, demoSeeds()))).toBe("Board created · 4 tasks");
+    expect(captionOf(s, create({ startAs: "timeline", startDate: null }, demoSeeds()))).toBe("Timeline created · 4 tasks");
+    expect(captionOf(s, create({ startAs: "timeline", startDate: "2026-09-28" }))).toBe("Timeline created · no tasks yet");
   });
 
   it("starts the command's project ops on the new project, after people added in the same command", () => {
@@ -847,7 +865,8 @@ describe("createProject", () => {
     const p = result.state.projects[op.projectId as ProjectId];
     expect(Object.values(p.tasks).map((t) => t.title).sort()).toEqual(["Copywriting", "Discovery"]);
     expect(p.memberIds).toEqual([giulia.personId]);
-    expect(result.caption?.text).toBe("Giulia added to the team · capacity not set · Board created · 1 task · Copywriting added");
+    // At most four parts (caption policy rule 7): the new task is on screen, its part is cut
+    expect(result.caption?.text).toBe("Giulia added to the team · capacity not set · Board created · 1 task");
     // The workspace commit and the project commit share one group
     expect(result.commits.map((c) => c.docId)).toEqual([s.workspace.id, op.projectId]);
   });
