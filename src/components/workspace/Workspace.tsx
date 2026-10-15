@@ -2,15 +2,16 @@
 
 import { AnimatePresence, LayoutGroup } from "motion/react";
 import { useLayoutEffect } from "react";
-import { useForm } from "@/lib/store";
+import { useActions, useActiveView, useBlocks, useFx, useHasProject, usePhase } from "@/lib/store/hooks";
 import { BLOCKS } from "./registry";
 
 export function Workspace() {
-  const tool = useForm((s) => s.doc.tool);
-  const rep = useForm((s) => s.doc.view.representation);
-  const fx = useForm((s) => s.fx);
-  const phase = useForm((s) => s.phase);
-  const setSpawn = useForm((s) => s.setSpawn);
+  const hasProject = useHasProject();
+  const blocks = useBlocks();
+  const rep = useActiveView();
+  const fx = useFx();
+  const phase = usePhase();
+  const { setSpawn } = useActions();
 
   // Creation: measure where each task surface will land so agent volumes can fly there
   useLayoutEffect(() => {
@@ -26,7 +27,7 @@ export function Workspace() {
     setSpawn(rects);
   }, [fx.seq, fx.kind, phase, setSpawn]);
 
-  if (!tool) return null;
+  if (!hasProject) return null;
 
   return (
     <LayoutGroup>
@@ -34,11 +35,12 @@ export function Workspace() {
         <AnimatePresence>
           {/* Focus is a stage: only the header line and the stage remain. The brief already
               states progress, so the metrics and progress blocks step aside for it */}
-          {tool.blocks
+          {blocks
             .filter((b) => (rep === "focus" ? b === "header" || b === "collection" : rep === "brief" ? b !== "metrics" && b !== "progress" : true))
             .map((b) => {
               const Block = BLOCKS[b];
-              return <Block key={b} />;
+              // A block with no surface yet (budget, activity) shows nothing
+              return Block ? <Block key={b} /> : null;
             })}
         </AnimatePresence>
       </div>

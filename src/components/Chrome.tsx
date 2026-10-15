@@ -2,21 +2,17 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
-import { useForm } from "@/lib/store";
+import { useActions, useCanRedo, useCanUndo, useChangeCount, useHasProject } from "@/lib/store/hooks";
 import { AgentMark } from "./agent/AgentMark";
 import { ShuffleText } from "./text/ShuffleText";
 
 /** Minimal, contextual chrome: wordmark, history controls, engine status, metadata. */
 export function Chrome() {
-  const hasTool = useForm((s) => !!s.doc.tool);
-  const canUndo = useForm((s) => s.past.length > 0);
-  const canRedo = useForm((s) => s.future.length > 0);
-  const undo = useForm((s) => s.undo);
-  const redo = useForm((s) => s.redo);
-  const reset = useForm((s) => s.reset);
-  const engine = useForm((s) => s.engine);
-  const changes = useForm((s) => s.log.length);
-  const setIntro = useForm((s) => s.setIntro);
+  const hasTool = useHasProject();
+  const canUndo = useCanUndo();
+  const canRedo = useCanRedo();
+  const { undo, redo, reset, setIntro } = useActions();
+  const changes = useChangeCount();
 
   return (
     <>
@@ -30,12 +26,13 @@ export function Chrome() {
         </div>
 
         <div className="pointer-events-auto flex items-center gap-1.5">
+          {/* The only engine until Phase 5 (plan §13, decision 3) */}
           <span
             className="t-micro mr-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-text-3 sm:flex"
-            title={engine === "demo" ? "Commands are interpreted by a deterministic, rule-based parser. No AI model is involved." : "Commands are interpreted by Claude on the server."}
+            title="Commands are interpreted by a deterministic, rule-based parser. No AI model is involved."
           >
-            <span className={`h-[6px] w-[6px] rounded-full ${engine === "demo" ? "border border-text-3" : "bg-ink"}`} />
-            {engine === "demo" ? "Demo parser · no API key" : "Claude · server-side"}
+            <span className="h-[6px] w-[6px] rounded-full border border-text-3" />
+            Demo parser · no AI model
           </span>
           <IconButton label="About this project" disabled={false} onClick={() => setIntro(true)}>
             <circle cx="8" cy="8" r="5.6" />

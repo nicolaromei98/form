@@ -2,7 +2,21 @@
 
 import { AnimatePresence, animate, motion, useMotionValue, useTransform, type Transition } from "motion/react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { useForm, type Rect } from "@/lib/store";
+import { nextViews } from "@/lib/domain/views";
+import {
+  type Rect,
+  useActions,
+  useComposerOpen,
+  useFx,
+  useHasProject,
+  useIntro,
+  usePhase,
+  useProposal,
+  useReducedMotion,
+  useSelectedId,
+  useSpawn,
+  useViews,
+} from "@/lib/store/hooks";
 import { CREATE, TAB_GROW_MS, ease, springs } from "@/lib/motion";
 import { useViewport } from "@/lib/useViewport";
 import { NODE, agentScale, agentShape, compactFrame, composerFrame, nodeFrames, type AgentMode, type Capsule, type Vec } from "./geometry";
@@ -13,22 +27,22 @@ import { CompactPill } from "./CompactPill";
 import { Caption } from "./Caption";
 import { NODE_TIMING, NodeBlobs, NodeLabels } from "./ViewNodes";
 import { VIEW_OFFER } from "./suggestions";
-import { nextViews } from "@/lib/views";
 
 export function AgentLayer() {
   const { w: vw, h: vh } = useViewport();
-  const hasTool = useForm((s) => !!s.doc.tool);
-  const composerOpen = useForm((s) => s.composerOpen);
-  const phase = useForm((s) => s.phase);
-  const spawn = useForm((s) => s.spawn);
-  const fxSeq = useForm((s) => s.fx.seq);
-  const reduced = useForm((s) => s.reducedMotion);
-  const openComposer = useForm((s) => s.openComposer);
-  const submit = useForm((s) => s.submit);
-  const intro = useForm((s) => s.intro);
-  // Nodes only speak when nothing else is being decided: no selection, proposal or plan
-  const quiet = useForm((s) => !s.selectedId && !s.doc.proposal && !s.doc.plan);
-  const views = useForm((s) => s.doc.tool?.views);
+  const hasTool = useHasProject();
+  const composerOpen = useComposerOpen();
+  const phase = usePhase();
+  const spawn = useSpawn();
+  const fxSeq = useFx().seq;
+  const reduced = useReducedMotion();
+  const { openComposer, submit } = useActions();
+  const intro = useIntro();
+  // Nodes only speak when nothing else is being decided: no selection and no proposal (steps or a plan)
+  const selectedId = useSelectedId();
+  const proposal = useProposal();
+  const quiet = selectedId === null && proposal === null;
+  const views = useViews();
   const offers = useMemo(() => nextViews(views), [views]);
   const [nodeHover, setNodeHover] = useState<number | null>(null);
   // A different set of offers (a view added, undone or redone) folds the nodes back into the agent
@@ -183,8 +197,8 @@ export function AgentLayer() {
         onHover={setNodeHover}
         // The same path as typing it: the agent takes it in, answers with a caption, and Undo removes the view
         onPick={(view, keyboard) =>
-          // Canned phrases the demo parser routes: deterministic and immediate on any engine
-          void submit(VIEW_OFFER[view], { engine: "demo" }).then((ok) => {
+          // Canned phrases the demo parser routes: deterministic and immediate
+          void submit(VIEW_OFFER[view]).then((ok) => {
             // Keyboard users land on the new tab once it has grown
             if (!ok || !keyboard) return;
             setTimeout(() => {

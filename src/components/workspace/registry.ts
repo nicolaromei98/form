@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { BlockType } from "@/lib/schema";
+import type { BlockKind } from "@/lib/domain/schema/primitives";
 import { CollectionBlock, HeaderBlock, MetricsBlock, ProgressBlock } from "./blocks";
 import { MoodboardBlock } from "./Moodboard";
 import { CostTag, EditableText, EstimateControl, NumberBadge, PriorityControl, ProgressControl, ProposalBlock, StatusControl, SubtaskList } from "./parts";
@@ -16,12 +16,15 @@ import { BriefView } from "./BriefView";
  * operations that reference these registered blocks, representations and
  * field components by name.
  */
-export const BLOCKS: Record<BlockType, ComponentType> = {
+export const BLOCKS: Readonly<Record<BlockKind, ComponentType | null>> = {
   header: HeaderBlock,
   metrics: MetricsBlock,
   progress: ProgressBlock,
   collection: CollectionBlock,
   moodboard: MoodboardBlock,
+  // In the schema already, with no surface until a later phase: the workspace skips them
+  budget: null,
+  activity: null,
 };
 
 export const REPRESENTATIONS = {

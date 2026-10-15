@@ -3,7 +3,8 @@
 import { AnimatePresence, animate, motion, useIsPresent, useMotionValue, useTransform, type Transition } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { ease, springs } from "@/lib/motion";
-import { REPRESENTATION_LABEL, type Representation } from "@/lib/schema";
+import { VIEW_LABEL } from "@/lib/domain/labels";
+import type { ViewKind } from "@/lib/domain/schema/primitives";
 import { REST_INSET, type NodeFrame, type Vec } from "./geometry";
 import { ShuffleText } from "../text/ShuffleText";
 
@@ -68,7 +69,7 @@ export function NodeLabels({
   shown: boolean;
   reduced: boolean;
   onHover: (i: number | null) => void;
-  onPick: (view: Representation, keyboard: boolean) => void;
+  onPick: (view: ViewKind, keyboard: boolean) => void;
 }) {
   return (
     <div role="group" aria-label="Views FORM suggests">
@@ -91,7 +92,7 @@ function NodeLabel({
   index: number;
   reduced: boolean;
   onHover: (i: number | null) => void;
-  onPick: (view: Representation, keyboard: boolean) => void;
+  onPick: (view: ViewKind, keyboard: boolean) => void;
 }) {
   const bud = NODE_TIMING.bud + i * NODE_TIMING.stagger;
   const delay = reduced ? 0 : bud + NODE_TIMING.label;
@@ -107,7 +108,7 @@ function NodeLabel({
   return (
     <motion.button
       type="button"
-      aria-label={`Add the ${REPRESENTATION_LABEL[f.view]} view`}
+      aria-label={`Add the ${VIEW_LABEL[f.view]} view`}
       tabIndex={active ? 0 : -1}
       // ::before widens the hit area; the capsule is the pill's height
       className={`focus-ring-ink fixed z-50 flex cursor-pointer items-center justify-center rounded-full bg-ink text-on-ink-2 transition-colors before:absolute before:-inset-1 before:rounded-full hover:text-on-ink ${active ? "" : "pointer-events-none"}`}
@@ -133,7 +134,7 @@ function NodeLabel({
         <svg width="9" height="9" viewBox="0 0 10 10" aria-hidden className="shrink-0">
           <path d="M5 1v8M1 5h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
         </svg>
-        <ShuffleText text={REPRESENTATION_LABEL[f.view]} className="t-body-s text-on-ink" />
+        <ShuffleText text={VIEW_LABEL[f.view]} className="t-body-s text-on-ink" />
       </motion.span>
     </motion.button>
   );
