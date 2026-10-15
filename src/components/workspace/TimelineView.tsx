@@ -2,10 +2,15 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { Fragment, useMemo } from "react";
-import { useForm } from "@/lib/store";
+import { addDays, daysBetween, isoWeekday } from "@/lib/domain/dates";
+import { STATUS_LABEL } from "@/lib/domain/labels";
+import type { StepId, TaskId } from "@/lib/domain/schema/ids";
+import type { IsoDate } from "@/lib/domain/schema/primitives";
+import type { Step, Task } from "@/lib/domain/schema/project";
+import type { SubtasksProposal } from "@/lib/domain/schema/proposal";
+import { dateMode, fmtDateYear, fmtDay, fmtDays, fmtShort, type GridBar, scheduleLabel, unknownLabel } from "@/lib/planning/format";
+import { type ProjectPlan, type TimelineGrid, useActions, usePlan, useTaskIds, useTimelineGrid, useToday, useVisibleTaskIds } from "@/lib/store/hooks";
 import { ease, move } from "@/lib/motion";
-import { addDays, dayDiff, fmtDay, fmtDays, fmtShort, parseISODate, schedule, subtasksOf, taskNumber, toISODate, topLevel } from "@/lib/selectors";
-import { STATUS_LABEL, type Task } from "@/lib/schema";
 import { useWidth } from "@/lib/useWidth";
 import { EditableText, EstimateControl, NumberBadge, StatusControl, StatusGlyph } from "./parts";
 import { useTaskSurface } from "./TaskCard";
@@ -27,24 +32,51 @@ const TRACK_DIM = "rgba(10,10,10,0.0375)";
 const TRACK_INK = "rgba(10,10,10,0.2)";
 
 /**
- * Representation: timeline. Dates are derived — start date + estimates in
- * workflow order — and labelled as a sample until the user sets a start.
+ * Boundary with step 18 area (b): `parts` and `TaskCard` take the task as a prop. Until they read
+ * the v2 task, the timeline hands them its task as their prop type. Once they take the v2 `Task`,
+ * this is the identity and the integration step removes it.
+ */
+type SurfaceTask = Parameters<typeof useTaskSurface>[0];
+const surfaceTask = (task: Task): SurfaceTask => task as unknown as SurfaceTask;
+
+/** A direct edit: one history entry, no caption unless refused (v0 "edit") */
+const EDIT = { label: "edit" } as const;
+
+/**
+ * Representation: timeline. Dates come from the schedule: working days from the start, estimates
+ * and dependencies (plan §8.2), drawn on the v0 calendar-day grid, so a bar spans the weekends
+ * inside it. They are labelled as a sample until the user sets a start.
  */
 export function TimelineView() {
-  const doc = useForm((s) => s.doc);
-  const commit = useForm((s) => s.commit);
-  const resolve = useForm((s) => s.resolveProposal);
-  const tool = doc.tool!;
-  const sch = useMemo(() => schedule(doc), [doc]);
+  const plan = usePlan();
+  const grid = useTimelineGrid();
+  const workflow = useTaskIds();
+  const visible = useVisibleTaskIds();
+  const today = useToday();
+  const { resolveProposal: resolve, shiftStart } = useActions();
   const [ref, width] = useWidth<HTMLDivElement>();
-  const compact = doc.view.density === "compact";
 
-  const start = parseISODate(tool.startDate);
-  const todayOff = dayDiff(start, new Date());
+  // Workflow order, as the header says; the view's filters (hide done …) still apply
+  const rows = useMemo(() => {
+    const shown = new Set(visible);
+    return workflow.filter((id) => shown.has(id));
+  }, [workflow, visible]);
+
+  if (plan === null || grid === null) return null;
+  const project = plan.project;
+  const view = project.viewConfig;
+  const compact = view.density === "compact";
+  const mode = dateMode(plan.schedule.anchor);
+
+  // Day 0 is the anchor date; with no date at all (relative mode) the cells are working days
+  const origin = grid.origin;
+  const todayOff = origin === null ? null : daysBetween(origin, today);
   const from = -1;
-  let end = Math.max(sch.totalDays, 1) + 2;
-  if (todayOff >= end && todayOff < end + 10) end = todayOff + 2;
+  let end = Math.max(grid.totalDays, 1) + 2;
+  if (todayOff !== null && todayOff >= end && todayOff < end + 10) end = todayOff + 2;
   const days = end - from;
+  /** Today's cell, when it is on the grid */
+  const todayAt = todayOff !== null && todayOff >= from && todayOff <= end ? todayOff : null;
 
   const labelW = width < 640 ? 164 : compact ? 248 : 280;
   const tail = 84; // room for the date range printed after the last bar
@@ -55,14 +87,17 @@ export function TimelineView() {
   const barH = compact ? 26 : 34;
   const subH = compact ? 32 : 36;
 
-  const rows = topLevel(doc).filter((t) => !(doc.view.hideDone && t.status === "done"));
+  const dateAt = (d: number): IsoDate | null => (origin === null ? null : addDays(origin, d));
+  const titleOf = (id: TaskId) => (Object.hasOwn(project.tasks, id) ? project.tasks[id].title : "a task");
+
   let spawn = 0;
   let order = 0; // build order across task and step rows
 
   const ticks = Array.from({ length: days }, (_, i) => {
     const d = from + i;
-    const date = addDays(start, d);
-    return { d, date, monday: date.getDay() === 1, weekend: date.getDay() === 0 || date.getDay() === 6 };
+    const date = dateAt(d);
+    // Shaded: the days the calendar doesn't work (the weekends, in the demo)
+    return { d, date, monday: date !== null && isoWeekday(date) === 1, weekend: date !== null && !plan.calendar.isWorkingDay(date) };
   });
 
   return (
@@ -97,10 +132,10 @@ export function TimelineView() {
                   }}
                 />
               ))}
-              {todayOff >= from && todayOff <= end && (
-                <div className="absolute top-0 bottom-0 w-px bg-ink" style={{ left: X(todayOff) + dayW / 2 }}>
+              {todayAt !== null && (
+                <div className="absolute top-0 bottom-0 w-px bg-ink" style={{ left: X(todayAt) + dayW / 2 }}>
                   <span className="t-micro absolute top-[10px] left-1/2 z-10 -translate-x-1/2 rounded-full bg-ink px-2 py-[3px] whitespace-nowrap text-on-ink">
-                    Today {fmtShort(new Date())}
+                    Today {fmtShort(today)}
                   </span>
                 </div>
               )}
@@ -119,70 +154,77 @@ export function TimelineView() {
               </div>
               <div className="relative h-full" style={{ width: chartW }}>
                 {ticks.map((t, i) =>
+                  t.date !== null &&
                   (t.monday || (i === 0 && !ticks.slice(1, 4).some((n) => n.monday))) &&
                   // The today tag owns its slot in the week row
-                  !(todayOff >= from && todayOff <= end && Math.abs(X(t.d) - X(todayOff)) < 72) ? (
+                  !(todayAt !== null && Math.abs(X(t.d) - X(todayAt)) < 72) ? (
                     <span key={`w${t.d}`} className="t-micro absolute top-[14px] pl-1.5 whitespace-nowrap text-text-2" style={{ left: X(t.d) }}>
                       {fmtDay(t.date)}
                     </span>
                   ) : null,
                 )}
                 {dayW >= 22 &&
-                  ticks.map((t) => (
-                    <span
-                      key={`d${t.d}`}
-                      className="t-data absolute bottom-0 text-center text-[11px] text-text-3"
-                      style={{ left: X(t.d), width: dayW }}
-                    >
-                      {String(t.date.getDate()).padStart(2, "0")}
-                    </span>
-                  ))}
+                  ticks.map((t) =>
+                    t.date !== null ? (
+                      <span
+                        key={`d${t.d}`}
+                        className="t-data absolute bottom-0 text-center text-[11px] text-text-3"
+                        style={{ left: X(t.d), width: dayW }}
+                      >
+                        {t.date.slice(8, 10)}
+                      </span>
+                    ) : null,
+                  )}
               </div>
             </motion.div>
 
             {/* Rows */}
             <div className="relative">
-              {rows.map((t) => {
-                const slot = sch.slots[t.id];
-                const subs = subtasksOf(doc, t.id);
-                const proposal = doc.proposal?.parentId === t.id ? doc.proposal : null;
-                const spawnIndex = slot && spawn < 6 ? spawn++ : null;
+              {rows.map((id) => {
+                const t = project.tasks[id];
+                const bar = grid.bars.get(id);
+                const timing = plan.schedule.timings.get(id);
+                const proposal = project.proposal?.kind === "subtasks" && project.proposal.taskId === id ? project.proposal : null;
+                const spawnIndex = bar && spawn < 6 ? spawn++ : null;
                 const at = order++;
                 return (
-                  <Fragment key={t.id}>
-                    <Row height={rowH} labelW={labelW} enter={BUILD.label + at * BUILD.step} label={<RowLabel task={t} number={taskNumber(doc, t.id)} compact={compact} />}>
-                      {slot ? (
+                  <Fragment key={id}>
+                    <Row height={rowH} labelW={labelW} enter={BUILD.label + at * BUILD.step} label={<RowLabel task={t} number={plan.number(id)} compact={compact} />}>
+                      {bar ? (
                         <Bar
                           task={t}
-                          left={X(slot.start)}
-                          width={slot.days * dayW}
+                          left={X(bar.start)}
+                          width={bar.days * dayW}
                           top={(rowH - barH) / 2}
                           height={barH}
                           spawnIndex={spawnIndex}
                           enter={BUILD.bar + at * BUILD.step}
-                          range={[addDays(start, slot.start), addDays(start, slot.start + slot.days - 1)]}
+                          range={origin === null ? null : [addDays(origin, bar.start), addDays(origin, bar.start + bar.days - 1)]}
                         />
                       ) : (
-                        <div className="absolute flex items-center gap-2" style={{ left: X(sch.totalDays) + 8, top: (rowH - 26) / 2 }}>
-                          <span className="t-data text-text-3">Needs a duration</span>
-                          <span className="tone-light">
-                            <EstimateControl task={t} />
-                          </span>
+                        <div className="absolute flex items-center gap-2" style={{ left: X(grid.totalDays) + 8, top: (rowH - 26) / 2 }}>
+                          {/* The task without an estimate offers one; the tasks waiting on it name it */}
+                          <span className="t-data text-text-3">{timing?.kind === "unknown" ? unknownLabel(timing, plan.schedule, titleOf) : "Needs a duration"}</span>
+                          {(timing === undefined || (timing.kind === "unknown" && timing.reason === "noEstimate")) && (
+                            <span className="tone-light">
+                              <EstimateControl task={surfaceTask(t)} />
+                            </span>
+                          )}
                         </div>
                       )}
                     </Row>
 
                     {/* Steps travel within the timeline only (proposal → accepted): a card keeps its steps in a clipped window */}
-                    {subs.map((s) => {
-                      const ss = sch.slots[s.id];
+                    {t.steps.map((s) => {
+                      const ss = grid.steps.get(s.id);
                       const sat = order++;
                       return (
-                        <Row key={s.id} height={subH} labelW={labelW} enter={BUILD.label + sat * BUILD.step} label={<SubLabel task={s} />} layoutId={`tl-sub-${s.id}`}>
+                        <Row key={s.id} height={subH} labelW={labelW} enter={BUILD.label + sat * BUILD.step} label={<SubLabel taskId={id} step={s} />} layoutId={`tl-sub-${s.id}`}>
                           {ss && (
                             <motion.div
                               className="absolute"
                               initial={{ clipPath: wipe(6, false) }}
-                              animate={{ clipPath: wipe(6, true), backgroundColor: s.status === "done" ? "#0a0a0a" : "rgba(10,10,10,0.1)", transitionEnd: { clipPath: "none" } }}
+                              animate={{ clipPath: wipe(6, true), backgroundColor: s.done ? "#0a0a0a" : "rgba(10,10,10,0.1)", transitionEnd: { clipPath: "none" } }}
                               transition={{ clipPath: { ...move, delay: BUILD.bar + sat * BUILD.step }, backgroundColor: { duration: 0.3 } }}
                               style={{ left: X(ss.start) + 1, width: Math.max(10, ss.days * dayW - 2), top: (subH - 12) / 2, height: 12, borderRadius: 6 }}
                             />
@@ -202,17 +244,15 @@ export function TimelineView() {
                           className="overflow-hidden"
                         >
                           {(() => {
-                            let cur = slot?.start ?? 0;
+                            const cells = proposedCells(t, proposal, plan, grid);
                             return proposal.items.map((item, i) => {
-                              const left = X(cur);
-                              const w = (item.estimate ?? 0) * dayW;
-                              cur += item.estimate ?? 0;
+                              const cell = cells.get(item.stepId);
                               return (
                                 <Row
-                                  key={item.id}
+                                  key={item.stepId}
                                   height={subH}
                                   labelW={labelW}
-                                  layoutId={`tl-sub-${item.id}`}
+                                  layoutId={`tl-sub-${item.stepId}`}
                                   label={
                                     <div className="flex min-w-0 items-center gap-2 pl-9 text-text-3">
                                       <StatusGlyph status="todo" size={12} />
@@ -220,12 +260,12 @@ export function TimelineView() {
                                     </div>
                                   }
                                 >
-                                  {item.estimate != null && slot && (
+                                  {cell && (
                                     <motion.div
                                       className="absolute rounded-full border border-dashed border-line-strong"
                                       initial={{ opacity: 0, x: -8 }}
                                       animate={{ opacity: 1, x: 0, transition: { delay: 0.1 + i * 0.06, ...move } }}
-                                      style={{ left: left + 1, width: Math.max(10, w - 2), top: (subH - 14) / 2, height: 14 }}
+                                      style={{ left: X(cell.start) + 1, width: Math.max(10, cell.days * dayW - 2), top: (subH - 14) / 2, height: 14 }}
                                     />
                                   )}
                                 </Row>
@@ -262,22 +302,53 @@ export function TimelineView() {
         {/* Honest footer: where the dates come from */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
           <span className="t-data text-text-3">
-            {tool.startDateIsSample ? "Sample schedule" : "Schedule"} · derived from estimates in workflow order
-            {sch.unscheduled.length > 0 && ` · ${sch.unscheduled.length} without duration`}
+            {scheduleLabel(mode)} · working days, from estimates and dependencies
+            {grid.unscheduled.length > 0 && ` · ${grid.unscheduled.length} without dates`}
           </span>
           <div className="flex items-center gap-1">
             <span className="t-micro mr-1 text-text-3">Start</span>
-            <ShiftButton label="Start one week earlier" onClick={() => commit([{ op: "setStartDate", date: toISODate(addDays(start, -7)) }], "start date")} d="M6.5 2.5L3.5 5l3 2.5" />
+            <ShiftButton label="Start one week earlier" onClick={() => shiftStart(-7)} d="M6.5 2.5L3.5 5l3 2.5" />
             <span className="t-data rounded-full bg-white/70 px-2.5 py-1.5 text-text">
-              {start.getDate()} {start.toLocaleString("en-US", { month: "short" })} {start.getFullYear()}
-              {tool.startDateIsSample && <span className="text-text-3"> · sample date</span>}
+              {project.startDate === null ? "—" : fmtDateYear(project.startDate)}
+              {mode === "sample" && <span className="text-text-3"> · sample date</span>}
             </span>
-            <ShiftButton label="Start one week later" onClick={() => commit([{ op: "setStartDate", date: toISODate(addDays(start, 7)) }], "start date")} d="M3.5 2.5L6.5 5l-3 2.5" />
+            <ShiftButton label="Start one week later" onClick={() => shiftStart(7)} d="M3.5 2.5L6.5 5l-3 2.5" />
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+/**
+ * Where the proposed steps would sit once accepted, as cells of the grid (plan §8.2): after the
+ * task's own steps, back to back from its start, each ⌈estimate / allocation⌉ working days and cut
+ * at its finish: the schedule's step rule (Q1), on the plan's calendar. A step without an estimate,
+ * or a task without dates, gets no bar.
+ */
+function proposedCells(task: Task, proposal: SubtasksProposal, plan: ProjectPlan, grid: TimelineGrid): ReadonlyMap<StepId, GridBar> {
+  const cells = new Map<StepId, GridBar>();
+  const timing = plan.schedule.timings.get(task.id);
+  if (timing?.kind !== "scheduled" || timing.finish <= timing.es) return cells;
+  const lo = timing.es;
+  const hi = timing.finish;
+  const allocation = task.allocation > 0 && task.allocation <= 1 ? task.allocation : 1;
+  const length = (estimate: number) => Math.ceil(estimate / allocation);
+  const origin = grid.origin;
+  /** The grid cell of a working-day ordinal: calendar days from the origin, or working days in relative mode */
+  const cell = (ordinal: number) => (origin === null ? ordinal - plan.schedule.anchor.ordinal : daysBetween(origin, plan.calendar.dateAt(ordinal)));
+
+  let cursor = lo;
+  for (const s of task.steps) if (s.estimateDays !== null) cursor += length(s.estimateDays);
+  for (const item of proposal.items) {
+    if (item.estimateDays === null) continue;
+    const es = Math.min(cursor, hi - 1);
+    const finish = Math.max(es + 1, Math.min(cursor + length(item.estimateDays), hi));
+    const start = cell(es);
+    cells.set(item.stepId, { start, days: Math.max(1, cell(finish - 1) - start + 1) });
+    cursor += length(item.estimateDays);
+  }
+  return cells;
 }
 
 function ShiftButton({ label, onClick, d }: { label: string; onClick: () => void; d: string }) {
@@ -331,42 +402,42 @@ function Row({
 }
 
 function RowLabel({ task, number, compact }: { task: Task; number: string; compact: boolean }) {
-  const update = useForm((s) => s.updateTask);
-  const { highlight } = useTaskSurface(task);
+  const { commit } = useActions();
+  const { highlight } = useTaskSurface(surfaceTask(task));
   return (
     <div className="tone-light flex min-w-0 flex-1 items-center gap-2">
-      <NumberBadge task={task} number={number} inline />
-      <StatusControl task={task} variant="bare" />
+      <NumberBadge task={surfaceTask(task)} number={number} inline />
+      <StatusControl task={surfaceTask(task)} variant="bare" />
       {highlight && <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-signal" aria-label="Urgent" />}
       <EditableText
         value={task.title}
         label="Task title"
-        onCommit={(v) => update(task.id, { title: v })}
+        onCommit={(v) => commit([{ op: "updateTask", taskId: task.id, field: "title", value: v }], EDIT)}
         className={`${compact ? "t-body" : task.emphasis ? "t-body-l" : "t-body"} min-w-0 truncate`}
       />
     </div>
   );
 }
 
-function SubLabel({ task }: { task: Task }) {
-  const update = useForm((s) => s.updateTask);
+function SubLabel({ taskId, step }: { taskId: TaskId; step: Step }) {
+  const { commit } = useActions();
   return (
     <div className="tone-light flex min-w-0 flex-1 items-center gap-2 pl-9">
       <button
         type="button"
-        aria-label={task.status === "done" ? `Mark ${task.title} not done` : `Mark ${task.title} done`}
-        onClick={() => update(task.id, { status: task.status === "done" ? "todo" : "done" })}
+        aria-label={step.done ? `Mark ${step.title} not done` : `Mark ${step.title} done`}
+        onClick={() => commit([{ op: "updateStep", taskId, stepId: step.id, field: "done", value: !step.done }], EDIT)}
         className="focus-ring grid h-[20px] w-[20px] shrink-0 cursor-pointer place-items-center rounded-full"
       >
-        <StatusGlyph status={task.status === "done" ? "done" : "todo"} size={12} />
+        <StatusGlyph status={step.done ? "done" : "todo"} size={12} />
       </button>
       <EditableText
-        value={task.title}
+        value={step.title}
         label="Step title"
-        onCommit={(v) => update(task.id, { title: v })}
-        className={`t-body-s min-w-0 truncate ${task.status === "done" ? "text-text-3 line-through" : "text-text-2"}`}
+        onCommit={(v) => commit([{ op: "updateStep", taskId, stepId: step.id, field: "title", value: v }], EDIT)}
+        className={`t-body-s min-w-0 truncate ${step.done ? "text-text-3 line-through" : "text-text-2"}`}
       />
-      <span className="t-data ml-auto shrink-0 text-text-3">{fmtDays(task.estimate)}</span>
+      <span className="t-data ml-auto shrink-0 text-text-3">{fmtDays(step.estimateDays)}</span>
     </div>
   );
 }
@@ -389,9 +460,10 @@ function Bar({
   spawnIndex: number | null;
   /** Build-in delay (s) of the wipe */
   enter: number;
-  range: [Date, Date];
+  /** First and last day under the bar; null when the schedule has no dates (relative mode) */
+  range: readonly [IsoDate, IsoDate] | null;
 }) {
-  const { selected, dim, onClick, highlight } = useTaskSurface(task);
+  const { selected, dim, onClick, highlight } = useTaskSurface(surfaceTask(task));
   const reveal = useReveal(spawnIndex);
   const w = Math.max(height, width - 2);
   const fill = task.status === "done" ? w : Math.max(height, (task.progress / 100) * w);
@@ -452,15 +524,17 @@ function Bar({
           </span>
         )}
       </motion.button>
-      <motion.span
-        className="t-data pointer-events-none absolute whitespace-nowrap text-text-3"
-        style={{ top: top + height / 2 - 6 }}
-        initial={{ opacity: 0, left: left + w + 10 }}
-        animate={{ opacity: 1, left: left + w + 10 }}
-        transition={{ left: move, opacity: { delay: enter + 0.4, duration: 0.4 } }}
-      >
-        {fmtShort(range[0])}–{fmtShort(range[1])}
-      </motion.span>
+      {range !== null && (
+        <motion.span
+          className="t-data pointer-events-none absolute whitespace-nowrap text-text-3"
+          style={{ top: top + height / 2 - 6 }}
+          initial={{ opacity: 0, left: left + w + 10 }}
+          animate={{ opacity: 1, left: left + w + 10 }}
+          transition={{ left: move, opacity: { delay: enter + 0.4, duration: 0.4 } }}
+        >
+          {fmtShort(range[0])}–{fmtShort(range[1])}
+        </motion.span>
+      )}
     </>
   );
 }
