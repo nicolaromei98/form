@@ -29,16 +29,8 @@ import { ShuffleText } from "../text/ShuffleText";
    The task a control reads
    ------------------------------------------------------------------ */
 
-/**
- * The fields a task control reads from its task. Every surface on the store passes a `Task`.
- * Until the step 18 integration, the views still on the v0 store (Timeline, Team, Focus) hand
- * these controls their own task objects, so the id is a plain string here and only the fields
- * both shapes share are required. Integration narrows the id to `TaskId` and drops `asTaskId`.
- */
-export type TaskFields<K extends keyof Task = never> = Readonly<Pick<Task, K>> & { readonly id: string };
-
-/** A task id as the store knows it (see TaskFields) */
-export const asTaskId = (id: string): TaskId => id as TaskId;
+/** The fields a task control reads from its task: every surface passes the store's `Task` */
+export type TaskFields<K extends keyof Task = never> = Readonly<Pick<Task, "id" | K>>;
 
 /* ------------------------------------------------------------------
    Status
@@ -174,7 +166,7 @@ export function StatusControl({ task, variant = "chip" }: { task: TaskFields<"st
               type="button"
               onClick={() => {
                 // The §5.7 table moves progress with the status
-                if (s !== task.status) commit([{ op: "updateTask", taskId: asTaskId(task.id), field: "status", value: s }], { label: "status" });
+                if (s !== task.status) commit([{ op: "updateTask", taskId: task.id, field: "status", value: s }], { label: "status" });
                 statusPopClose();
               }}
               className={`focus-ring t-body-s flex h-9 cursor-pointer items-center gap-2.5 rounded-full px-3 text-left transition-colors ${
@@ -211,7 +203,7 @@ export function PriorityControl({ task, label = false }: { task: TaskFields<"pri
             aria-pressed={task.priority === p}
             onClick={(e) => {
               e.stopPropagation();
-              if (p !== task.priority) commit([{ op: "updateTask", taskId: asTaskId(task.id), field: "priority", value: p }], { label: "priority" });
+              if (p !== task.priority) commit([{ op: "updateTask", taskId: task.id, field: "priority", value: p }], { label: "priority" });
             }}
             className="focus-ring group grid h-[18px] w-[13px] cursor-pointer place-items-center rounded-full"
           >
@@ -253,7 +245,7 @@ export function ProgressControl({
   const track = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const h = size === "m" ? 6 : 4;
-  const taskId = asTaskId(task.id);
+  const taskId = task.id;
 
   // A drag is one gesture: each frame is recomputed from where it began, and the release seals one change
   const fromEvent = (e: RPointerEvent) => {
@@ -336,15 +328,10 @@ export function ProgressControl({
  * ("—"): nothing is written until the first "+", which sets half a day, and "−" closes it again
  * (Q3: FORM never invents a duration).
  */
-export function EstimateControl({
-  task,
-}: {
-  // Optional only until the step 18 integration: the v0 tasks the Timeline still passes name it `estimate`
-  task: TaskFields & { readonly estimateDays?: Task["estimateDays"] };
-}) {
+export function EstimateControl({ task }: { task: TaskFields<"estimateDays"> }) {
   const { commit } = useActions();
   const [open, setOpen] = useState(false);
-  const days = task.estimateDays ?? null;
+  const days = task.estimateDays;
   // Once there is an estimate the empty stepper has done its job: clearing it later shows "+ Duration" again
   if (open && days !== null) setOpen(false);
 
@@ -362,7 +349,7 @@ export function EstimateControl({
     setOpen(next);
   };
 
-  const set = (value: number) => commit([{ op: "updateTask", taskId: asTaskId(task.id), field: "estimateDays", value }], { label: "duration" });
+  const set = (value: number) => commit([{ op: "updateTask", taskId: task.id, field: "estimateDays", value }], { label: "duration" });
 
   if (days === null && !open) {
     return (
@@ -503,7 +490,7 @@ export function EditableText({
    ------------------------------------------------------------------ */
 
 export function NumberBadge({ task, number, inline = false }: { task: TaskFields<"title" | "priority" | "status">; number: string; inline?: boolean }) {
-  const taskId = asTaskId(task.id);
+  const taskId = task.id;
   const selected = useIsSelected(taskId);
   const { select } = useActions();
   const highlightUrgent = useViewConfig()?.highlightUrgent ?? false;
@@ -612,9 +599,8 @@ export function SubtaskList({ parentId, dense = false }: { parentId: TaskId; den
    Proposal — agent suggestions the user must accept
    ------------------------------------------------------------------ */
 
-// `parentId` stays a string until the step 18 integration: the Focus view still passes v0 ids (see TaskFields)
-export function ProposalBlock({ parentId, dense = false }: { parentId: string; dense?: boolean }) {
-  const proposal = useSubtaskProposal(asTaskId(parentId));
+export function ProposalBlock({ parentId, dense = false }: { parentId: TaskId; dense?: boolean }) {
+  const proposal = useSubtaskProposal(parentId);
   const { resolveProposal: resolve } = useActions();
   return (
     <AnimatePresence>

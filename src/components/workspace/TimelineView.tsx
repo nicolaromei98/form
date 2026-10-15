@@ -31,14 +31,6 @@ const TRACK = "rgba(10,10,10,0.075)";
 const TRACK_DIM = "rgba(10,10,10,0.0375)";
 const TRACK_INK = "rgba(10,10,10,0.2)";
 
-/**
- * Boundary with step 18 area (b): `parts` and `TaskCard` take the task as a prop. Until they read
- * the v2 task, the timeline hands them its task as their prop type. Once they take the v2 `Task`,
- * this is the identity and the integration step removes it.
- */
-type SurfaceTask = Parameters<typeof useTaskSurface>[0];
-const surfaceTask = (task: Task): SurfaceTask => task as unknown as SurfaceTask;
-
 /** A direct edit: one history entry, no caption unless refused (v0 "edit") */
 const EDIT = { label: "edit" } as const;
 
@@ -207,7 +199,7 @@ export function TimelineView() {
                           <span className="t-data text-text-3">{timing?.kind === "unknown" ? unknownLabel(timing, plan.schedule, titleOf) : "Needs a duration"}</span>
                           {(timing === undefined || (timing.kind === "unknown" && timing.reason === "noEstimate")) && (
                             <span className="tone-light">
-                              <EstimateControl task={surfaceTask(t)} />
+                              <EstimateControl task={t} />
                             </span>
                           )}
                         </div>
@@ -403,11 +395,11 @@ function Row({
 
 function RowLabel({ task, number, compact }: { task: Task; number: string; compact: boolean }) {
   const { commit } = useActions();
-  const { highlight } = useTaskSurface(surfaceTask(task));
+  const { highlight } = useTaskSurface(task);
   return (
     <div className="tone-light flex min-w-0 flex-1 items-center gap-2">
-      <NumberBadge task={surfaceTask(task)} number={number} inline />
-      <StatusControl task={surfaceTask(task)} variant="bare" />
+      <NumberBadge task={task} number={number} inline />
+      <StatusControl task={task} variant="bare" />
       {highlight && <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-signal" aria-label="Urgent" />}
       <EditableText
         value={task.title}
@@ -463,7 +455,7 @@ function Bar({
   /** First and last day under the bar; null when the schedule has no dates (relative mode) */
   range: readonly [IsoDate, IsoDate] | null;
 }) {
-  const { selected, dim, onClick, highlight } = useTaskSurface(surfaceTask(task));
+  const { selected, dim, onClick, highlight } = useTaskSurface(task);
   const reveal = useReveal(spawnIndex);
   const w = Math.max(height, width - 2);
   const fill = task.status === "done" ? w : Math.max(height, (task.progress / 100) * w);

@@ -7,7 +7,6 @@ import type { Task } from "@/lib/domain/schema/project";
 import { CREATE, ease, move } from "@/lib/motion";
 import { useActions, useIsSelected, useSteps, useSubtaskProposal, useTask, useTaskNumber, useViewConfig } from "@/lib/store/hooks";
 import {
-  asTaskId,
   CostTag,
   EditableText,
   EstimateControl,
@@ -37,7 +36,7 @@ interface Props {
 
 /** Shared behaviour for every task surface: selection, emphasis, highlight, creation skin. */
 export function useTaskSurface(task: TaskFields<"priority" | "status" | "emphasis">) {
-  const taskId = asTaskId(task.id);
+  const taskId = task.id;
   const selected = useIsSelected(taskId);
   const { select } = useActions();
   const view = useViewConfig();
