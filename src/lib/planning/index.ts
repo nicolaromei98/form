@@ -186,6 +186,8 @@ export {
   type WeekCell,
 } from "@/lib/planning/load";
 export { laneLoads, type LaneLoad } from "@/lib/planning/lanes";
+export { balance, type BalanceMove, type BalanceOptions, type BalanceResult } from "@/lib/planning/balance";
+export { level, type LevelMove, type LevelPlan } from "@/lib/planning/level";
 export {
   FOCUS_REASON_ORDER,
   focus,
