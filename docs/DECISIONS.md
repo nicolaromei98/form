@@ -198,3 +198,31 @@ Choices not covered by `docs/FORM-v1.md`, or confirmed from its section 3.2. Eac
   - **Brief.** "X starts after Y" names X's last-ending unfinished predecessor, following dependencies. Risk phrases rank by FOCUS_WEIGHTS, at most 2 per task, as in v0.
   - **Migration.** memberIds are every imported person: v0's Team showed all of doc.people. readV0 returns the whole stored value. A missing sample flag reads as "sample", so nothing shows as late. Totality repairs (parent loops, duplicate names, size guards) are each reported.
 - **Rejected:** families editing shared fixtures in parallel, which would have caused merge conflicts.
+
+### 2026-10-15 · Wave 5 outcomes (steps 15, 16) and the caption policy
+- **Context:** the fast parser port (step 15) and the full property suite with the wave-4 close-out (step 16) merged. Results:
+  - no stub is left, and the palette check is strict at 42;
+  - addMember is strict;
+  - 10,000 runs pass on 4 shards (reducer 142–195 s, planning 94–122 s);
+  - the parser matches the frozen v0 parser on 156 of 212 corpus commands, with 56 reviewed differences.
+- **Choice (accepted deviations):**
+  - **Named fixture.** One named fixture, `demoExtras`, holds the entities several samples need. The property suite has 5 start states, with enriched generated states.
+  - **Demo workspace.** It already contains the sample team at 2/4/5 days a week.
+  - **Clarify replies.** The parser keeps v0's clarify replies for removing a missing or last view.
+  - **Limits.** Estimates are capped at 250 days, and weekly capacities are rounded to half days.
+  - **Research's `completedAt`** is the creation time for Done seeds. Unknown would be more honest, but createProject records Done seeds at `now`. It is listed in the seed golden test.
+- **Choice (caption policy).** A product review of the 56 differences keeps the honest changes:
+  - no-ops say so;
+  - capacity is asked for, not invented;
+  - dependency bridges are named;
+  - status wins over progress.
+
+  It rejects the captions that grew, because the caption is the agent's only voice and must stay one short line. Rules for the composer and the parser, implemented in wave 6:
+  1. **Group parts that repeat a template across entities.** "Giulia and Paolo added to the team · capacity not set", not one part per person.
+  2. **Drop implied parts.** "X joins the project" is implied when X was added to the team in the same command.
+  3. **Demo expansions speak as one.** "Add a sample team" → "Sample team added · Marta, Sara and Luca · Marta over capacity". The per-op assignment parts are not listed.
+  4. **A view that opens as a side effect adds no part**, unless it was created ("<View> view added", once). A view's own status sentence ("Marta over capacity", "for the client · composed from the project, nothing invented") is said only when opening that view is the command's intent.
+  5. **No-op parts are never swallowed by a view part.** They come first: "The moodboard is already empty".
+  6. **The honest sample-dates note comes back** on a timeline birth while the start is unconfirmed.
+  7. **At most four parts.**
+- **Rejected:** keeping the long concatenated captions as "accurate". Accurate and readable are both required.
