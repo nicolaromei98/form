@@ -253,10 +253,19 @@ interface Comparison {
   images?: { expected: Png; actual: Png; diff?: Buffer };
 }
 
+/**
+ * The collapsed regions a capture didn't find on the page. A collapsed region is left out of the
+ * compare, so one that is missing (a moodboard whose board hasn't measured itself yet) would pass
+ * unseen: the page must show every one before it is taken out.
+ */
+const missing = (c: Capture) => (c.sidecar.full?.collapsed ?? []).filter((r) => r.boxes.length === 0).map((r) => `${r.ed} ${r.what}`);
+
 /** Two captures, compared with the union of their masks painted over both */
 function compare(ref: Capture, act: Capture, ratio: number): Comparison {
   const e = PNG.sync.read(ref.shot);
   const a = PNG.sync.read(act.shot);
+  const gone = [...missing(ref).map((m) => `reference: ${m}`), ...missing(act).map((m) => `candidate: ${m}`)];
+  if (gone.length) return { differing: NaN, compared: 0, failure: `expected region not on the page (${gone.join("; ")})`, images: { expected: e, actual: a } };
   if (e.width !== a.width || e.height !== a.height) return { differing: NaN, compared: 0, failure: `size changed: ${size(e)} → ${size(a)}`, images: { expected: e, actual: a } };
   const rects = [...maskRects(ref.sidecar.page, e), ...maskRects(act.sidecar.page, a)];
   paint(a, rects);
@@ -322,6 +331,8 @@ export async function gate(page: Page, testInfo: TestInfo, name: string, opts: G
     writeFileSync(ref, mine.shot);
     writeFileSync(side, JSON.stringify(sidecar, null, 2) + "\n");
     if (!isUpdate(testInfo)) rec.failures.push(`No reference for ${name}: written now`);
+    // A reference without an expected region would excuse the candidate from showing it
+    for (const m of missing(mine)) rec.failures.push(`expected region not on the page: ${m}`);
     rec.ok = rec.failures.length === 0;
     record(testInfo, rec);
     return rec;
