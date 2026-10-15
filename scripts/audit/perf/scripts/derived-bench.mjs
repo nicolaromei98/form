@@ -2,15 +2,16 @@
 // Usage: node scripts/audit/perf/scripts/derived-bench.mjs [root] [doc.json]. The root defaults to this checkout; pass another checkout (a git worktree) to compare commits.
 import { resolve } from "node:path";
 import { createJiti } from "jiti";
-import { ROOT as REPO } from "../../paths.mjs";
-const ROOT = process.argv[2] ? resolve(process.argv[2]) + "/" : REPO;
+import { LIB } from "../../paths.mjs";
+// The v0 lib: the frozen copies by default (step 18 deleted the originals), or another checkout's src/lib
+const LIBDIR = process.argv[2] ? resolve(process.argv[2]) + "/src/lib/" : LIB;
 const jiti = createJiti(import.meta.url);
 const fs = await import("node:fs");
-const sel = await jiti.import(ROOT + "src/lib/selectors.ts");
-const focus = await jiti.import(ROOT + "src/lib/focus.ts");
-const team = await jiti.import(ROOT + "src/lib/team.ts");
-const brief = await jiti.import(ROOT + "src/lib/brief.ts");
-const schema = await jiti.import(ROOT + "src/lib/schema.ts");
+const sel = await jiti.import(LIBDIR + "selectors.ts");
+const focus = await jiti.import(LIBDIR + "focus.ts");
+const team = await jiti.import(LIBDIR + "team.ts");
+const brief = await jiti.import(LIBDIR + "brief.ts");
+const schema = await jiti.import(LIBDIR + "schema.ts");
 const doc = JSON.parse(fs.readFileSync(process.argv[3] || new URL("../fixtures/doc60.json", import.meta.url), "utf8")).state.doc;
 const bench = (name, fn, n = 300) => { for (let i = 0; i < 30; i++) fn(); const t = performance.now(); for (let i = 0; i < n; i++) fn(); console.log(name.padEnd(34), ((performance.now() - t) / n).toFixed(3), "ms/call"); };
 bench("DocSchema.safeParse (hydrate)", () => schema.DocSchema.safeParse(doc));

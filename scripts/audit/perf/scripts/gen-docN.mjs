@@ -2,13 +2,14 @@
 // Usage: node scripts/audit/perf/scripts/gen-docN.mjs [root] [out]. The root defaults to this checkout; pass another checkout (a git worktree) to compare commits.
 import { resolve } from "node:path";
 import { createJiti } from "jiti";
-import { ROOT as REPO, outDir } from "../../paths.mjs";
-const ROOT = process.argv[2] ? resolve(process.argv[2]) + "/" : REPO;
+import { LIB, outDir } from "../../paths.mjs";
+// The v0 lib: the frozen copies by default (step 18 deleted the originals), or another checkout's src/lib
+const LIBDIR = process.argv[2] ? resolve(process.argv[2]) + "/src/lib/" : LIB;
 const OUT = process.argv[3] || outDir("perf") + "docN.json";
 const jiti = createJiti(import.meta.url);
-const ops = await jiti.import(ROOT + "src/lib/ops.ts");
-const schema = await jiti.import(ROOT + "src/lib/schema.ts");
-const seed = await jiti.import(ROOT + "src/lib/seed.ts");
+const ops = await jiti.import(LIBDIR + "ops.ts");
+const schema = await jiti.import(LIBDIR + "schema.ts");
+const seed = await jiti.import(LIBDIR + "seed.ts");
 const fs = await import("node:fs");
 
 let doc = seed.emptyDoc();

@@ -1,5 +1,7 @@
 // Phase 0 audit probe: demo parser behaviour + Claude post-processing, offline (mocked SDK).
 // Usage: node scripts/audit/agent/probe.mjs [ctx|palette|sanitize|claude|all]
+// It loads the v0 Claude module and the SDK, which Phase 1 step 18 removed: run it on a checkout of
+// a commit before step 18 (scripts/audit/README.md).
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createJiti } from "jiti";
@@ -56,7 +58,8 @@ if (on("ctx")) {
 }
 
 if (on("palette")) {
-  const { CAPABILITIES } = await jiti.import(SRC + "/components/agent/suggestions.ts");
+  // v0's palette: the frozen copy (step 18 replaced CAPABILITIES with the registry's paletteGroups)
+  const { CAPABILITIES } = await jiti.import(LIB + "../components/agent/suggestions.ts");
   for (const g of CAPABILITIES) for (const item of g.items) {
     const base = g.needs === "none" ? emptyDoc() : doc;
     const sel = g.needs === "selection" ? "t-ui" : null;

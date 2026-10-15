@@ -22,10 +22,30 @@ const libImport = (paths) => `(?:^@/|^\\.{1,2}/(?:.*/)?)lib/(?:${paths.join("|")
 
 /** Packages that bring a UI, a store or the framework: never in pure code. */
 const FRAMEWORK = {
-  regex: "^(?:react|react-dom|zustand|gsap|@gsap/react|motion|next|server-only)(?:/.*)?$",
+  regex: "^(?:react|react-dom|zustand|gsap|@gsap/react|motion|next)(?:/.*)?$",
   message: "Pure modules don't import UI, store or framework code (plan §2).",
 };
 const NO_UI = { regex: "^@/(?:components|app)(?:/|$)", message: "lib never imports components or routes." };
+
+/** What components may import from lib, values and types (plan §2; see form/boundaries/components) */
+const COMPONENT_LIB = [
+  "store/hooks",
+  "planning/format",
+  "motion",
+  "assets",
+  "useViewport",
+  "useWidth",
+  "domain/labels",
+  "domain/limits",
+  "domain/money",
+  "domain/colours",
+  "domain/dates",
+];
+/** Where components may take types only from (with everything under them) */
+const COMPONENT_LIB_TYPES = ["store/actions", "domain"];
+const COMPONENT_VALUES = `(?:${COMPONENT_LIB.map(escape).join("|")})`;
+const COMPONENT_TYPES = `(?:${COMPONENT_LIB_TYPES.map(escape).join("|")})(?:/.*)?`;
+const COMPONENT_NEVER = "(?:store/form|ops/reduce|ops/command|migrate(?:/.*)?|demo(?:/.*)?)";
 const ONLY_HOOKS_IMPORT_FORM = "Only lib/store/hooks and lib/store/actions import the store (plan §2).";
 
 /** Pure modules (plan §2): what each may import from the rest of `src/lib` besides itself. */
@@ -155,9 +175,17 @@ export default defineConfig([
     },
   },
 
-  // Components and routes read data through lib/store/hooks and change it through lib/store/actions
-  // (plan §2, §10.1). The §2 allow-list (hooks, action types, domain labels and types, planning/format,
-  // motion, assets, viewport hooks) can only be enforced once step 18 moves components off the v0 lib.
+  // Components and routes read data through lib/store/hooks and change it through the actions those
+  // hooks hand out (plan §2, §10.1). The allow-list, enforced since step 18:
+  //   - values and types: lib/store/hooks, planning/format, lib/motion, lib/assets, the viewport hooks
+  //     (useViewport, useWidth), and the domain's display vocabulary: labels, limits (the caps an
+  //     input enforces), money (formatMoney, which plan §8.2 names for CostTag), colours (the
+  //     colour picker's normaliseHex) and dates (IsoDate arithmetic for the timeline's day grid);
+  //   - types only: lib/store/actions and the rest of lib/domain (the schema types);
+  //   - nothing else from lib: no store/form, ops (reduce, command, build …), planning beyond its
+  //     formatters, compose, migrate, interpret, demo, or the domain's logic (views, ids, order,
+  //     invariants, mood geometry), which reach components through hooks.
+  // Relative imports into lib are refused too, so the alias rules always see the path.
   {
     name: "form/boundaries/components",
     files: [`src/components/**/*.${CODE}`, `src/app/**/*.${CODE}`],
@@ -168,9 +196,20 @@ export default defineConfig([
         {
           patterns: [
             { regex: libImport(["store/form"]), message: "Components read the store through lib/store/hooks (plan §2)." },
-            { regex: libImport(["ops/reduce", "ops/command"]), message: "Components change data through lib/store/actions (plan §2)." },
+            { regex: libImport(["ops/reduce", "ops/command"]), message: "Components change data through the actions useActions() hands out (plan §2)." },
             { regex: libImport(["migrate"]), message: "Components never import the migration (plan §2)." },
             { regex: libImport(["demo"]), message: "Components never import lib/demo; the store owns it (plan §2)." },
+            {
+              // Anything else in lib (the never-list above has its own messages)
+              regex: `^@/lib/(?!${COMPONENT_VALUES}$)(?!${COMPONENT_TYPES}$)(?!${COMPONENT_NEVER}$)`,
+              message: `Components import from lib only ${COMPONENT_LIB.join(", ")}, and types from ${COMPONENT_LIB_TYPES.join(", ")} (plan §2).`,
+            },
+            {
+              regex: `^@/lib/(?!${COMPONENT_VALUES}$)${COMPONENT_TYPES}$`,
+              allowTypeImports: true,
+              message: `Components take only types from ${COMPONENT_LIB_TYPES.join(" and ")}; data and actions come through lib/store/hooks (plan §2).`,
+            },
+            { regex: "^(?:\\.\\./)+(?:.*/)?lib(?:/|$)", message: 'Import lib through "@/lib/…", so the boundary rules can check it.' },
           ],
         },
       ],
