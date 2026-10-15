@@ -14,10 +14,15 @@ import { distinct, freshIds, plural, ProposalSource } from "@/lib/ops/registry/_
  * estimate 0 and no steps. The pending proposal is replaced, and undo restores it.
  */
 
-/** "no estimates yet", "2 without an estimate" or "14d of work" */
-function estimateNote(seeds: readonly TaskSeed[]): string {
+/** "8 tasks, no estimates yet", "8 tasks, 2 without an estimate", "8 tasks, 14d of work" or "2 milestones" */
+function summary(seeds: readonly TaskSeed[]): string {
   const work = seeds.filter((s) => s.kind === "task");
-  if (work.length === 0) return "milestones only";
+  if (work.length === 0) return plural(seeds.length, "milestone");
+  return `${plural(seeds.length, "task")}, ${estimateNote(work)}`;
+}
+
+/** What is known of the work's estimates (milestones take no time) */
+function estimateNote(work: readonly TaskSeed[]): string {
   const unknown = work.filter((s) => s.estimateDays === null).length;
   if (unknown === work.length) return unknown === 1 ? "no estimate yet" : "no estimates yet";
   if (unknown > 0) return `${unknown} without an estimate`;
@@ -80,7 +85,7 @@ export default defineOp({
   },
 
   // "Proposal · 8 tasks, no estimates yet"
-  caption: ({ op }) => part(`Proposal · ${plural(op.tasks.length, "task")}, ${estimateNote(op.tasks)}`, undefined, "proposal"),
+  caption: ({ op }) => part(`Proposal · ${summary(op.tasks)}`, undefined, "proposal"),
   // A proposal always carries a fresh id: proposing applies or is refused, never a no-op
   noopCaption: () => null,
   undoable: true,

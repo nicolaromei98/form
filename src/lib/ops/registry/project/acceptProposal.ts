@@ -246,7 +246,7 @@ export default defineOp({
     const a = accepting(before, env.workspace(), op);
     if (isRejection(a)) return null;
     const n = a.live.length;
-    if (n === 0) return part(a.leftOut > 0 ? "Proposal closed · none of the chosen items still apply" : "Proposal closed · nothing in it still applies");
+    if (n === 0) return part(op.only ? "Proposal closed · none of the chosen items still apply" : "Proposal closed · nothing in it still applies");
     const parts: CaptionPart[] = [];
     switch (a.kind) {
       case "subtasks":
