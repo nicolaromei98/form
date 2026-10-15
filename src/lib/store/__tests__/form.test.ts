@@ -39,7 +39,7 @@ describe("submit", () => {
     expect(s.fx).toMatchObject({ kind: "create", seq: 1 });
     expect(openProject(store).views).toEqual(["timeline"]);
     expect(s.local.activeView).toBe("timeline");
-    expect(s.caption).toMatchObject({ text: "Timeline created · 4 tasks · Demo mode ships one template (website) — rename anything", undoable: true });
+    expect(s.caption).toMatchObject({ text: "Timeline created · 4 tasks · sample dates, sequenced from estimates · Demo mode ships one template (website) — rename anything", undoable: true });
     expect(s.past).toHaveLength(1);
     expect(s.changes).toBe(1);
     expect(s.composerOpen).toBe(false);

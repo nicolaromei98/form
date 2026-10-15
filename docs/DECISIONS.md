@@ -226,3 +226,21 @@ Choices not covered by `docs/FORM-v1.md`, or confirmed from its section 3.2. Eac
   6. **The honest sample-dates note comes back** on a timeline birth while the start is unconfirmed.
   7. **At most four parts.**
 - **Rejected:** keeping the long concatenated captions as "accurate". Accurate and readable are both required.
+
+### 2026-10-15 · Wave 6 outcomes (step 17 store, caption policy)
+- **Context:** the store and the caption policy merged into `phase-1-domain`. The store is built and tested but not mounted yet; the components switch over in wave 7.
+- **Store.** Deviations accepted:
+  - Undo and redo return the exact documents by reference when they can, and use patches only otherwise. Planning memos keep hitting, and Phase 2 merges still have the patches.
+  - Gestures have an explicit cancel.
+  - Typed undo, redo and reset say "Nothing to undo/redo/reset" on an empty stack (v0 always said "Undone").
+  - The composer closes on done, proposal and info tones.
+  - The store is created lazily, so importing it has no server side effects.
+  - When `.backup` already holds a different copy, a second unreadable save goes to `.backup.2`…`.9`, and nothing is ever wiped.
+  - `CAPTION_PLANNING` is the single planning implementation behind captions, shared by the store, the property runner and the golden harness.
+- **Captions.** The rules are implemented in the composer, with every target asserted word for word in `captions.golden.test.ts`:
+  - **Expansions** are a typed marker (`sampleTeam`, `demoProject`). The composer renders their summary from the ops that applied, and the parser writes no text.
+  - **The sample-dates note** belongs to createProject's own caption. It is said only when the project is born as a timeline with an unconfirmed start.
+  - **Side-effect views** carry `reveal: true` and say nothing.
+  - **The four-part cap** counts " · " segments and never drops a refusal.
+  - **Three captions exceed 120 characters.** All three are v0 wording and are listed, the longest being "Create a timeline for my project" at 126.
+- **Rejected:** a fixed notice for the sample dates, because a notice would let the parser assert something about the result.
