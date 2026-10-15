@@ -255,7 +255,7 @@ export function createFormStore(deps: FormDeps): FormStore {
     const where = (): Where => ({ projectId: get().activeProjectId, local: get().local });
     const caption = (c: Caption): StoreCaption => ({ ...c, id: ++captionSeq });
     /** Today again when a change moved the workspace to another zone */
-    const todayFor_ = (docs: DocsState) => (docs.workspace.timezone === get().docs.workspace.timezone ? get().today : todayFor(docs.workspace.timezone, deps.now()));
+    const todayAfter = (docs: DocsState) => (docs.workspace.timezone === get().docs.workspace.timezone ? get().today : todayFor(docs.workspace.timezone, deps.now()));
 
     const clearGestureTimer = () => {
       if (gestureTimer !== null) clearTimeout(gestureTimer);
@@ -276,7 +276,7 @@ export function createFormStore(deps: FormDeps): FormStore {
       // A gesture ran from its base, not from its last live frame
       const entry = historyEntry(result, o.label, { ...before, docs: o.base ?? s.docs });
       const patch: Partial<FormState> = { docs: result.state, activeProjectId: result.projectId, local: result.local };
-      if (result.state !== s.docs) patch.today = todayFor_(result.state);
+      if (result.state !== s.docs) patch.today = todayAfter(result.state);
       if (entry) {
         patch.past = [...s.past, entry].slice(-HISTORY_LIMIT);
         patch.future = [];
@@ -465,7 +465,7 @@ export function createFormStore(deps: FormDeps): FormStore {
           docs,
           activeProjectId: land.projectId,
           local: land.local,
-          today: todayFor_(docs),
+          today: todayAfter(docs),
           past: s.past.slice(0, -1),
           future: [entry, ...s.future].slice(0, HISTORY_LIMIT),
           fx: restoreFx(
@@ -488,7 +488,7 @@ export function createFormStore(deps: FormDeps): FormStore {
           docs,
           activeProjectId: land.projectId,
           local: land.local,
-          today: todayFor_(docs),
+          today: todayAfter(docs),
           // The redone entry now ends at these documents, so a later undo starts from them
           past: [...s.past, { ...entry, after: docs }].slice(-HISTORY_LIMIT),
           future: s.future.slice(1),

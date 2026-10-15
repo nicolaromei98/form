@@ -224,6 +224,23 @@ export function useFormRuntime(): void {
   }, [store]);
 }
 
+// The brief's text exports (copy as text or HTML), for the Brief view
+export { briefHtml, briefPlainText, lineText, plainText } from "@/lib/compose/brief-export";
+
+// The types the hooks return, so components never import planning, compose or the store itself
+export type { Brief, BriefLine, BriefSection, Run, Sentence } from "@/lib/compose/brief";
+export type {
+  FocusCandidate,
+  FocusReason,
+  FocusResult,
+  LaneLoad,
+  Metrics,
+  ProjectPlan,
+  ScheduledTiming,
+  TaskTiming,
+  UnknownTiming,
+} from "@/lib/planning";
+export type { TimelineGrid } from "@/lib/planning/format";
 export type { Actions, BoardPoint } from "@/lib/store/actions";
 export type { Phase, StoreCaption } from "@/lib/store/form";
 export type { Fx, FxKind, Rect } from "@/lib/store/fx";
