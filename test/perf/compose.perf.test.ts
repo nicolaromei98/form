@@ -8,7 +8,7 @@
 // Each timed call composes the whole brief from scratch.
 import { describe, expect, it } from "vitest";
 import { composeBrief, type BriefInput } from "@/lib/compose/brief";
-import type { Audience, ProjectDoc } from "@/lib/domain/schema";
+import type { Audience, ProjectDoc, WorkspaceDoc } from "@/lib/domain/schema";
 import { laneLoads, planProject, weeklyLoad } from "@/lib/planning";
 import { activeProject, FIXTURE_TODAY, generated } from "../fixtures/v2/build";
 import { budget, time } from "./timing";
@@ -19,7 +19,13 @@ const RUNS = 30;
 /** Compositions per timed sample: one takes well under a tenth of a millisecond, near the timer's resolution */
 const BATCH = 10;
 
-function inputOf(project: ProjectDoc, ws: Parameters<typeof planProject>[1], audience: Audience, short: boolean): BriefInput {
+interface Fixture {
+  input: BriefInput;
+  project: ProjectDoc;
+  ws: WorkspaceDoc;
+}
+
+function inputOf(project: ProjectDoc, ws: WorkspaceDoc, audience: Audience, short: boolean): BriefInput {
   const plan = planProject(project, ws, FIXTURE_TODAY);
   // Warm the plan's stages, so the timing is the composer's own
   void plan.schedule;
@@ -31,7 +37,7 @@ function inputOf(project: ProjectDoc, ws: Parameters<typeof planProject>[1], aud
 }
 
 /** A generated project, with an edit (a rewrite) on every line FORM composes for both audiences */
-function fixture(n: number, audience: Audience, short: boolean): BriefInput {
+function fixture(n: number, audience: Audience, short: boolean): Fixture {
   const state = generated(n, PERF_FIXTURE);
   const ws = state.workspace;
   let project = activeProject(state);
@@ -43,7 +49,7 @@ function fixture(n: number, audience: Audience, short: boolean): BriefInput {
     }
   }
   project = { ...project, brief: { ...project.brief, edits } };
-  return inputOf(project, ws, audience, short);
+  return { input: inputOf(project, ws, audience, short), project, ws };
 }
 
 /** `fn` BATCH times in a row */
@@ -71,8 +77,8 @@ describe("brief perf", () => {
     ["client", false],
     ["team", true],
   ] as const)("composes the %s brief (short: %s) at 150 tasks in at most 4 ms", (audience, short) => {
-    const a = fixture(150, audience, short);
-    const b = fixture(300, audience, short);
+    const a = fixture(150, audience, short).input;
+    const b = fixture(300, audience, short).input;
     // Real work: many sentences, every one of them edited
     const brief = composeBrief(a)!;
     const lines = brief.sections.flatMap((s) => s.lines);
@@ -86,5 +92,23 @@ describe("brief perf", () => {
     report(`composeBrief ${audience}${short ? " short" : ""}`, t150, t300);
     expect(t150).toBeLessThan(budget(4));
     expect(t300 / t150).toBeLessThan(3);
+  });
+
+  // What an edit costs the brief view end to end: a new tasks record, so every stage recomputes.
+  // Step 19 measures the same path in the browser (< 8 ms at 4× CPU); here it is reported, and held
+  // to the sum of the cold plan's and the composer's budgets.
+  it("reports the cold path: plan, Team lanes and the team brief after an edit", () => {
+    const at = (n: number) => {
+      const { project, ws } = fixture(n, "team", false);
+      return () => {
+        const edited = { ...project, tasks: { ...project.tasks } };
+        const fresh = planProject(edited, ws, FIXTURE_TODAY);
+        const lanes = laneLoads(fresh, weeklyLoad(ws, [fresh]), ws);
+        return composeBrief({ plan: fresh, ws, audience: "team", short: false, today: FIXTURE_TODAY, lanes });
+      };
+    };
+    const { t150, t300 } = compare(at(150), at(300));
+    report("plan + lanes + composeBrief, cold", t150, t300);
+    expect(t150).toBeLessThan(budget(8 + 4));
   });
 });
