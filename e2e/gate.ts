@@ -285,6 +285,15 @@ function compare(ref: Capture, act: Capture, ratio: number): Comparison {
   };
 }
 
+/** The record's sizes and masked areas, from the pair of captures the verdict rests on */
+function describe(rec: GateRecord, ref: Capture, act: Capture) {
+  rec.masked = {};
+  for (const m of [...act.sidecar.page.masks, ...(act.sidecar.full?.collapsed ?? [])]) rec.masked[m.ed] = (rec.masked[m.ed] ?? 0) + Math.round(m.boxes.reduce((s, b) => s + b.w * b.h, 0));
+  rec.sizes = { reference: size(ref.sidecar.page), actual: size(act.sidecar.page) };
+  if (ref.sidecar.full) rec.sizes.referencePage = size(ref.sidecar.full);
+  if (act.sidecar.full) rec.sizes.actualPage = size(act.sidecar.full);
+}
+
 /**
  * Fresh captures for the retry protocol (stills only): the same state reached again from its seed in
  * a new browser context, on the candidate build and, when its server is up (compare.mjs keeps it
@@ -339,30 +348,31 @@ export async function gate(page: Page, testInfo: TestInfo, name: string, opts: G
   }
 
   const theirs: Capture = { shot: readFileSync(ref), sidecar: JSON.parse(readFileSync(side, "utf8")) as Sidecar };
-  rec.sizes.reference = size(theirs.sidecar.page);
-  if (theirs.sidecar.full) rec.sizes.referencePage = size(theirs.sidecar.full);
+  describe(rec, theirs, mine);
   const ratio = opts.maxDiffPixelRatio ?? 0;
   let result = compare(theirs, mine, ratio);
 
   if (result.failure && (again.candidate || again.reference)) {
     rec.retries = [`first capture: ${result.failure}`];
     const candidates = [mine];
-    const references = [theirs];
     if (again.candidate) {
       const fresh = await capture(await again.candidate(), opts);
       candidates.push(fresh);
       const r = compare(theirs, fresh, ratio);
       rec.retries.push(`candidate reached again: ${r.failure ?? "matches"}`);
-      if (!r.failure) result = r;
+      if (!r.failure) {
+        result = r;
+        describe(rec, theirs, fresh);
+      }
     }
     if (result.failure && again.reference) {
       const fresh = await capture(await again.reference(), opts);
-      references.push(fresh);
       for (const [i, c] of candidates.entries()) {
         const r = compare(fresh, c, ratio);
         rec.retries.push(`reference reached again, against candidate capture ${i + 1}: ${r.failure ?? "matches"}`);
         if (!r.failure) {
           result = r;
+          describe(rec, fresh, c);
           break;
         }
       }
