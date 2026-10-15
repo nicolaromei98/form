@@ -66,9 +66,9 @@ describe("history entries", () => {
     const research = taskByTitle(project, "Research");
     const noop = run(docs, command([updateTaskOp(research.id, "status", "done")]), where, ctx());
     expect(noop.changed).toBe(false);
-    expect(historyEntry(noop, "noop", where)).toBeNull();
+    expect(historyEntry(noop, "noop", { ...where, docs })).toBeNull();
     const applied = run(docs, command([updateTaskOp(research.id, "priority", "high")]), where, ctx());
-    const entry = historyEntry(applied, "priority", where)!;
+    const entry = historyEntry(applied, "priority", { ...where, docs })!;
     expect(entry.commits).toHaveLength(1);
     expect(entry.after).toBe(applied.state);
     expect(entry.localBefore).toBe(where.local);
@@ -84,7 +84,7 @@ describe("history entries", () => {
     ];
     const result = run(docs, command(ops), where, ctx());
     expect(result.commits.map((c) => c.docId)).toEqual([docs.workspace.id, project.id]);
-    const entry = historyEntry(result, "assign", where)!;
+    const entry = historyEntry(result, "assign", { ...where, docs })!;
     const undone = undo(result.state, entry);
     expect(undone).toEqual(docs);
     const redone = redo(undone, entry);
@@ -99,7 +99,7 @@ describe("history entries", () => {
     const result = run(docs, command(ops), where, ctx());
     expect(result.spawned).toHaveLength(1);
     const spawned = result.spawned[0];
-    const entry = historyEntry(result, "create", where)!;
+    const entry = historyEntry(result, "create", { ...where, docs })!;
     expect(entry.projectAfter).toBe(spawned.id);
 
     const undone = undo(result.state, entry);
@@ -117,7 +117,7 @@ describe("history entries", () => {
     const { docs, project, where } = demo();
     const ui = taskByTitle(project, "UI Design");
     const first = run(docs, command([updateTaskOp(ui.id, "priority", "low")]), where, ctx());
-    const entry = historyEntry(first, "first", where)!;
+    const entry = historyEntry(first, "first", { ...where, docs })!;
     const second = run(first.state, command([updateTaskOp(ui.id, "title", "Screens")]), where, ctx());
     expect(() => undo(second.state, entry)).toThrow(/didn't leave/);
   });
@@ -128,7 +128,7 @@ describe("history entries", () => {
     const cmd = toCommand(parsed, "Add a timeline")!;
     const result = run(docs, cmd, where, ctx());
     expect(result.local.activeView).toBe("timeline");
-    const entry = historyEntry(result, "Add a timeline", where)!;
+    const entry = historyEntry(result, "Add a timeline", { ...where, docs })!;
     const undone = undo(result.state, entry);
     const back = landing(undone, entry, "before", { projectId: project.id, local: result.local });
     expect(undone.projects[project.id].views).toEqual(["cards"]);
@@ -143,7 +143,7 @@ describe("history entries", () => {
     const where: Where = { projectId: project.id, local: defaultLocalViewState(project) };
     const ui = taskByTitle(project, "UI Design");
     const result = run(docs, command([updateTaskOp(ui.id, "priority", "low")]), where, ctx());
-    const entry = historyEntry(result, "priority", where)!;
+    const entry = historyEntry(result, "priority", { ...where, docs })!;
     const now: Where = { projectId: project.id, local: { ...result.local, activeView: "board" } };
     expect(landing(undo(result.state, entry), entry, "before", now).local.activeView).toBe("board");
   });
@@ -177,7 +177,7 @@ describe("gestures", () => {
     expect(g.ops).toHaveLength(1);
     expect(g.state.projects[project.id].tasks[ui.id].progress).toBe(70);
     const sealed = endGesture(g, [], ctx())!;
-    const entry = historyEntry(sealed, "drag", where)!;
+    const entry = historyEntry(sealed, "drag", { ...where, docs })!;
     expect(entry.commits[0].patches.length).toBeGreaterThan(0);
     expect(sealed.state.projects[project.id].tasks[ui.id].progress).toBe(70);
     // The sealed command is exactly a direct commit of the coalesced ops from the base
@@ -200,7 +200,7 @@ describe("gestures", () => {
     const sealed = endGesture(g, [], ctx())!;
     expect(sealed.changed).toBe(false);
     expect(sealed.state).toBe(at90.state);
-    expect(historyEntry(sealed, "drag", where)).toBeNull();
+    expect(historyEntry(sealed, "drag", { ...where, docs: at90.state })).toBeNull();
   });
 
   it("restore the base when cancelled", () => {

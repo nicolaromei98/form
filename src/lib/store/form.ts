@@ -267,10 +267,14 @@ export function createFormStore(deps: FormDeps): FormStore {
      * changed (the counter counts it, redo is cleared), the fx, and the caption. `quiet` keeps the
      * current caption when the command has none to say.
      */
-    function apply(result: CommandResult, o: { label: string; quiet: boolean; fx?: boolean; extra?: Partial<FormState> }): HistoryEntry | null {
+    function apply(
+      result: CommandResult,
+      o: { label: string; quiet: boolean; fx?: boolean; extra?: Partial<FormState>; base?: DocsState },
+    ): HistoryEntry | null {
       const s = get();
       const before = where();
-      const entry = historyEntry(result, o.label, before);
+      // A gesture ran from its base, not from its last live frame
+      const entry = historyEntry(result, o.label, { ...before, docs: o.base ?? s.docs });
       const patch: Partial<FormState> = { docs: result.state, activeProjectId: result.projectId, local: result.local };
       if (result.state !== s.docs) patch.today = todayFor_(result.state);
       if (entry) {
@@ -294,7 +298,7 @@ export function createFormStore(deps: FormDeps): FormStore {
       const result = endGesture(g, [], ctx());
       // The gesture closes in the same update that commits it, so persistence sees one change
       if (result === null) set({ gesture: null, docs: g.base });
-      else apply(result, { label: "gesture", quiet: true, fx: false, extra: { gesture: null } });
+      else apply(result, { label: "gesture", quiet: true, fx: false, extra: { gesture: null }, base: g.base });
     }
 
     function armGestureTimer(): void {

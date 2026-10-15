@@ -166,6 +166,9 @@ export interface EntryCommit {
   readonly docId: WorkspaceId | ProjectId;
   readonly patches: readonly Patch[];
   readonly inverse: readonly Patch[];
+  /** The document before and after the commit (a spawned project's own document before its project commit) */
+  readonly before: WorkspaceDoc | ProjectDoc;
+  readonly after: WorkspaceDoc | ProjectDoc;
 }
 
 export interface HistoryEntry {
@@ -183,17 +186,29 @@ export interface HistoryEntry {
   readonly after: DocsState;
 }
 
+/** Where a command ran from: the documents it saw, the project and the local view state */
+export interface From extends Where {
+  docs: DocsState;
+}
+
 /** The history entry of a command, or null when nothing changed (no entry, plan §5.3) */
-export function historyEntry(result: CommandResult, label: string, before: Where): HistoryEntry | null {
+export function historyEntry(result: CommandResult, label: string, from: From): HistoryEntry | null {
   if (!result.changed || result.groupId === null) return null;
+  const beforeOf = (docId: WorkspaceId | ProjectId) => docAt(from.docs, docId) ?? result.spawned.find((p) => p.id === docId)!;
   return {
     groupId: result.groupId,
     label,
-    commits: result.commits.map((c) => ({ docId: c.docId, patches: c.result.patches, inverse: c.result.inverse })),
+    commits: result.commits.map((c) => ({
+      docId: c.docId,
+      patches: c.result.patches,
+      inverse: c.result.inverse,
+      before: beforeOf(c.docId),
+      after: c.result.doc,
+    })),
     spawned: result.spawned,
-    localBefore: before.local,
+    localBefore: from.local,
     localAfter: result.local,
-    projectBefore: before.projectId,
+    projectBefore: from.projectId,
     projectAfter: result.projectId,
     after: result.state,
   };
@@ -223,14 +238,19 @@ function assertAt(state: DocsState, entry: HistoryEntry): void {
   }
 }
 
-/** Applies inverse patches per commit, newest first, then drops the projects the command created */
+/**
+ * Undoes an entry: per commit, newest first, the inverse patches; then the projects the command
+ * created are dropped. When a document is exactly the one the commit left, the one it started
+ * from comes back by reference instead (the same value, and every memo keyed on it still holds);
+ * the patches serve a document that moved on since (Phase 2's merges).
+ */
 export function undo(state: DocsState, entry: HistoryEntry): DocsState {
   assertAt(state, entry);
   let out = state;
   for (const c of [...entry.commits].reverse()) {
     const doc = docAt(out, c.docId);
     if (doc === undefined) throw new Error(`Undo of "${entry.label}": ${c.docId} is gone`);
-    out = withDoc(out, c.docId, applyPatches(doc, c.inverse as Patch[]));
+    out = withDoc(out, c.docId, doc === c.after ? c.before : applyPatches(doc, c.inverse as Patch[]));
   }
   if (entry.spawned.length > 0) {
     const projects = { ...out.projects };
@@ -240,13 +260,17 @@ export function undo(state: DocsState, entry: HistoryEntry): DocsState {
   return out;
 }
 
-/** Applies the patches per commit, oldest first; spawned projects return after the workspace commit */
+/**
+ * Redoes an entry: per commit, oldest first, the patches (or, when the document is exactly the one
+ * the commit started from, the one it left, by reference); spawned projects return after the
+ * workspace commit, the same frozen documents.
+ */
 export function redo(state: DocsState, entry: HistoryEntry): DocsState {
   let out = state;
   for (const c of entry.commits) {
     const doc = docAt(out, c.docId);
     if (doc === undefined) throw new Error(`Redo of "${entry.label}": ${c.docId} is missing`);
-    out = withDoc(out, c.docId, applyPatches(doc, c.patches as Patch[]));
+    out = withDoc(out, c.docId, doc === c.before ? c.after : applyPatches(doc, c.patches as Patch[]));
     if (isWorkspace(out, c.docId) && entry.spawned.length > 0) {
       const projects = { ...out.projects };
       for (const p of entry.spawned) projects[p.id] = p;
