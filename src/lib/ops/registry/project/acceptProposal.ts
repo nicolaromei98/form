@@ -39,6 +39,10 @@ import { freshOutsideProposal, isActivePerson, plural } from "@/lib/ops/registry
  *
  * The ids a proposal creates are fresh by invariant (plan §3.8 P3); they are checked again outside
  * the proposal itself, and a collision is `duplicate_id`, never re-minted.
+ *
+ * - Payload: proposalId, only?: (StepId | TaskId)[] 1–150
+ * - Caption: "4 steps added to UI Design" · "1 task reassigned" · "2 steps added to UI Design · 2 left out"
+ *   · rejected `stale_proposal`
  */
 
 const Payload = z

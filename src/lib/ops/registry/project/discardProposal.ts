@@ -8,6 +8,9 @@ import { part } from "@/lib/ops/registry/_helpers";
  * Discards the pending proposal (plan §4.4 row 46; v0 discardProposal and discardReassign).
  * Nothing in the project moves. Naming a proposal that is no longer pending (already resolved
  * or replaced by a newer one) is a no-op, so a newer proposal is never thrown away by mistake.
+ *
+ * - Payload: proposalId
+ * - Caption: "Proposal discarded" · "Plan discarded · nothing moved" · no-op: "That proposal was already replaced"
  */
 
 /** v0 called the reassign proposal "Plan"; the subtasks and plan proposals are "Proposal" */

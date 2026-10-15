@@ -11,6 +11,9 @@ import { distinct, freshIds, mustBeOpen, ownerName, plural, ProposalSource } fro
  * §6.6; v0 proposeReassign). Each move names open work; an owner move names the task's current
  * owner as `from` and an active person other than them as `to`. The pending proposal is
  * replaced, and undo restores it. Nothing moves until the proposal is accepted.
+ *
+ * - Payload: proposalId, moves (owner {taskId, from, to, why} | shift {taskId, pinnedStart, days, why})[] 1–12, source
+ * - Caption: "Marta is 4d over capacity · 1 handover proposed. Review it on the team."
  */
 
 export default defineOp({

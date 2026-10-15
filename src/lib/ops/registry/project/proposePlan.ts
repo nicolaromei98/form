@@ -12,6 +12,9 @@ import { distinct, freshIds, plural, ProposalSource } from "@/lib/ops/registry/_
  * on earlier seeds of the same plan or on tasks that exist; its owner is an active person. Seeds
  * are normalised on write (plan §5.6): dependencies are deduplicated, and a milestone gets
  * estimate 0 and no steps. The pending proposal is replaced, and undo restores it.
+ *
+ * - Payload: proposalId, tasks: TaskSeed[] 1–12, source
+ * - Caption: "Proposal · 8 tasks, no estimates yet"
  */
 
 /** "8 tasks, no estimates yet", "8 tasks, 2 without an estimate", "8 tasks, 14d of work" or "2 milestones" */

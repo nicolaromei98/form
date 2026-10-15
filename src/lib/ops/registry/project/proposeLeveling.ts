@@ -10,6 +10,9 @@ import { distinct, freshIds, mustBeOpen, plural, ProposalSource } from "@/lib/op
  * Proposes new starts that keep every owner within a day's work (plan §4.4 row 42, §6.6
  * leveling). Each move pins one open task's start; nothing moves until the proposal is
  * accepted. The pending proposal is replaced, and undo restores it.
+ *
+ * - Payload: proposalId, moves {taskId, pinnedStart, days, why}[] 1–150, source
+ * - Caption: "Leveling proposed · 3 starts move"
  */
 
 export default defineOp({

@@ -11,6 +11,10 @@ import { distinct, freshIds, plural, ProposalSource } from "@/lib/ops/registry/_
  * replaced, and undo restores it. The step ids are minted by the producer and kept when the
  * proposal is accepted, so the proposed row morphs into the real step. Only a task (never a
  * milestone) takes steps, and the steps it would end up with stay within the 40-step limit.
+ *
+ * - Payload: proposalId, taskId, items {stepId, title, estimateDays|null}[] 1–12, source
+ *   (parser|agent|direct: who proposed it, stored on the proposal)
+ * - Caption: "4 steps proposed for UI Design · fits its 6d estimate. Review them on the task."
  */
 
 /**

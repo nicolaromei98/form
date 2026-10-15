@@ -10,6 +10,9 @@ import { distinct, freshIds, ProposalSource } from "@/lib/ops/registry/_proposal
  * Suggests estimates (plan §4.4 row 43). They are shown as suggestions until accepted; only tasks
  * take one, since a milestone takes no time (plan §3.8 P9). The pending proposal is replaced, and
  * undo restores it.
+ *
+ * - Payload: proposalId, items {taskId, estimateDays}[] 1–150, source
+ * - Caption: "Suggested estimates for 6 tasks" · "Suggested estimate for UI Design · 6d"
  */
 
 export default defineOp({
