@@ -59,9 +59,9 @@ function withBench(state: FixtureState): FixtureState {
 
 /**
  * Three generated projects of 50 tasks on one team (plan §10.3), each with a few brief lines, two
- * brief edits and mood references, the last one archived; in the workspace a user template, a
- * closure, the first person linked to an account and off for a week, and the bench: a busy
- * studio, so the ops on those meet targets from the first step in more than one fixture.
+ * brief edits and mood references, one of the inactive two archived; in the workspace a user
+ * template, a closure, the first person linked to an account and off for a week, and the bench: a
+ * busy studio, so the ops on those meet targets from the first step in more than one fixture.
  */
 function busyStudio(): FixtureState {
   const state = withBench(multiProject({ briefLines: 3, moodItems: 6 }));
