@@ -509,3 +509,34 @@ describe("the moodboard, as v0 did it", () => {
     expect(doc).toEqual(start);
   });
 });
+
+/* ------------------------------------------------------------------
+   Record key order (the jsonb guard, plan §5.4)
+   ------------------------------------------------------------------ */
+
+describe("record key order", () => {
+  /** The same board with its record keys in reverse order, as Postgres jsonb may hand it back */
+  const reversedKeys = (s: TestState): TestState =>
+    edited(s, (p) => ({ ...p, moodboard: { items: Object.fromEntries(Object.entries(p.moodboard.items).reverse()) } }));
+
+  it("never changes what an op does or the patches it writes", () => {
+    const s = mixedBoard();
+    const shuffled = reversedKeys(s);
+    const [bottom, , third, , , , top] = boardOf(s);
+    const ops = [
+      add([note("Late"), image(), colour("#2a8c86")]),
+      update(bottom.id, { x: 0.4, w: 0.3 }, true),
+      update(top.id, {}, true),
+      remove(third.id),
+      ...LAYOUTS.map((layout) => arrangeOp(layout, idsOf([top, bottom, third]))),
+      clear(idsOf([top, third, bottom])),
+    ];
+    for (const op of ops) {
+      const a = apply(s, op).result;
+      const b = apply(shuffled, op).result;
+      expect(b.kind, op.op).toBe(a.kind);
+      expect(b.doc, op.op).toEqual(a.doc);
+      if (a.kind === "applied" && b.kind === "applied") expect(b.patches, op.op).toEqual(a.patches);
+    }
+  });
+});
