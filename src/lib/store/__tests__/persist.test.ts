@@ -173,6 +173,29 @@ describe("saving", () => {
     expect(savedEnvelope(storage).projects[store.getState().activeProjectId!].tasks[ui.id].progress).toBe(60);
   });
 
+  it("saves a change whose timer ran out during a gesture once the gesture ends, or on flush", async () => {
+    const { store, storage } = await started();
+    const ui = taskByTitle(openProject(store), "UI Design");
+    store.getState().commit([updateTaskOp(ui.id, "priority", "low")], { label: "a" });
+    store.getState().live([updateTaskOp(ui.id, "progress", 50)]);
+    vi.advanceTimersByTime(SAVE_DEBOUNCE_MS);
+    expect(writes(storage)).toEqual([]);
+    store.getState().cancelGesture();
+    vi.advanceTimersByTime(SAVE_DEBOUNCE_MS);
+    expect(writes(storage)).toHaveLength(1);
+    expect(savedEnvelope(storage).projects[store.getState().activeProjectId!].tasks[ui.id]).toMatchObject({ priority: "low", progress: 30 });
+    // flush writes at once, and only what differs
+    store.getState().commit([updateTaskOp(ui.id, "priority", "high")], { label: "b" });
+    store.getState().flushSave();
+    store.getState().flushSave();
+    expect(writes(storage)).toHaveLength(2);
+  });
+
+  it("is safe to flush without storage", () => {
+    const store = createFormStore(testDeps());
+    expect(() => store.getState().flushSave()).not.toThrow();
+  });
+
   it("ignores the selection, the caption, the composer and the phase", async () => {
     const { store, storage } = await started();
     const ui = taskByTitle(openProject(store), "UI Design");

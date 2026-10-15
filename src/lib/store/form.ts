@@ -309,6 +309,59 @@ export function createFormStore(deps: FormDeps): FormStore {
       }, GESTURE_IDLE_MS);
     }
 
+    /** A typed command after the beat: parse, then control, a reply, or a command */
+    async function runTyped(command: string): Promise<boolean> {
+      const t0 = deps.now();
+      const s0 = get();
+      const parsed = fastParse(command, parserContext({ docs: s0.docs, projectId: s0.activeProjectId, local: s0.local, today: s0.today, mint: deps.mint }));
+
+      // A short, honest beat so the shape change reads: no fake reasoning
+      const beat = get().reducedMotion ? 0 : PROCESS_BEAT_MS;
+      const elapsed = deps.now() - t0;
+      if (elapsed < beat) await sleep(beat - elapsed);
+      set((st) => ({ commandHistory: [command, ...st.commandHistory.filter((c) => c !== command)].slice(0, COMMAND_HISTORY) }));
+      // A drag may have started during the beat
+      seal();
+
+      if (parsed.status === "none") {
+        set({ phase: "rest", composerOpen: true, caption: caption({ text: parsed.reply.text, tone: "unsupported", undoable: false }) });
+        return false;
+      }
+      if ("control" in parsed) {
+        if (parsed.control === "reset") {
+          get().reset();
+          set({ phase: "rest", composerOpen: false });
+          return true;
+        }
+        const did = parsed.control === "undo" ? get().undo() : get().redo();
+        const text = parsed.control === "undo" ? (did ? "Undone" : "Nothing to undo") : did ? "Redone" : "Nothing to redo";
+        set({ phase: "rest", composerOpen: false, caption: caption({ text, tone: "info", undoable: false }) });
+        return true;
+      }
+      const cmd = toCommand(parsed, command);
+      if (cmd === null) {
+        // A question back with nothing to apply: the composer stays open for the answer
+        set({ phase: "rest", composerOpen: true, caption: caption({ text: parsed.reply?.text ?? "", tone: "clarify", undoable: false }) });
+        return false;
+      }
+
+      const result = run(get().docs, cmd, where(), ctx());
+      const tone = result.caption?.tone ?? (result.changed ? "done" : "info");
+      const ok = tone !== "clarify" && tone !== "unsupported";
+      const created = result.outcomes.some((o) => o.result.kind === "applied" && o.def?.name === "createProject");
+      const creating = created && !get().reducedMotion;
+      // One update: the new documents and the agent's phase render together, so freshly created
+      // surfaces mount already knowing they must wait for the agent
+      apply(result, { label: command, quiet: false, extra: { phase: creating ? "creating" : "rest", composerOpen: !ok } });
+      if (creating) {
+        const seq = get().fx.seq;
+        setTimeout(() => {
+          if (get().phase === "creating" && get().fx.seq === seq) set({ phase: "rest", spawn: null });
+        }, CREATE_TOTAL_MS);
+      }
+      return ok;
+    }
+
     return {
       ...hydrated.state,
       past: [],
@@ -329,55 +382,14 @@ export function createFormStore(deps: FormDeps): FormStore {
         seal();
         set({ phase: "processing", caption: null, spawn: null });
 
-        const t0 = deps.now();
-        const s0 = get();
-        const parsed = fastParse(command, parserContext({ docs: s0.docs, projectId: s0.activeProjectId, local: s0.local, today: s0.today, mint: deps.mint }));
-
-        // A short, honest beat so the shape change reads: no fake reasoning
-        const beat = get().reducedMotion ? 0 : PROCESS_BEAT_MS;
-        const elapsed = deps.now() - t0;
-        if (elapsed < beat) await sleep(beat - elapsed);
-        set((st) => ({ commandHistory: [command, ...st.commandHistory.filter((c) => c !== command)].slice(0, COMMAND_HISTORY) }));
-        // A drag may have started during the beat
-        seal();
-
-        if (parsed.status === "none") {
-          set({ phase: "rest", composerOpen: true, caption: caption({ text: parsed.reply.text, tone: "unsupported", undoable: false }) });
+        try {
+          return await runTyped(command);
+        } catch (e) {
+          // A bug in the parser or a recipe: the agent comes back to rest; development surfaces the error
+          set({ phase: "rest", composerOpen: true, caption: caption({ text: "FORM couldn't run that command.", tone: "unsupported", undoable: false }) });
+          if (process.env.NODE_ENV !== "production") throw e;
           return false;
         }
-        if ("control" in parsed) {
-          if (parsed.control === "reset") {
-            get().reset();
-            set({ phase: "rest", composerOpen: false });
-            return true;
-          }
-          const did = parsed.control === "undo" ? get().undo() : get().redo();
-          const text = parsed.control === "undo" ? (did ? "Undone" : "Nothing to undo") : did ? "Redone" : "Nothing to redo";
-          set({ phase: "rest", composerOpen: false, caption: caption({ text, tone: "info", undoable: false }) });
-          return true;
-        }
-        const cmd = toCommand(parsed, command);
-        if (cmd === null) {
-          // A question back with nothing to apply: the composer stays open for the answer
-          set({ phase: "rest", composerOpen: true, caption: caption({ text: parsed.reply?.text ?? "", tone: "clarify", undoable: false }) });
-          return false;
-        }
-
-        const result = run(get().docs, cmd, where(), ctx());
-        const tone = result.caption?.tone ?? (result.changed ? "done" : "info");
-        const ok = tone !== "clarify" && tone !== "unsupported";
-        const created = result.outcomes.some((o) => o.result.kind === "applied" && o.def?.name === "createProject");
-        const creating = created && !get().reducedMotion;
-        // One update: the new documents and the agent's phase render together, so freshly created
-        // surfaces mount already knowing they must wait for the agent
-        apply(result, { label: command, quiet: false, extra: { phase: creating ? "creating" : "rest", composerOpen: !ok } });
-        if (creating) {
-          const seq = get().fx.seq;
-          setTimeout(() => {
-            if (get().phase === "creating" && get().fx.seq === seq) set({ phase: "rest", spawn: null });
-          }, CREATE_TOTAL_MS);
-        }
-        return ok;
       },
 
       commit(ops, meta) {

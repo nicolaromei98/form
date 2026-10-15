@@ -81,6 +81,7 @@ export function attachPersistence<S extends PersistedState>(store: Subscribable<
 
   const save = () => {
     timer = null;
+    if (!enabled) return;
     const state = store.getState();
     if (state.gesture) return;
     const snapshot = snapshotOf(state);
@@ -109,8 +110,8 @@ export function attachPersistence<S extends PersistedState>(store: Subscribable<
   const unsubscribe = store.subscribe(check);
   return {
     flush() {
-      if (timer === null) return;
-      clearTimeout(timer);
+      // Also catches a change whose timer fired while a gesture was open
+      if (timer !== null) clearTimeout(timer);
       save();
     },
     check,
