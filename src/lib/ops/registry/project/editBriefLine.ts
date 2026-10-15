@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { idKindOf } from "@/lib/domain/ids";
 import { BRIEF_BASIS, BRIEF_TEXT_MAX } from "@/lib/domain/limits";
 import { BriefEditKey } from "@/lib/domain/schema/project";
 import { defineOp, reject } from "@/lib/ops/registry/_contract";
 import { part, setIfChanged } from "@/lib/ops/registry/_helpers";
+import { fitsDoc, namesMissing, recordBytes } from "@/lib/ops/registry/_views";
 
 /**
  * The user's own wording for one composed sentence of the brief (plan §4.4 row 53). The key is
@@ -11,8 +11,8 @@ import { part, setIfChanged } from "@/lib/ops/registry/_helpers";
  * FORM's version moves on. Text "" hides the sentence. Writing back exactly FORM's wording is no
  * edit at all (v0): the edit is dropped, or the op is a no-op when there was none.
  *
- * A key that names a task the project no longer has is refused: removeTask deletes the edits keyed
- * to its task, and nothing may bring a dangling one back.
+ * A key that names a task or a step the project no longer has is refused: removeTask and
+ * removeStep delete the edits keyed to what they remove, and nothing may bring a dangling one back.
  */
 
 /** One trimmed line of the user's words; "" hides the sentence */
@@ -20,14 +20,6 @@ const EditText = z
   .string()
   .max(BRIEF_TEXT_MAX)
   .refine((s) => s === s.trim() && !/[\r\n]/.test(s), "Use one trimmed line");
-
-/** Whether a key ("client:moving:tsk_…") names a task id the project doesn't have */
-function namesMissingTask(key: string, tasks: Readonly<Record<string, unknown>>): boolean {
-  return key
-    .split(":")
-    .slice(1)
-    .some((segment) => idKindOf(segment) === "task" && !Object.hasOwn(tasks, segment));
-}
 
 export default defineOp({
   name: "editBriefLine",
@@ -37,13 +29,18 @@ export default defineOp({
     .strict(),
 
   reduce(d, op) {
-    if (namesMissingTask(op.key, d.tasks)) return reject("not_found", "That sentence's task isn't in this project anymore.");
+    if (namesMissing(op.key, d)) return reject("not_found", "That sentence's task isn't in this project anymore.");
     const edits = d.brief.edits;
+    const existing = Object.hasOwn(edits, op.key) ? edits[op.key] : undefined;
+    // Writing back FORM's own wording restores it
     if (op.text === op.basis.trim()) {
-      if (Object.hasOwn(edits, op.key)) delete edits[op.key];
+      if (existing) delete edits[op.key];
       return;
     }
-    setIfChanged(edits, op.key, { text: op.text, basis: op.basis });
+    const edit = { text: op.text, basis: op.basis };
+    const tooLarge = fitsDoc(d, recordBytes(op.key, edit), existing ? recordBytes(op.key, existing) : 0);
+    if (tooLarge) return tooLarge;
+    setIfChanged(edits, op.key, edit);
   },
 
   caption({ op, after }) {

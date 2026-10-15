@@ -4,6 +4,7 @@ import { SnapshotId } from "@/lib/domain/schema/ids";
 import { Audience } from "@/lib/domain/schema/primitives";
 import { defineOp, reject } from "@/lib/ops/registry/_contract";
 import { ensureFreshId, part } from "@/lib/ops/registry/_helpers";
+import { fitsDoc, jsonBytes } from "@/lib/ops/registry/_views";
 
 /**
  * Records that a brief was sent (plan §4.4 row 59). The body is a server row (`brief_snapshots`,
@@ -22,7 +23,10 @@ export default defineOp({
     if (d.brief.sent.length >= BRIEF_SENT_MAX) return reject("limit", `A project keeps at most ${BRIEF_SENT_MAX} sent briefs.`);
     const fresh = ensureFreshId(d, op.snapshotId);
     if (fresh) return fresh;
-    d.brief.sent.push({ snapshotId: op.snapshotId, audience: op.audience, sentAt: ctx.now });
+    const sent = { snapshotId: op.snapshotId, audience: op.audience, sentAt: ctx.now };
+    const tooLarge = fitsDoc(d, jsonBytes(sent) + 1);
+    if (tooLarge) return tooLarge;
+    d.brief.sent.push(sent);
   },
 
   caption: ({ op }) => part(`${AUDIENCE_LABEL[op.audience]} brief marked as sent`),

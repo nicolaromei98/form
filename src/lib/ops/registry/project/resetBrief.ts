@@ -35,4 +35,9 @@ export default defineOp({
   palette: [{ group: "Brief", phrase: "Reset the brief", rank: 60, needs: "project", fixture: "demo", surfaces: ["demo", "app"] }],
   transport: { tool: "brief", action: "reset" },
   sample: () => ({ op: "resetBrief", audience: "client" }),
+  // Complete and unit-tested (views.test.ts runs the completeness checks on a fixture with brief
+  // content), but no named fixture holds a brief edit or line yet, so the completeness test can't
+  // apply the sample. The mark keeps the op out of the full-op checks until
+  // test/fixtures/v2/named.ts gains one (reported by step 10b); then delete this line.
+  stub: { family: "10b", until: 1 },
 });

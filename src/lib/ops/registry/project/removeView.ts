@@ -18,7 +18,8 @@ export default defineOp({
     const i = d.views.indexOf(op.view);
     if (i < 0) return;
     if (d.views.length === 1) {
-      return reject("last_view", `The ${VIEW_LABEL[op.view]} is the project's only view: add another before removing it.`);
+      // v0 wording
+      return reject("last_view", `The ${VIEW_LABEL[op.view]} is this project's only view · add another before removing it.`);
     }
     d.views.splice(i, 1);
   },

@@ -4,7 +4,7 @@ import { BriefLineId } from "@/lib/domain/schema/ids";
 import { Text } from "@/lib/domain/schema/primitives";
 import { defineOp, isRejection } from "@/lib/ops/registry/_contract";
 import { part, setIfChanged } from "@/lib/ops/registry/_helpers";
-import { lineIndex } from "@/lib/ops/registry/_views";
+import { fitsDoc, jsonBytes, lineIndex } from "@/lib/ops/registry/_views";
 
 /**
  * Rewrites one of the user's own brief lines (plan §4.4 row 56). The text is never empty: an
@@ -18,7 +18,10 @@ export default defineOp({
   reduce(d, op) {
     const i = lineIndex(d, op.lineId);
     if (isRejection(i)) return i;
-    setIfChanged(d.brief.lines[i], "text", op.text);
+    const line = d.brief.lines[i];
+    const tooLarge = fitsDoc(d, jsonBytes(op.text), jsonBytes(line.text));
+    if (tooLarge) return tooLarge;
+    setIfChanged(line, "text", op.text);
   },
 
   caption: () => part("Brief line updated"),
@@ -37,4 +40,9 @@ export default defineOp({
     lineId: fx.project?.brief.lines[0]?.id ?? mint("briefLine"),
     text: "Homepage preview moves to Monday.",
   }),
+  // Complete and unit-tested (views.test.ts runs the completeness checks on a fixture with brief
+  // content), but no named fixture holds a brief line yet, so the completeness test can't apply
+  // the sample. The mark keeps the op out of the full-op checks until test/fixtures/v2/named.ts
+  // gains one (reported by step 10b); then delete this line and point `sampleOn` at it.
+  stub: { family: "10b", until: 1 },
 });

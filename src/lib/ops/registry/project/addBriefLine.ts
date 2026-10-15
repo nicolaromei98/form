@@ -5,6 +5,7 @@ import { BriefLineId } from "@/lib/domain/schema/ids";
 import { Audience, BriefSection, Text } from "@/lib/domain/schema/primitives";
 import { defineOp, reject } from "@/lib/ops/registry/_contract";
 import { ensureFreshId, part } from "@/lib/ops/registry/_helpers";
+import { fitsDoc, jsonBytes } from "@/lib/ops/registry/_views";
 
 /**
  * Adds a line in the user's own words to one audience's brief, under a section (plan §4.4 row 55).
@@ -28,7 +29,10 @@ export default defineOp({
     if (d.brief.lines.length >= BRIEF_LINES_MAX) return reject("limit", `The brief holds at most ${BRIEF_LINES_MAX} lines of your own.`);
     const fresh = ensureFreshId(d, op.lineId);
     if (fresh) return fresh;
-    d.brief.lines.push({ id: op.lineId, audience: op.audience, section: op.section, text: op.text });
+    const line = { id: op.lineId, audience: op.audience, section: op.section, text: op.text };
+    const tooLarge = fitsDoc(d, jsonBytes(line) + 1);
+    if (tooLarge) return tooLarge;
+    d.brief.lines.push(line);
   },
 
   caption: ({ op }) => part(`Added to the ${op.audience} brief · ${SECTION_LABEL[op.section]}`),
