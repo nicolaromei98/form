@@ -20,8 +20,9 @@ import { ordinalAfter, type Schedule } from "@/lib/planning/schedule";
  * - **Pin.** A task the user pinned wins while it is open, blocked or not: it is their choice
  *   (`chosenBy: "you"`, v0 parity). FORM's own pick (`chosenBy: "form"`) is never blocked or Done.
  * - **Ranking:** score, then workflow order, then project creation order ("My focus" spans projects).
- * - **Why** joins the two highest reasons that have a phrase: adjectives with " and ", clauses
- *   after them with "; ". "Urgent and on the critical path."
+ * - **Why** joins the two highest reasons that have a phrase, strongest first: two adjectives with
+ *   " and " ("Urgent and on the critical path."), a clause with "; " ("Urgent; Development waits
+ *   on it.").
  *
  * Scores are O(V + E) per project plus the descendant bitsets (O((V+E)·V/32)); the ranking is
  * O(V log V).
@@ -111,13 +112,14 @@ function floatText(float: number): string {
   return `${float} ${float === 1 ? "day" : "days"} of float`;
 }
 
-/** The why: the two highest reasons with a phrase, adjectives first ("urgent and on the critical path"), then clauses */
+/**
+ * The why: the two highest reasons with a phrase, in the order given (strongest first). Two
+ * adjectives join with " and "; a clause joins with "; ". No phrase at all: "Nothing is blocking it."
+ */
 export function whyOf(reasons: readonly FocusReason[]): string {
-  const top = reasons.filter((r) => r.phrase !== null).slice(0, 2);
-  if (top.length === 0) return "Nothing is blocking it.";
-  const adjectives = top.filter((r) => !r.clause).map((r) => r.phrase!);
-  const clauses = top.filter((r) => r.clause).map((r) => r.phrase!);
-  const sentence = [adjectives.join(" and "), ...clauses].filter((s) => s.length > 0).join("; ");
+  const [a, b] = reasons.filter((r) => r.phrase !== null);
+  if (a === undefined) return "Nothing is blocking it.";
+  const sentence = b === undefined ? a.phrase! : `${a.phrase}${!a.clause && !b.clause ? " and " : "; "}${b.phrase}`;
   return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}.`;
 }
 
