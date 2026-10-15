@@ -17,8 +17,6 @@ import { makeOp, type Op, updateTaskOp } from "@/lib/ops/build";
  * done (status Done) and estimate; v0's other step fields don't exist in v2 and are dropped.
  */
 
-export const PLURAL = /\b(ones|tasks|cards|items|all|everything|them|these|those|rows|bars)\b/;
-
 const WANTS_BREAKDOWN = (s: string) =>
   (/\b(break|split|divide|decompose|chunk)\b/.test(s) && /\b(down|up|into|smaller|steps?|subtasks?|parts|pieces|chunks)\b/.test(s)) ||
   /\b(sub-?tasks|smaller steps|steps for)\b/.test(s);

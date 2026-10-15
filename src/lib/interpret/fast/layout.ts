@@ -1,12 +1,12 @@
 import { TASK_TITLE } from "@/lib/domain/limits";
+import { sortedByOrder } from "@/lib/domain/order";
 import type { LocalViewState } from "@/lib/domain/schema/local";
 import type { SortKey } from "@/lib/domain/schema/primitives";
 import type { ProjectDoc } from "@/lib/domain/schema/project";
 import { clarify, type Collector, type FamilyResult, type FastContext } from "@/lib/interpret/fast/context";
-import { type Command, lineOf, type Target } from "@/lib/interpret/fast/match";
+import { type Command, lineOf, PLURAL, type Target } from "@/lib/interpret/fast/match";
 import { showHome, viewIn } from "@/lib/interpret/fast/view";
 import { addTaskOp, makeOp, setViewOp } from "@/lib/ops/build";
-import { sortedByOrder } from "@/lib/domain/order";
 
 /**
  * The workspace-level rules (plan §8.4 step 14), ported from v0: they accumulate after the task
@@ -34,7 +34,7 @@ export function workspaceRules(
   const { clean, s } = cmd;
   const { local } = ctx;
   const vc = project.viewConfig;
-  const plural = /\b(ones|tasks|cards|items|all|everything|them|these|those|rows|bars)\b/.test(s);
+  const plural = PLURAL.test(s);
 
   // The view a sentence names: added when the project doesn't have it, then shown
   const rep = viewIn(s, false);

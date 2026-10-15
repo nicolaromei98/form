@@ -59,6 +59,9 @@ export function covers(re: RegExp, s: string): boolean {
    Tasks and steps named in a command
    ------------------------------------------------------------------ */
 
+/** A sentence about several tasks: "this" then means none of them in particular (v0) */
+export const PLURAL = /\b(ones|tasks|cards|items|all|everything|them|these|those|rows|bars)\b/;
+
 /** What a command can point at: a task, or one of its steps (v0 kept steps as tasks with a parent) */
 export type Target = { kind: "task"; task: Task } | { kind: "step"; task: Task; step: Step };
 

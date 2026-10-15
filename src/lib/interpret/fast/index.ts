@@ -4,9 +4,9 @@ import { clarify, Collector, type FamilyResult, type FastContext, unsupported } 
 import { planFollowUp, proposalFollowUp, reset, undoRedo } from "@/lib/interpret/fast/control";
 import { create, noProject } from "@/lib/interpret/fast/create";
 import { workspaceRules } from "@/lib/interpret/fast/layout";
-import { findNamed, normalise, type Target } from "@/lib/interpret/fast/match";
+import { findNamed, normalise, PLURAL, type Target } from "@/lib/interpret/fast/match";
 import { moodboard } from "@/lib/interpret/fast/mood";
-import { breakdown, entityEdits, notUnderstood, PLURAL } from "@/lib/interpret/fast/task";
+import { breakdown, entityEdits, notUnderstood } from "@/lib/interpret/fast/task";
 import { team } from "@/lib/interpret/fast/team";
 import { exitFocus, focus, removeView } from "@/lib/interpret/fast/view";
 import type { Op } from "@/lib/ops/build";
