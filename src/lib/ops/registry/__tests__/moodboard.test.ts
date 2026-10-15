@@ -104,7 +104,8 @@ const toV0 = (it: MoodItem): V0MoodItem => ({ id: it.id, kind: it.kind, x: it.x,
    addMoodItems
    ------------------------------------------------------------------ */
 
-const add = (items: Record<string, unknown>[]) => ({ op: "addMoodItems", items: items.map((it) => ({ itemId: mint("moodItem"), ...it })) });
+type RawItem = Record<string, unknown> & { itemId: MoodItemId };
+const add = (items: Record<string, unknown>[]) => ({ op: "addMoodItems", items: items.map((it): RawItem => ({ itemId: mint("moodItem"), ...it })) });
 const colour = (hex: string, text?: string) => ({ kind: "color", hex, ...(text !== undefined ? { text } : {}) });
 const note = (text: string) => ({ kind: "note", text });
 const image = () => ({ kind: "image", assetId: mint("asset") });
@@ -157,6 +158,21 @@ describe("addMoodItems", () => {
     const [item] = board(after(apply(s, op)));
     expect(item).toMatchObject({ x: 0.4, y: 0, w: 0.6, h: MOOD_BOUNDS.h.max, r: 0 });
     expectSameBox(item, v0AddMoodItems([], [{ kind: "note", text: "Dropped", x: 0.95, y: -1, w: 0.9, h: 5 }])[0]);
+  });
+
+  it("never lands a reference below the board's floor, where v0 broke the document", () => {
+    const s = moodShown();
+    const tall = Array.from({ length: 8 }, () => ({ ...note("Tall"), w: 0.6, h: 3 }));
+    const op = add(tall);
+    const r = apply(s, op);
+    expectInverse(r.before, expectApplied(r.result));
+    const items = board(after(r));
+    // v0 put the eighth note at y 21.156, past the stored bound; the first seven land where v0 put them
+    const v0 = v0AddMoodItems([], tall.map(({ text, w, h }) => ({ kind: "note", text, w, h })));
+    expect(v0[7].y).toBeGreaterThan(MOOD_BOUNDS.y.max);
+    items.slice(0, 7).forEach((it, i) => expectSameBox(it, v0[i]));
+    expect(items[7]).toMatchObject({ x: v0[7].x, y: MOOD_BOUNDS.y.max, w: 0.6, h: 3 });
+    expect(captionOf(s, op)).toBe("8 notes added to the moodboard");
   });
 
   it("speaks v0's words for notes, colours and images", () => {
@@ -476,7 +492,7 @@ describe("the moodboard, as v0 did it", () => {
     s = { ...s, projects: result.state.projects as TestState["projects"] };
 
     // v0: add, then the moved item goes to the top of the stack, then the whole board is arranged
-    let v0 = v0AddMoodItems([], inputs).map((it, i) => ({ ...it, id: ids[i] }));
+    let v0: V0MoodItem[] = v0AddMoodItems([], inputs).map((it, i) => ({ ...it, id: ids[i] }));
     const moved = v0PatchMoodItem(v0[0], { x: 0.5, y: 0.6 });
     v0 = [...v0.slice(1), moved];
     v0 = v0ArrangeMood(v0, "collage");

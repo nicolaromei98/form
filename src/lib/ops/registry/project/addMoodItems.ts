@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { normaliseHex } from "@/lib/domain/colours";
 import { MOOD_ADD_MAX, MOOD_MAX, MOOD_TEXT } from "@/lib/domain/limits";
-import { frontZs, type MoodRect, placeNew } from "@/lib/domain/mood-geometry";
+import { clampBox, frontZs, type MoodRect, placeNew } from "@/lib/domain/mood-geometry";
 import { sortedByZ } from "@/lib/domain/order";
 import { AssetId, MoodItemId } from "@/lib/domain/schema/ids";
 import type { MoodItem, ProjectDoc } from "@/lib/domain/schema/project";
@@ -12,10 +12,10 @@ import { HexInput, itemCount, showBoard } from "@/lib/ops/registry/_mood";
 /**
  * Adds references to the moodboard (plan §4.4 row 61; v0 addMoodItems). The producer mints the
  * item ids. Each item lands where v0 put it (`placeNew`: its own size clamped, at its own place
- * when it was dropped somewhere, else in the next free spot), unrotated, stacked above every
- * item already there in payload order. The board fills only up to 200 references and the caption
- * says so; a full board refuses with `limit`. Adding references brings a hidden board back, as in
- * v0.
+ * when it was dropped somewhere, else in the next free spot, never below the board's floor),
+ * unrotated, stacked above every item already there in payload order. The board fills only up to
+ * 200 references and the caption says so; a full board refuses with `limit`. Adding references
+ * brings a hidden board back, as in v0.
  */
 
 /** A size, and a place when the item was dropped somewhere; clamped to the stored bounds on write */
@@ -74,7 +74,10 @@ export default defineOp({
     // Each new item lands among the ones already there and the ones added before it
     const placed: MoodRect[] = [...existing];
     adding.forEach((input, i) => {
-      const box = placeNew(input.kind, input, placed);
+      // v0 never clamped the free spot, so on a board filled down to its floor (y 20) an item
+      // landed below it and the document broke. Clamping keeps every valid v0 placement bit for
+      // bit (the value passes through Math.min/Math.max unchanged) and lays the rest on the floor.
+      const box = clampBox(placeNew(input.kind, input, placed));
       placed.push(box);
       const item: MoodItem = {
         id: input.itemId,
