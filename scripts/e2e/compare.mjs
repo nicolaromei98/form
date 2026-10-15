@@ -237,10 +237,10 @@ function gateSummary(out) {
   for (const f of files(root).filter((f) => f.endsWith(".json"))) {
     const [project, spec] = f.split("/");
     const rec = JSON.parse(readFileSync(join(root, f), "utf8"));
-    const s = (summary[`${project} ${spec}`] ??= { captures: 0, passed: 0, failed: 0, page: 0, crops: 0, compared: 0, differing: 0, maskedBy: {}, failures: [] });
+    const s = (summary[`${project} ${spec}`] ??= { captures: 0, passed: 0, failed: 0, page: 0, collapsed: 0, compared: 0, differing: 0, maskedBy: {}, failures: [] });
     s.captures++;
     s[rec.ok ? "passed" : "failed"]++;
-    s[rec.mode]++;
+    s[rec.mode] = (s[rec.mode] ?? 0) + 1;
     s.compared += rec.compared;
     s.differing += rec.differing;
     for (const ed of Object.keys(rec.masked ?? {})) if (rec.masked[ed] > 0) s.maskedBy[ed] = (s.maskedBy[ed] ?? 0) + 1;
@@ -355,7 +355,7 @@ async function main() {
   console.log(`\nBase ${short(base)}: ${JSON.stringify(summary.base)}\nHead ${short(head)}: ${JSON.stringify(summary.head)}`);
   for (const [key, s] of Object.entries(gated)) {
     const masked = Object.entries(s.maskedBy).map(([ed, n]) => `${ed}×${n}`).join(" ");
-    console.log(`Gate ${key}: ${s.passed}/${s.captures} pass (${s.page} page, ${s.crops} crops), ${s.differing} differing of ${s.compared} compared pixels; masked ${masked || "nothing"}`);
+    console.log(`Gate ${key}: ${s.passed}/${s.captures} pass (${s.page} page, ${s.collapsed} collapsed), ${s.differing} differing of ${s.compared} compared pixels; masked ${masked || "nothing"}`);
     for (const f of s.failures) console.log(`  ✘ ${f}`);
   }
   console.log(`Reports: ${relative(REPO, join(out, "head/report"))} (head), ${relative(REPO, join(out, "base/report"))} (base)`);

@@ -307,9 +307,22 @@ export async function afterFrame(page: Page) {
  * first, and there the wait is real time instead (stills only: no frame stepping runs in WebKit).
  */
 export async function realFrames(page: Page, n: number) {
-  if (page.context().browser()?.browserType().name() === "chromium") await page.evaluate((n) => window.__e2e!.rendered(n), n);
-  else await page.waitForTimeout(n * 17);
+  if (page.context().browser()?.browserType().name() !== "chromium") return page.waitForTimeout(n * 17);
+  // A browser that stops rendering (seen with the Mac's display asleep: every worker stalled at
+  // once) would otherwise hang the test until its timeout and its teardown
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const stalled = new Promise<never>((_, fail) => {
+    timer = setTimeout(() => fail(new Error(`The browser rendered no frame for ${REAL_FRAME_TIMEOUT_MS / 1000} s: is the display asleep? (caffeinate -d)`)), REAL_FRAME_TIMEOUT_MS);
+  });
+  try {
+    await Promise.race([page.evaluate((n) => window.__e2e!.rendered(n), n), stalled]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
+
+/** How long a few real frames may take before the browser counts as stalled */
+const REAL_FRAME_TIMEOUT_MS = 30_000;
 
 /**
  * Captures the frames of one trigger (§10.8 motion) on a page opened in stepped mode: the trigger
