@@ -281,9 +281,9 @@ export type V0OpName = (typeof V0_OP_NAMES)[number];
 export type StubFamily = "10a" | "10b" | "10c" | "10d" | "10e";
 
 /**
- * Marks an op file that is still a stub: its schema takes `{ op }` alone and its recipe refuses
- * everything. The completeness test skips the full-op checks for stubs, and fails once
- * FORM_PHASE passes `until`, so no stub survives Phase 1.
+ * Step 9's mark for an op file that was still a stub. Step 16 removed the last one: the
+ * completeness test now fails on any op that carries it. The type stays only so branches cut
+ * before step 16 still type-check when they merge; it can go once Phase 1 is merged.
  */
 export interface StubMark {
   family: StubFamily;

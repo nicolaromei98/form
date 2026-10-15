@@ -7,7 +7,6 @@ import { nKeys } from "@/lib/domain/order";
 import { CommitSchema } from "@/lib/domain/schema/commit";
 import type { TaskId } from "@/lib/domain/schema/ids";
 import { toCommits } from "@/lib/ops/command";
-import { REGISTRY } from "@/lib/ops/registry";
 import { byId, demoState, emptyState, FIXTURE_NOW, indexEntry, makeProject, makeTask, taskByTitle } from "../../../../test/fixtures/v2/build";
 import { deepFreeze, expectRejection, projectOf, run, type TestState } from "../registry/__tests__/support";
 
@@ -132,7 +131,7 @@ describe("runCommand", () => {
     expect(toCommits(run(s, [update(id(s, "Research"), "status", "done")]), { source: "direct", text: null }, { now: FIXTURE_NOW, actorId: null }, () => 0)).toEqual([]);
   });
 
-  it.skipIf(REGISTRY.get("rebalanceOrder")!.stub !== undefined)("appends rebalanceOrder when an order key passes 48 characters", () => {
+  it("appends rebalanceOrder when an order key passes 48 characters", () => {
     const long = `a0${"V".repeat(ORDER_KEY_REBALANCE - 1)}`;
     const keys = nKeys(2);
     const a = makeTask({ id: mint("task"), title: "A", order: keys[0] });

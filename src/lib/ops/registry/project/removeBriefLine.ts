@@ -32,9 +32,5 @@ export default defineOp({
   transport: { tool: "brief", action: "hideLine" },
   // The fixture's first line of the user's own; a fixture with none gives an id that names nothing
   sample: (fx, mint) => ({ op: "removeBriefLine", lineId: fx.project?.brief.lines[0]?.id ?? mint("briefLine") }),
-  // Complete and unit-tested (views.test.ts runs the completeness checks on a fixture with brief
-  // content), but no named fixture holds a brief line yet, so the completeness test can't apply
-  // the sample. The mark keeps the op out of the full-op checks until test/fixtures/v2/named.ts
-  // gains one (reported by step 10b); then delete this line and point `sampleOn` at it.
-  stub: { family: "10b", until: 1 },
+  sampleOn: "demoExtras",
 });

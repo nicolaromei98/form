@@ -629,18 +629,22 @@ describe("addMember", () => {
     expect(captionOf(s, add(GIULIA))).toBe("Giulia joins the project");
   });
 
-  it("keeps a person the workspace doesn't know as a reference, resolved at read time (Q7)", () => {
+  it("refuses a person the workspace doesn't know, like an owner (Q7)", () => {
     const s = demo();
-    const stranger = mint("person");
-    expect(after(apply(s, add(stranger))).memberIds).toContain(stranger);
-    expect(captionOf(s, add(stranger))).toBe("Someone joins the project");
+    const r = expectRejection(apply(s, add(mint("person"))).result, "invalid_reference");
+    expect(r.message).toBe("That person isn't in the workspace.");
   });
 
-  it("is a no-op for a member", () => {
+  it("is a no-op for a member, even one the workspace no longer knows", () => {
     const s = demo();
     const r = apply(s, add(DEMO_PEOPLE.sara));
     expectNoop(r.result, r.before);
     expect(captionOf(s, add(DEMO_PEOPLE.sara))).toBe("Sara is already in the project");
+    // deletePerson never edits project documents, so a deleted member stays a reference (read as missing)
+    const people = Object.fromEntries(Object.entries(s.workspace.people).filter(([key]) => key !== DEMO_PEOPLE.sara));
+    const gone: TestState = deepFreeze({ ...s, workspace: { ...s.workspace, people } });
+    const again = apply(gone, add(DEMO_PEOPLE.sara));
+    expectNoop(again.result, again.before);
   });
 
   it("refuses an archived person and a 101st member", () => {

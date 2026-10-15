@@ -2,9 +2,9 @@
 // union, the samples, the exemptions, the transport list, the palette, the spawners, the v0
 // names, the property generators or the unit tests drift apart.
 //
-// Stubs (step 9 ships all 66 files; `registry/README.md`) skip the full-op checks while
-// FORM_PHASE ≤ their `until`, so Phase 1 must fill them all; codes and names whose only producer
-// is still a stub are exempt for the same reason, and stop being exempt as soon as it's filled.
+// Step 9 shipped all 66 files with stubs (`registry/README.md`); step 16 removed the last stub mark,
+// so every op now meets every check: no stub, exactly 42 palette phrases, both spawners, every
+// reject code produced by a unit test.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,7 +23,6 @@ import {
   isExempt,
   PALETTE_GROUPS,
   REJECT_CODES,
-  type RejectCode,
   V0_OP_NAMES,
   type V0OpName,
 } from "@/lib/ops/registry/_contract";
@@ -40,9 +39,6 @@ const GEN_DIR = join(ROOT, "test/property/gen");
 const PALETTE_TEST = join(ROOT, "test/golden/palette.test.ts");
 
 const defs: AnyOpDef[] = OP_NAMES.map((n) => REGISTRY.get(n)!);
-const isStub = (d: AnyOpDef) => d.stub !== undefined;
-const stubAllowed = (d: AnyOpDef) => d.stub !== undefined && FORM_PHASE <= d.stub.until;
-const complete = defs.filter((d) => !isStub(d));
 
 /**
  * Item 2: the registry keys equal the TS union `Op["op"]`. `satisfies` fails to compile on a
@@ -120,14 +116,6 @@ const NAMES = {
 /** v0 names no registry op folds in: the demo action addSampleTeam, lowered by test/legacy/lower.ts (plan §4.5) */
 const LOWERED_ONLY: readonly V0OpName[] = ["addSampleTeam"];
 
-/** Reject codes only one op produces: exempt from item 9 while that op is a stub */
-const ONLY_PRODUCER: Partial<Record<RejectCode, OpName>> = {
-  last_view: "removeView",
-  protected_block: "removeBlock",
-  stale_proposal: "acceptProposal",
-  owns_tasks: "deletePerson",
-};
-
 const EXEMPT_MIN = 10;
 
 function checkExempt(e: Exempt, where: string): void {
@@ -164,10 +152,10 @@ describe("files and the registry", () => {
 });
 
 /* ------------------------------------------------------------------
-   3. Every complete op: strict schema, sample, caption, flags
+   3. Every op: strict schema, sample, caption, flags
    ------------------------------------------------------------------ */
 
-describe.each(complete.map((d) => [d.name, d] as const))("%s", (name, def) => {
+describe.each(defs.map((d) => [d.name, d] as const))("%s", (name, def) => {
   const fixture = namedFixture(def.sampleOn ?? "demo");
   const sample = def.sample(docsOf(fixture), seededMinter(1));
 
@@ -206,7 +194,7 @@ describe.each(complete.map((d) => [d.name, d] as const))("%s", (name, def) => {
 
 describe("parser, palette and transport", () => {
   it("are filled or exempt with a reason, and no exemption has expired", () => {
-    for (const def of complete) {
+    for (const def of defs) {
       for (const key of ["parser", "palette", "transport"] as const) {
         const value = def[key];
         if (isExempt(value)) checkExempt(value, `${def.name}.${key}`);
@@ -225,11 +213,8 @@ describe("parser, palette and transport", () => {
     }
   });
 
-  it("leaves stubs only to Phase 1, each owned by a step 10 family", () => {
-    for (const def of defs.filter(isStub)) {
-      expect(["10a", "10b", "10c", "10d", "10e"]).toContain(def.stub!.family);
-      expect(stubAllowed(def), `${def.name} is still a stub after phase ${def.stub!.until}`).toBe(true);
-    }
+  it("leaves no stub: every op is implemented (Phase 1)", () => {
+    expect(defs.filter((d) => d.stub !== undefined).map((d) => d.name)).toEqual([]);
   });
 
   it("names only §9.4 tools, and every tool has an owner or a reason", () => {
@@ -273,10 +258,8 @@ describe("palette phrases", () => {
     }
   });
 
-  it("total the 42 v0 phrases once every op is filled", () => {
-    // Finished ops may keep a stub mark until a fixture can apply their sample (wave 4), so all 42 can be placed early
-    if (defs.some(isStub)) expect(entries.length).toBeLessThanOrEqual(42);
-    else expect(entries.length).toBe(42);
+  it("total the 42 v0 phrases", () => {
+    expect(entries.length).toBe(42);
   });
 
   it.skipIf(!existsSync(PALETTE_TEST))("are each exercised by the palette test (§10.5), generated from paletteGroups", () => {
@@ -292,8 +275,9 @@ describe("spawn and deprecations", () => {
   it("spawns only from createProject and duplicateProject", () => {
     const SPAWNERS = ["createProject", "duplicateProject"];
     for (const def of defs) {
-      if (def.spawn) expect(SPAWNERS, `${def.name} spawns`).toContain(def.name);
-      else if (SPAWNERS.includes(def.name)) expect(isStub(def), `${def.name} must spawn`).toBe(true);
+      expect(typeof def.spawn === "function", `${def.name} ${SPAWNERS.includes(def.name) ? "must spawn" : "spawns"}`).toBe(
+        SPAWNERS.includes(def.name),
+      );
     }
   });
 
@@ -357,16 +341,12 @@ describe("generators and unit tests", () => {
     }
   });
 
-  it("names every complete op in a unit test", () => {
-    for (const def of complete) expect(sources.some((s) => s.includes(`"${def.name}"`)), `a unit test names ${def.name}`).toBe(true);
+  it("names every op in a unit test", () => {
+    for (const def of defs) expect(sources.some((s) => s.includes(`"${def.name}"`)), `a unit test names ${def.name}`).toBe(true);
   });
 
   it("produces every reject code in some unit test", () => {
     const produced = new Set(sources.flatMap((s) => [...rejectionCodes(s)]));
-    for (const code of REJECT_CODES) {
-      const producer = ONLY_PRODUCER[code];
-      if (producer && isStub(REGISTRY.get(producer)!)) continue;
-      expect(produced.has(code), `no unit test produces ${code}`).toBe(true);
-    }
+    for (const code of REJECT_CODES) expect(produced.has(code), `no unit test produces ${code}`).toBe(true);
   });
 });

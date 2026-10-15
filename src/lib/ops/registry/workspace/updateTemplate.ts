@@ -59,8 +59,5 @@ export default defineOp({
     field: "name",
     value: "Website, renamed",
   }),
-  // Complete, but no named fixture holds a user template yet, so the completeness test can't
-  // apply the sample. The mark keeps the op out of the full-op checks until
-  // test/fixtures/v2/named.ts gains one (reported by step 10d); then delete this line.
-  stub: { family: "10d", until: 1 },
+  sampleOn: "demoExtras",
 });

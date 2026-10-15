@@ -1,6 +1,6 @@
 // Property generator for addMember: a third of the time a current member (a no-op), a third a
-// non-member (someone of the workspace outside the project, else an id the workspace doesn't know,
-// kept as a reference), otherwise any person of the workspace, archived ones included.
+// non-member (someone of the workspace outside the project, else an id the workspace doesn't
+// know: invalid_reference), otherwise any person of the workspace, archived ones included.
 import type { PersonId } from "@/lib/domain/schema/ids";
 import { activeProject, type OpGen, pick, pickPerson } from "./_pick";
 

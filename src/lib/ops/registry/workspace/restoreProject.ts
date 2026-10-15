@@ -44,8 +44,5 @@ export default defineOp({
         .map((e) => e.id)
         .sort(compareKeys)[0] ?? mint("project"),
   }),
-  // Complete, but no named fixture holds an archived project yet, so the completeness test can't
-  // apply the sample. The mark keeps the op out of the full-op checks until
-  // test/fixtures/v2/named.ts gains one (reported by step 10d); then delete this line.
-  stub: { family: "10d", until: 1 },
+  sampleOn: "demoExtras",
 });
