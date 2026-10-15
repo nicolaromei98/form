@@ -330,14 +330,16 @@ function buildCalendar({ key, week, off }: Normalised): WorkCalendar {
   }
 
   /**
-   * The horizon index of a date, growing the horizon to hold it. Growing replaces `mask` and
-   * `prefix`, so callers take the index first and read the arrays after: `mask[indexOf(d)]`
-   * would read the array from before the growth.
+   * Grows the horizon to hold day `n`. Growing replaces `mask` and `prefix`, so callers grow in a
+   * statement of its own and read the arrays after it. Never fold the two into one expression,
+   * not even through a single-use variable (`const i = indexOf(d); return prefix[i]`): the
+   * production minifier (SWC, as Next 16 runs it) inlines such a variable into `prefix[indexOf(d)]`,
+   * which reads `prefix` before the call replaces it. That read the empty starting array on a fresh
+   * calendar, so every ordinal was undefined and every task "too far out to date" in the built
+   * app (calendar.minify.test.ts runs this module through the same minifier).
    */
-  function indexOf(d: IsoDate): number {
-    const n = toDayNum(d);
+  function hold(n: DayNum): void {
     if (n < h0 || n >= h1) cover(n, n + 1);
-    return n - h0;
   }
 
   function dateAt(i: number): IsoDate {
@@ -367,26 +369,25 @@ function buildCalendar({ key, week, off }: Normalised): WorkCalendar {
   }
 
   function ordinal(d: IsoDate): number {
-    const i = indexOf(d);
-    return prefix[i];
+    const n = toDayNum(d);
+    hold(n);
+    return prefix[n - h0];
   }
 
   return Object.freeze({
     key,
     isWorkingDay(d: IsoDate): boolean {
-      const i = indexOf(d);
-      return mask[i] === 1;
+      const n = toDayNum(d);
+      hold(n);
+      return mask[n - h0] === 1;
     },
     ordinal,
     dateAt,
     nextWorkingDay(d: IsoDate, inclusive: boolean): IsoDate {
-      if (inclusive) {
-        const i = indexOf(d);
-        return mask[i] === 1 ? d : dateAt(prefix[i]);
-      }
-      // The first working day after d is the one whose ordinal is the count up to and including d
       const n = toDayNum(d);
-      if (n < h0 || n >= h1) cover(n, n + 1);
+      hold(n);
+      if (inclusive) return mask[n - h0] === 1 ? d : dateAt(prefix[n - h0]);
+      // The first working day after d is the one whose ordinal is the count up to and including d
       return dateAt(prefix[n + 1 - h0]);
     },
     addWorkingDays(d: IsoDate, n: number): IsoDate {
