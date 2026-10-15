@@ -17,7 +17,7 @@ import { type CommandCtx, type CommandResult, type DocsState, runCommand } from 
 import type { AnyDoc } from "@/lib/ops/reduce";
 import { defOf, type Op } from "@/lib/ops/registry";
 import type { ReduceCtx } from "@/lib/ops/registry/_contract";
-import { laneLoads, loadFor, planProject } from "@/lib/planning";
+import { CAPTION_PLANNING } from "@/lib/store/engine";
 import { FIXTURE_NOW, FIXTURE_TODAY } from "../fixtures/v2/build";
 import type { Run } from "./arbitraries";
 import type { StepIntent } from "./gen/_pick";
@@ -130,15 +130,8 @@ export function shuffledCtx(state: GenState, salt: number): ReduceCtx {
   };
 }
 
-/** Captions read the real planning engine, as in the store (plan §5.9, `caption-env.ts`) */
-export const PLANNING: CaptionPlanning = {
-  plan: (project, ws, today) => planProject(project, ws, today),
-  lanes: (project, ws, projects, today) => {
-    const plans = projects.map((p) => planProject(p, ws, today));
-    return laneLoads(planProject(project, ws, today), loadFor(ws, plans), ws);
-  },
-  focus: (project, ws, today) => planProject(project, ws, today).focus,
-};
+/** Captions read the real planning engine, the store's own (plan §5.9, `caption-env.ts`) */
+export const PLANNING: CaptionPlanning = CAPTION_PLANNING;
 
 function commandCtx(state: GenState): CommandCtx {
   const project = state.projectId !== null && Object.hasOwn(state.projects, state.projectId) ? state.projects[state.projectId] : null;

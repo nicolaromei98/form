@@ -11,21 +11,19 @@
 // Canonical form: every id is replaced by a label made of titles and names, timestamps are left
 // out, and so are order and z keys (the lists keep their order instead). Reassign moves keep no
 // `why`: v0 had none, and the caption carries it.
-import { breakdownFor } from "@/lib/demo/library";
 import { sampleForMigration } from "@/lib/demo/sample";
-import { addSampleTeam, createDemoProject, demoWorkspace } from "@/lib/demo/seed";
+import { demoWorkspace } from "@/lib/demo/seed";
 import { seededMinter } from "@/lib/domain/ids";
 import { sortedByOrder, sortedByZ } from "@/lib/domain/order";
 import type { PersonId, ProjectId, TaskId } from "@/lib/domain/schema/ids";
 import { defaultLocalViewState, type LocalViewState } from "@/lib/domain/schema/local";
 import type { ProjectDoc } from "@/lib/domain/schema/project";
 import type { WorkspaceDoc } from "@/lib/domain/schema/workspace";
-import { type FastContext, type FastResult, fastParse, paletteKey, toCommand } from "@/lib/interpret/fast";
+import { type FastContext, type FastResult, fastParse, toCommand } from "@/lib/interpret/fast";
 import { migrateV0 } from "@/lib/migrate";
 import type { CaptionPlanning } from "@/lib/ops/caption-env";
 import { type CommandResult, type DocsState, runCommand } from "@/lib/ops/command";
-import { paletteEntries } from "@/lib/ops/palette";
-import { laneLoads, planProject, weeklyLoad } from "@/lib/planning";
+import { CAPTION_PLANNING, liveProjects as storeLiveProjects, parserContext, parserPalette } from "@/lib/store/engine";
 import { FIXTURE_NOW, FIXTURE_TODAY } from "../fixtures/v2/build";
 import { interpretDemo } from "../legacy/v0/lib/interpret/demo";
 import { breakdownFor as legacyBreakdownFor } from "../legacy/v0/lib/interpret/library";
@@ -40,28 +38,14 @@ import { lower } from "../legacy/lower";
    The engine pieces both sides share
    ------------------------------------------------------------------ */
 
-/** Live projects: neither archived nor deleted */
-export function liveProjects(state: DocsState): ProjectDoc[] {
-  return Object.values(state.projects).filter((p) => {
-    const entry = state.workspace.projects[p.id];
-    return !entry || (entry.archivedAt === null && entry.deletedAt === null);
-  });
-}
+/** Live projects: neither archived nor deleted (the store's own) */
+export const liveProjects: (state: DocsState) => ProjectDoc[] = storeLiveProjects;
 
-/** The planning engine behind captions (plan §5.9): what the store passes in step 17 */
-export const PLANNING: CaptionPlanning = {
-  plan: (project, ws, today) => planProject(project, ws, today),
-  lanes(project, ws, projects, today) {
-    const plans = projects.map((p) => planProject(p, ws, today));
-    if (!plans.some((p) => p.project.id === project.id)) plans.push(planProject(project, ws, today));
-    const plan = plans.find((p) => p.project.id === project.id)!;
-    return laneLoads(plan, weeklyLoad(ws, plans), ws);
-  },
-  focus: (project, ws, today) => planProject(project, ws, today).focus,
-};
+/** The planning engine behind captions (plan §5.9): the store's own */
+export const PLANNING: CaptionPlanning = CAPTION_PLANNING;
 
 /** The palette's phrases as the parser compares them (Q17 tier 1.0) */
-export const PALETTE_KEYS: ReadonlySet<string> = new Set(paletteEntries().map((e) => paletteKey(e.phrase)));
+export const PALETTE_KEYS: ReadonlySet<string> = parserPalette();
 
 /** A v2 state with its active project and local view state */
 export interface V2State {
@@ -70,20 +54,9 @@ export interface V2State {
   local: LocalViewState;
 }
 
-/** The fast parser's context on a state (what the store builds in step 17) */
+/** The fast parser's context on a state: the store's own wiring */
 export function fastContext(s: V2State, seed: number): FastContext {
-  return {
-    ws: s.docs.workspace,
-    project: s.projectId !== null ? s.docs.projects[s.projectId] : null,
-    projects: liveProjects(s.docs),
-    local: s.local,
-    selectedTaskId: s.local.selectedTaskId,
-    mint: seededMinter(seed),
-    today: FIXTURE_TODAY,
-    palette: PALETTE_KEYS,
-    breakdown: breakdownFor,
-    demo: { createProject: createDemoProject, sampleTeam: addSampleTeam },
-  };
+  return parserContext({ docs: s.docs, projectId: s.projectId, local: s.local, today: FIXTURE_TODAY, mint: seededMinter(seed) });
 }
 
 /** Runs a command on a state with the real runner and captions */
