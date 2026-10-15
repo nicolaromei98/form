@@ -121,10 +121,10 @@ describe("weeklyLoad", () => {
       id: ANNA,
       name: "Anna",
       capacityDaysPerWeek: 4,
-      timeOff: { tof_annaoffanna: { id: "tof_annaoffanna" as TimeOffId, from: d("2026-10-06"), to: d("2026-10-07"), label: null } },
+      timeOff: byId([{ id: "tof_annaoffanna" as TimeOffId, from: d("2026-10-06"), to: d("2026-10-07"), label: null }]),
     });
     const ws = workspace([anna], {
-      closures: { cls_closedclosed: { id: "cls_closedclosed" as ClosureId, from: d("2026-10-12"), to: d("2026-10-13"), label: "Studio away" } },
+      closures: byId([{ id: "cls_closedclosed" as ClosureId, from: d("2026-10-12"), to: d("2026-10-13"), label: "Studio away" }]),
     });
     // W41: 5 working days, Anna off 2 → 4 × 3 / 5 = 2.4. W42: closed Mon–Tue → 4 × 3 / 5 = 2.4.
     expect(capacityInWeek(ws, anna, d("2026-10-05"))).toBe(2.4);
