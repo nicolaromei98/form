@@ -1,9 +1,15 @@
 // Property generator for setView: a random subset of the options, with the columns/layout
-// coupling exercised (columns alone, layout alone, both), partial fields and filters with repeats.
+// coupling exercised (columns alone, layout alone, both), partial fields and filters with repeats;
+// one time in five the options the project already has (a no-op, which a random subset rarely is).
 import { PRIORITY_ORDER, SORT_ORDER, STATUS_ORDER } from "@/lib/domain/labels";
-import { type OpGen, pick, pickPerson } from "./_pick";
+import { activeProject, type OpGen, pick, pickPerson } from "./_pick";
 
 const gen: OpGen = (s, state, mint) => {
+  const project = activeProject(state);
+  if (project && s.picks[4] % 5 === 0) {
+    const vc = project.viewConfig;
+    return { op: "setView", patch: { density: vc.density, sort: vc.sort, hideDone: vc.hideDone, briefShort: vc.brief.short } };
+  }
   const patch: Record<string, unknown> = {};
   const has = (bit: number) => (s.picks[0] >> bit) % 2 === 1;
   if (has(0)) patch.density = s.flags[0] ? "compact" : "comfortable";

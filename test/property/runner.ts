@@ -4,6 +4,7 @@
 // each command's commits and the projects it spawned (plan §5.8 drops those on undo and brings
 // them back on redo). The reducer, planning and coverage properties share it and differ only in
 // what they check after each step.
+import fc from "fast-check";
 import { applyPatches, type Patch } from "immer";
 import { seededMinter } from "@/lib/domain/ids";
 import { OPS_PER_COMMAND } from "@/lib/domain/limits";
@@ -23,6 +24,15 @@ import type { StepIntent } from "./gen/_pick";
 import { type GenState, materialise, startState } from "./materialise";
 
 export type { GenState } from "./materialise";
+
+/**
+ * The timeout of a property that plays whole runs: the project's 15 minutes, or more when FC_RUNS
+ * asks for long sweeps. The reducer property takes about 14 ms a run here, so the nightly 100,000
+ * runs need well over 15 minutes; 60 ms a run leaves room for a slower CI machine.
+ */
+export function runsTimeout(msPerRun = 60): number {
+  return Math.max(15 * 60_000, (fc.readConfigureGlobal().numRuns ?? 100) * msPerRun);
+}
 
 /* ------------------------------------------------------------------
    Values

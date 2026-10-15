@@ -34,6 +34,7 @@ import {
   otherDoc,
   redoAll,
   reduceCtx,
+  runsTimeout,
   shuffledCopy,
   shuffledCtx,
   sortedPatches,
@@ -187,17 +188,17 @@ describe("reducer properties", () => {
         expect(redone.projects).toEqual(final.projects);
       }),
     );
-  });
+  }, runsTimeout());
 
   afterAll(() => {
     if (process.env.FORM_PROPERTY_STATS) console.log(Object.fromEntries([...seen].sort(([a], [b]) => (a < b ? -1 : 1))));
-    // The generators reach every outcome of every op (coverage.property.test.ts holds the stricter counts)
-    if (Number(process.env.FC_RUNS ?? 500) < 200) return;
+    // Every op was checked applied and refused at least once. The no-ops of idempotent ops, rarer
+    // for some, and the stricter counts are the coverage meta-test's (2,000 runs or more).
+    if (Number(process.env.FC_RUNS ?? 500) < 500) return;
     for (const op of new Set(WEIGHTED_OP_NAMES)) {
       const row = seen.get(op) ?? { applied: 0, noop: 0, rejected: 0 };
       expect(row.applied, `${op} applied`).toBeGreaterThan(0);
       expect(row.rejected, `${op} rejected`).toBeGreaterThan(0);
-      if (REGISTRY.get(op)!.idempotent) expect(row.noop, `${op} no-op`).toBeGreaterThan(0);
     }
   });
 });

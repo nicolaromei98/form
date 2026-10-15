@@ -59,9 +59,10 @@ function withBench(state: FixtureState): FixtureState {
 
 /**
  * Three generated projects of 50 tasks on one team (plan §10.3), each with a few brief lines, two
- * brief edits and mood references, one of the inactive two archived; in the workspace a user
- * template, a closure, the first person linked to an account and off for a week, and the bench: a
- * busy studio, so the ops on those meet targets from the first step in more than one fixture.
+ * brief edits and mood references; of the two inactive ones, one archived and one deleted (kept
+ * until compaction); in the workspace a user template, a closure, the first person linked to an
+ * account and off for a week, and the bench: a busy studio, so the ops on those meet targets from
+ * the first step in more than one fixture.
  */
 function busyStudio(): FixtureState {
   const state = withBench(multiProject({ briefLines: 3, moodItems: 6 }));
@@ -75,7 +76,8 @@ function busyStudio(): FixtureState {
     "team:next:up": { text: "", basis: "Next up: Task 20." },
   };
   const projects = Object.fromEntries(Object.entries(state.projects).map(([id, p]) => [id, { ...p, brief: { ...p.brief, edits } }]));
-  const shelved = Object.keys(state.projects).find((id) => id !== state.projectId) as ProjectId;
+  const [shelved, gone] = (Object.keys(state.projects) as ProjectId[]).filter((id) => id !== state.projectId);
+  const index = state.workspace.projects;
   return {
     ...state,
     projects,
@@ -84,16 +86,23 @@ function busyStudio(): FixtureState {
       templates: { [template.id]: template },
       closures: { [closure.id]: closure },
       people: { ...state.workspace.people, [me.id]: me },
-      projects: { ...state.workspace.projects, [shelved]: { ...state.workspace.projects[shelved], archivedAt: FIXTURE_NOW } },
+      projects: {
+        ...index,
+        [shelved]: { ...index[shelved], archivedAt: FIXTURE_NOW },
+        [gone]: { ...index[gone], deletedAt: FIXTURE_NOW },
+      },
     },
   };
 }
 
-/** The start states: plan §10.3's four (generated ones with the bench), and demoExtras */
+/**
+ * The start states: plan §10.3's four, and demoExtras. The generated ones get the bench, and
+ * generated60 a moodboard of eight references, so the mood ops meet targets in three fixtures.
+ */
 const BUILDERS: Record<PropertyFixture, () => FixtureState> = {
   empty: emptyState,
   demo: () => demoState(),
-  generated60: () => withBench(generated(60)),
+  generated60: () => withBench(generated(60, { moodItems: 8 })),
   multiProject150: busyStudio,
   demoExtras: () => demoExtrasState(),
 };

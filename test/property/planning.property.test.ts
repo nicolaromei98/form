@@ -21,7 +21,7 @@ import type { WorkspaceDoc } from "@/lib/domain/schema/workspace";
 import { planProject, planWorkspace, type ProjectPlan } from "@/lib/planning";
 import { FIXTURE_TODAY } from "../fixtures/v2/build";
 import { runArb } from "./arbitraries";
-import { executeRun, type GenState, shuffledCopy, type StepRecord } from "./runner";
+import { executeRun, type GenState, runsTimeout, shuffledCopy, type StepRecord } from "./runner";
 
 /** Checks one plan; returns it */
 function checkPlan(project: ProjectDoc, ws: WorkspaceDoc): ProjectPlan {
@@ -170,5 +170,5 @@ describe("planning on reducer states", () => {
         }
       }),
     );
-  });
+  }, runsTimeout());
 });

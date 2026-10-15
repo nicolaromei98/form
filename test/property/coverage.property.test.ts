@@ -10,7 +10,7 @@ import { applyOp } from "@/lib/ops/reduce";
 import { OP_NAMES, REGISTRY } from "@/lib/ops/registry";
 import { REJECT_CODES, type RejectCode } from "@/lib/ops/registry/_contract";
 import { runArb } from "./arbitraries";
-import { executeRun, otherDoc, reduceCtx, type StepRecord } from "./runner";
+import { executeRun, otherDoc, reduceCtx, runsTimeout, type StepRecord } from "./runner";
 
 /** Plan §10.3: the meta-test's floor of runs and of applications per op */
 const COVERAGE_RUNS = 2_000;
@@ -64,5 +64,5 @@ describe("coverage of the property generators", () => {
     }
     expect(missing).toEqual([]);
     expect(codes.get("invalid_result") ?? 0).toBe(0);
-  });
+  }, runsTimeout(15));
 });
