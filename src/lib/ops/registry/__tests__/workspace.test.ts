@@ -1213,11 +1213,10 @@ describe("deleteProject", () => {
    ------------------------------------------------------------------ */
 
 /**
- * reducer.property.test.ts can't run createProject and duplicateProject yet: its end-of-run undo
- * replays patches only, and these ops also spawn a document, which undo drops (plan §5.8). Until
- * step 16 teaches it that, this property runs their generators with other workspace ops in
- * between and checks the same things (validity, inverse patches, determinism, captions), undoing
- * and redoing the spawned projects too.
+ * A focused companion to reducer.property.test.ts, which draws these ops among all 66: their
+ * generators with only the workspace ops that change what they read in between, so spawning is
+ * exercised densely (validity, inverse patches, determinism, captions, and undo and redo dropping
+ * and restoring the spawned projects, plan §5.8).
  */
 describe("createProject and duplicateProject under generated payloads", () => {
   const OPS = ["createProject", "duplicateProject", "createProject", "addPerson", "archivePerson", "archiveProject", "deleteProject"] as const;

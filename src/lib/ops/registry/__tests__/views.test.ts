@@ -1,8 +1,8 @@
 // The step 10b ops (plan §11 row 10): views, blocks, setFocus and the brief. For each op: the
 // happy path with its exact caption, the no-op (same reference plus noopCaption), every rejection
-// it can produce, and undo by patches. Then the completeness checks on a fixture that holds brief
-// content, and properties 1–9 over this family's ops (the brief ops that no named fixture can
-// sample yet sit out of reducer.property.test.ts, so this run covers them).
+// it can produce, and undo by patches. Then the completeness checks on a fixture that holds more
+// brief content, and properties 1–9 over this family's ops alone, so the brief ops meet brief
+// content far more often than among all 66 in reducer.property.test.ts.
 import fc from "fast-check";
 import { applyPatches, type Patch } from "immer";
 import { describe, expect, it } from "vitest";
@@ -738,8 +738,7 @@ describe("the 10b family", () => {
     });
   });
 
-  // The completeness checks (plan §4.3 item 3) on the sample fixtures plus brief content, which
-  // also covers the ops whose samples no named fixture can apply yet
+  // The completeness checks (plan §4.3 item 3) on the sample fixtures plus more brief content
   describe.each(FAMILY.map((n) => [n] as const))("%s, with brief content", (name) => {
     const def = REGISTRY.get(name)!;
     const base = namedFixture(def.sampleOn ?? "demo");

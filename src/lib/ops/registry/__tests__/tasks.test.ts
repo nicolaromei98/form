@@ -872,8 +872,8 @@ describe("rebalanceOrder", () => {
     expectRejection(apply(s, rebalance(keysFor(p, ["a0", "a1", "a2", "a30"]))).result, "invalid_payload");
   });
 
-  // The reducer suite can't draw a system op yet (gen/rebalanceOrder.ts): the same checks, here.
-  // Runs start from the property fixtures, after a few generated moves that lengthen keys.
+  // The reducer suite draws it among all 66; here it always follows a few generated moves that
+  // lengthen keys, from the property fixtures.
   it("holds the reducer properties over generated payloads", () => {
     const seen = { applied: 0, noop: 0, rejected: 0 };
     fc.assert(
