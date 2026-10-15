@@ -2,6 +2,7 @@
 // blocked exclusion, the pin, ties, the "me" scope, the weights file and the plan's getter.
 import { describe, expect, it } from "vitest";
 import { IsoDate, type PersonId, type ProjectDoc, type Task, type TaskId, type Timestamp } from "@/lib/domain/schema";
+import type { CaptionFocus } from "@/lib/ops/registry/_contract";
 import { planProject } from "@/lib/planning";
 import { focus, FOCUS_REASON_ORDER, type FocusReason, whyOf } from "@/lib/planning/focus";
 import { FOCUS_WEIGHTS } from "@/lib/planning/focus.weights";
@@ -71,6 +72,11 @@ describe("the demo at 2026-10-14", () => {
 
   it('explains it as "Urgent and on the critical path."', () => {
     expect(result.pick!.why).toBe("Urgent and on the critical path.");
+  });
+
+  it("fits the captions' focus seam (CaptionPlanning.focus)", () => {
+    const seam: CaptionFocus = result;
+    expect(seam.pick?.reasons[0].text).toBe("Urgent priority");
   });
 
   it("ranks Visual Direction second with 68 (25 + 10 + 15 + 8 + 10)", () => {

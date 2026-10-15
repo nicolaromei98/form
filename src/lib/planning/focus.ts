@@ -1,5 +1,6 @@
-import { descendantBits, successorMap } from "@/lib/domain/invariants/graph";
-import { compareKeys, sortedByOrder } from "@/lib/domain/order";
+import { descendantBits } from "@/lib/domain/invariants/graph";
+import { PRIORITY_LABEL } from "@/lib/domain/labels";
+import { compareKeys } from "@/lib/domain/order";
 import type { PersonId, ProjectId, StepId, TaskId } from "@/lib/domain/schema/ids";
 import type { IsoDate, Priority } from "@/lib/domain/schema/primitives";
 import type { ProjectDoc } from "@/lib/domain/schema/project";
@@ -94,7 +95,6 @@ export interface FocusOptions {
    Reasons
    ------------------------------------------------------------------ */
 
-const PRIORITY_TEXT: Readonly<Record<Priority, string>> = { urgent: "Urgent", high: "High", medium: "Medium", low: "Low" };
 const PRIORITY_PHRASE: Readonly<Record<Priority, string | null>> = { urgent: "urgent", high: "high priority", medium: null, low: null };
 
 const reason = (key: FocusReasonKey, points: number, text: string, phrase: string | null, clause = false, risk = false): FocusReason =>
@@ -152,17 +152,23 @@ function scoreProject(plan: FocusPlan, opts: FocusOptions, w: FocusWeights, bloc
   const risks: Risks = risksOf(project, calendar, today);
   const throughToday = ordinalAfter(calendar, today);
 
-  // Open tasks waiting on each task, directly or not: descendant bitsets ANDed with the open ones
+  // Open tasks waiting on each task, directly or not: descendant bitsets ANDed with the open ones.
+  // Successors come straight from the topological order (their order doesn't change the bits).
   const topo = schedule.topo;
-  const bits = descendantBits(topo, successorMap(project));
+  const succ = new Map<TaskId, TaskId[]>();
+  for (const id of topo) succ.set(id, []);
+  for (const id of topo) for (const p of new Set(tasks[id].dependsOn)) if (p !== id) succ.get(p)?.push(id);
+  const bits = descendantBits(topo, succ);
   const words = Math.ceil(topo.length / 32);
   const open = new Uint32Array(words);
   topo.forEach((id, j) => {
-    if (Object.hasOwn(tasks, id) && tasks[id].status !== "done") open[j >>> 5] |= 1 << (j & 31);
+    if (tasks[id].status !== "done") open[j >>> 5] |= 1 << (j & 31);
   });
 
+  // Topological order: the ranking sorts by workflow order later, so this order never shows
   const out: Scored[] = [];
-  for (const task of sortedByOrder(tasks)) {
+  for (const id of topo) {
+    const task = tasks[id];
     if (task.status === "done") continue;
     const inScope = ownerId === null || task.ownerId === ownerId;
     if (!inScope && task.id !== pin) continue;
@@ -174,7 +180,7 @@ function scoreProject(plan: FocusPlan, opts: FocusOptions, w: FocusWeights, bloc
     if (isBlocked && task.id !== pin) continue;
 
     const reasons: FocusReason[] = [];
-    reasons.push(reason("priority", w.priority[task.priority], `${PRIORITY_TEXT[task.priority]} priority`, PRIORITY_PHRASE[task.priority], false, task.priority === "urgent"));
+    reasons.push(reason("priority", w.priority[task.priority], `${PRIORITY_LABEL[task.priority]} priority`, PRIORITY_PHRASE[task.priority], false, task.priority === "urgent"));
 
     const late = risks.byTask.get(task.id)?.late ?? null;
     if (late !== null) {

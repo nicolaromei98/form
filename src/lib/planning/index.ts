@@ -12,8 +12,10 @@ import type { Schedule } from "@/lib/planning/schedule";
 
 /**
  * The planning façade (plan §6.8). `planProject` gathers everything planning knows about one
- * project on one day. Parts are lazy getters backed by the stage memos (`memo.ts`), so a reader
- * pays only for what it asks, and an edit recomputes only the stages it touches.
+ * project on one day. Parts are lazy getters backed by the stage memos (`memo.ts`, and
+ * `projectFocus` for focus), so a reader pays only for what it asks, and an edit recomputes only
+ * the stages it touches. `planWorkspace` adds the weekly load across projects (`load.ts`); Team
+ * lanes, balance and leveling take a plan and that load (`lanes.ts`, `balance.ts`, `level.ts`).
  *
  * The engine is pure and isomorphic. The caller passes today as the workspace's civil date
  * (`todayIn(ws.timezone, Date.now())`).

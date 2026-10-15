@@ -2,6 +2,7 @@
 // standard week, unknown capacities, the unassigned row and the rows themselves.
 import { describe, expect, it } from "vitest";
 import { IsoDate, type PersonId, type ProjectDoc, type TaskId, type WorkspaceDoc } from "@/lib/domain/schema";
+import type { CaptionLane } from "@/lib/ops/registry/_contract";
 import { planProject } from "@/lib/planning";
 import { laneLoads, type LaneLoad } from "@/lib/planning/lanes";
 import { weeklyLoad } from "@/lib/planning/load";
@@ -86,6 +87,11 @@ describe("the demo lanes", () => {
     expect(laneOf(after, DEMO_PEOPLE.marta)).toMatchObject({ days: 4, capacity: 4, over: 0, free: 0, weeks: ["2026-W40", "2026-W41"] });
     expect(laneOf(after, DEMO_PEOPLE.sara)).toMatchObject({ days: 6, capacity: 8, over: 0, free: 2, weeks: ["2026-W41", "2026-W42"], taskIds: [ui] });
     expect(laneOf(after, DEMO_PEOPLE.luca)).toMatchObject({ days: 8, capacity: 15, free: 7 });
+  });
+
+  it("fits the captions' lane seam (CaptionPlanning.lanes)", () => {
+    const seam: readonly CaptionLane[] = lanes;
+    expect(seam.filter((l) => l.over !== null && l.over > 0).map((l) => l.personId)).toEqual([DEMO_PEOPLE.marta]);
   });
 
   it("unassigns through a null override", () => {
