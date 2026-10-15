@@ -1,10 +1,9 @@
 // The planning façade's budgets (plan §6.8, §10.7), on generated(150, { stepsPerTask: 3,
 // predsMean: 1.5, people: 8 }), with the growth guard t(300) / t(150) < 3:
-// - planProject cold (schedule + risks + metrics) ≤ 8 ms, target about 2 ms;
+// - planProject cold (schedule + risks + metrics + focus) ≤ 8 ms, target about 2 ms;
 // - planProject warm ≤ 0.05 ms.
 // "Cold" is a project version the memos have never seen (new tasks record), on a calendar that is
-// already built: calendars are shared by key and outlive document versions. Focus joins the cold
-// figure in step 12.
+// already built: calendars are shared by key and outlive document versions.
 import { describe, expect, it } from "vitest";
 import type { ProjectDoc } from "@/lib/domain/schema";
 import { planProject } from "@/lib/planning";
@@ -42,7 +41,7 @@ function versions(project: ProjectDoc, count: number): ProjectDoc[] {
 
 function touch(project: ProjectDoc, state: FixtureState) {
   const plan = planProject(project, state.workspace, FIXTURE_TODAY);
-  return plan.schedule.end !== null && plan.risks.byTask.size >= 0 && plan.metrics.count > 0;
+  return plan.schedule.end !== null && plan.risks.byTask.size >= 0 && plan.metrics.count > 0 && plan.focus.ranked.length >= 0;
 }
 
 /** Cold plans per timed sample: one plan takes a fraction of a millisecond, below the timer's steady range */
