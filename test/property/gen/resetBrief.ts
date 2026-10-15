@@ -1,7 +1,7 @@
-// Property generator for resetBrief: a stub until Phase 1 step 10b, which makes it
-// materialise payloads (src/lib/ops/registry/README.md). Until then the op is never generated.
+// Property generator for resetBrief: either audience, so a brief with the user's edits or lines is
+// cleared and one without is a no-op.
 import type { OpGen } from "./_pick";
 
-const gen: OpGen = () => null;
+const gen: OpGen = (s) => ({ op: "resetBrief", audience: s.flags[0] ? "team" : "client" });
 
 export default gen;
