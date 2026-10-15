@@ -174,6 +174,7 @@ export const FIXTURE_NAMES = [
   "demoNoTeam",
   "demoUnestimated",
   "generated60",
+  "demoExtras",
 ] as const;
 export type FixtureName = (typeof FIXTURE_NAMES)[number];
 

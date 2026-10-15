@@ -10,7 +10,10 @@ import {
   activeProject,
   DEMO_PEOPLE,
   DEMO_WORKSPACE_ID,
+  demoExtrasState,
   demoState,
+  EXTRA_EDIT_KEYS,
+  EXTRA_PEOPLE,
   emptyProjectState,
   emptyState,
   type FixtureState,
@@ -20,7 +23,8 @@ import {
   taskByTitle,
 } from "../../../../test/fixtures/v2/build";
 
-function expectValid(state: FixtureState) {
+/** Every document parses and keeps its invariants; projects are live unless named in `archived` */
+function expectValid(state: FixtureState, archived: readonly string[] = []) {
   const ws = WorkspaceDocSchema.safeParse(state.workspace);
   expect(ws.success, ws.error?.message).toBe(true);
   expect(checkWorkspace(state.workspace)).toEqual([]);
@@ -30,7 +34,9 @@ function expectValid(state: FixtureState) {
     expect(checkProject(project)).toEqual([]);
     expect(project.id).toBe(id);
     expect(project.workspaceId).toBe(state.workspace.id);
-    expect(state.workspace.projects[project.id]).toMatchObject({ id: project.id, archivedAt: null, deletedAt: null });
+    const entry = state.workspace.projects[project.id];
+    expect(entry).toMatchObject({ id: project.id, deletedAt: null });
+    expect(entry.archivedAt !== null).toBe(archived.includes(project.id));
   }
   if (state.projectId !== null) expect(state.projects[state.projectId]).toBeDefined();
 }
@@ -88,6 +94,41 @@ describe("fixture builders", () => {
     const state = demoState({ views: ["cards", "timeline", "team"], blocks: ["header", "metrics", "collection", "moodboard"] });
     expectValid(state);
     expect(activeProject(state).views).toEqual(["cards", "timeline", "team"]);
+  });
+
+  it("build the demo after some use, with one of every optional entity (demoExtras)", () => {
+    const state = demoExtrasState();
+    const demo = demoState();
+    const archived = Object.values(state.workspace.projects).filter((e) => e.archivedAt !== null);
+    expect(archived).toHaveLength(1);
+    expectValid(state, [archived[0].id]);
+    expect(state.projects[archived[0].id].title).toBe("Ceramica Bassi");
+
+    // The demo project stays active with its tasks, owners and members; only its brief grows
+    const project = activeProject(state);
+    expect(project.id).toBe(demo.projectId);
+    expect({ ...project, brief: null }).toEqual({ ...activeProject(demo), brief: null });
+    expect(project.brief.lines.map((l) => [l.audience, l.text])).toEqual([
+      ["client", "Homepage preview on Friday."],
+      ["team", "Copy is late."],
+    ]);
+    expect(Object.keys(project.brief.edits).sort()).toEqual(
+      [EXTRA_EDIT_KEYS.client, EXTRA_EDIT_KEYS.teamTask(taskByTitle(project, "UI Design").id)].sort(),
+    );
+
+    // The workspace: a closure, Marta's time off, a template, Giulia outside the project, Paolo archived
+    const ws = state.workspace;
+    expect(Object.values(ws.closures).map((c) => [c.from, c.to, c.label])).toEqual([["2026-12-24", "2027-01-06", "Christmas break"]]);
+    expect(Object.values(ws.people[DEMO_PEOPLE.marta].timeOff).map((t) => [t.from, t.to])).toEqual([["2026-11-02", "2026-11-06"]]);
+    expect(Object.values(ws.templates).map((t) => [t.name, t.tasks.length])).toEqual([["Website, four phases", 5]]);
+    expect(ws.people[EXTRA_PEOPLE.giulia]).toMatchObject({ name: "Giulia", archived: false });
+    expect(ws.people[EXTRA_PEOPLE.paolo]).toMatchObject({ name: "Paolo", archived: true });
+    expect(project.memberIds).not.toContain(EXTRA_PEOPLE.giulia);
+    const owners = Object.values(state.projects).flatMap((p) => Object.values(p.tasks).map((t) => t.ownerId));
+    expect(owners).not.toContain(EXTRA_PEOPLE.giulia);
+    expect(owners).not.toContain(EXTRA_PEOPLE.paolo);
+    expect(sortedByOrder(ws.people).map((p) => p.name)).toEqual(["Marta", "Sara", "Luca", "Giulia", "Paolo"]);
+    expect(demoExtrasState()).toEqual(state);
   });
 
   it.each([60, 150, 300])("build a valid %i-task project", (n) => {

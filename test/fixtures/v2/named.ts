@@ -12,11 +12,13 @@
 // - demoNoTeam: demo with no people, members or owners
 // - demoUnestimated: demo with UI Design's estimate cleared
 // - generated60: a generated 60-task project
+// - demoExtras: demo after some use: brief lines and edits, a closure, time off, a user template,
+//   Giulia (active, outside the project), Paolo (archived) and an archived project (build.ts)
 import { seededMinter } from "@/lib/domain/ids";
 import { frontZs, placeNew } from "@/lib/domain/mood-geometry";
 import type { PersonId, ProjectDoc, TaskId } from "@/lib/domain/schema";
 import type { FixtureDocs, FixtureName } from "@/lib/ops/registry/_contract";
-import { activeProject, demoState, emptyState, FIXTURE_NOW, type FixtureState, generated, taskByTitle } from "./build";
+import { activeProject, demoExtrasState, demoState, emptyState, FIXTURE_NOW, type FixtureState, generated, taskByTitle } from "./build";
 
 export interface NamedFixture extends FixtureState {
   name: FixtureName;
@@ -120,6 +122,7 @@ const BUILD: Record<FixtureName, () => FixtureState> = {
   demoNoTeam,
   demoUnestimated,
   generated60: () => generated(60),
+  demoExtras: () => demoExtrasState(),
 };
 
 /** A named fixture state with its local selection */
