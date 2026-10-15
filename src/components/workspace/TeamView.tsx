@@ -12,16 +12,17 @@ import { ease, move } from "@/lib/motion";
 import {
   type LaneLoad,
   useActions,
-  useIsSelected,
+  useCanAddPerson,
+  useHasSamplePerson,
   useLaneLoads,
   usePerson,
   usePhase,
   useProject,
   useProposal,
-  useViewConfig,
 } from "@/lib/store/hooks";
 import { useWidth } from "@/lib/useWidth";
 import { EditableText } from "./parts";
+import { useTaskSurface } from "./TaskCard";
 import { ShuffleText } from "../text/ShuffleText";
 
 /** Like the timeline, the team view draws itself: labels condense in, then each row's track wipes open */
@@ -32,13 +33,6 @@ const SEG_H = 42;
 const PAD = (TRACK_H - SEG_H) / 2;
 const GAP = 4;
 const NONE = "__unassigned";
-/**
- * The /demo sample team (lib/demo/sample.ts `SAMPLE_PERSON_IDS`; a migrated v0 team maps onto the
- * same ids). Components never import lib/demo (plan §2) and the hooks don't re-export
- * `isSamplePerson` yet, so the fixed ids are read here until they do.
- */
-const SAMPLE_IDS: ReadonlySet<string> = new Set(["per_demomarta", "per_demosara", "per_demoluca"]);
-const isSamplePerson = (id: string | null) => id !== null && SAMPLE_IDS.has(id);
 const HATCH = "repeating-linear-gradient(-45deg, rgba(214,69,69,0.2) 0 5px, rgba(214,69,69,0.06) 5px 10px)";
 /**
  * Segment surfaces. A dimmed segment (50%) and one leaving in a balance preview (40%) recede by
@@ -122,6 +116,9 @@ function TeamBoard() {
   const previewLanes = useLaneLoads({ preview: true });
   const proposal = useProposal();
   const phase = usePhase();
+  // The sample team is labelled as sample data
+  const sample = useHasSamplePerson();
+  const canAddPerson = useCanAddPerson();
   const [ref, width] = useWidth<HTMLDivElement>(0);
   const [drag, setDrag] = useState<Drag | null>(null);
 
@@ -147,7 +144,6 @@ function TeamBoard() {
   }
   if (showUnassigned) rows.push({ id: NONE, lane: unassigned, next: nextOf(null) });
   const overloaded = lanes.some((l) => (l.over ?? 0) > 0) || tasksOf(unassigned?.taskIds ?? NO_IDS, tasks).some((t) => t.estimateDays != null);
-  const sample = people.some((l) => isSamplePerson(l.personId));
 
   const startDrag = (e: RPointerEvent<HTMLElement>, task: Task, from: string) => {
     if (e.button !== 0) return;
@@ -227,8 +223,8 @@ function TeamBoard() {
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              disabled={people.length >= PEOPLE_MAX}
-              title={people.length >= PEOPLE_MAX ? `A workspace holds up to ${PEOPLE_MAX} people` : undefined}
+              disabled={!canAddPerson}
+              title={canAddPerson ? undefined : `A workspace holds up to ${PEOPLE_MAX} people`}
               // A visible, editable 5 days a week (Q3)
               onClick={() => actions.addPerson()}
               className="focus-ring t-body-s h-[34px] cursor-pointer rounded-full px-3.5 text-text-2 transition-colors hover:bg-black/[0.05] hover:text-text disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
@@ -522,7 +518,7 @@ function Segment({
   dragging: boolean;
   onPointerDown: (e: RPointerEvent<HTMLElement>) => void;
 }) {
-  const { selected, highlight, dim } = useSegmentSurface(task);
+  const { selected, highlight, dim } = useTaskSurface(task);
   // A leaving segment is the task's ghost, light whatever its emphasis: dimmed ink under light text would fail contrast
   const ink = task.emphasis && !leaving;
   const unsized = task.estimateDays == null;
@@ -557,17 +553,6 @@ function Segment({
       </span>
     </motion.div>
   );
-}
-
-/**
- * The task-surface rule every view shares (v0 `useTaskSurface`): highlighting urgent work recedes
- * the rest, except what the user is focused on (its emphasis or the selection).
- */
-function useSegmentSurface(task: Task) {
-  const selected = useIsSelected(task.id);
-  const highlightUrgent = useViewConfig()?.highlightUrgent ?? false;
-  const urgent = task.priority === "urgent" && task.status !== "done";
-  return { selected, highlight: highlightUrgent && urgent, dim: highlightUrgent && !urgent && !task.emphasis && !selected };
 }
 
 function Avatar({ person, over }: { person: Person | null; over: boolean }) {

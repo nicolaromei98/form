@@ -4,12 +4,11 @@ import { AnimatePresence, motion } from "motion/react";
 import { Fragment, useMemo } from "react";
 import { addDays, daysBetween, isoWeekday } from "@/lib/domain/dates";
 import { STATUS_LABEL } from "@/lib/domain/labels";
-import type { StepId, TaskId } from "@/lib/domain/schema/ids";
+import type { TaskId } from "@/lib/domain/schema/ids";
 import type { IsoDate } from "@/lib/domain/schema/primitives";
 import type { Step, Task } from "@/lib/domain/schema/project";
-import type { SubtasksProposal } from "@/lib/domain/schema/proposal";
-import { dateMode, fmtDateYear, fmtDay, fmtDays, fmtShort, type GridBar, scheduleLabel, unknownLabel } from "@/lib/planning/format";
-import { type ProjectPlan, type TimelineGrid, useActions, usePlan, useTaskIds, useTimelineGrid, useToday, useVisibleTaskIds } from "@/lib/store/hooks";
+import { dateMode, fmtDateYear, fmtDay, fmtDays, fmtShort, scheduleLabel, unknownLabel } from "@/lib/planning/format";
+import { useActions, usePlan, useProposalCells, useTaskIds, useTimelineGrid, useToday, useVisibleTaskIds } from "@/lib/store/hooks";
 import { ease, move } from "@/lib/motion";
 import { useWidth } from "@/lib/useWidth";
 import { EditableText, EstimateControl, NumberBadge, StatusControl, StatusGlyph } from "./parts";
@@ -42,6 +41,7 @@ const EDIT = { label: "edit" } as const;
 export function TimelineView() {
   const plan = usePlan();
   const grid = useTimelineGrid();
+  const proposalCells = useProposalCells();
   const workflow = useTaskIds();
   const visible = useVisibleTaskIds();
   const today = useToday();
@@ -235,35 +235,33 @@ export function TimelineView() {
                           transition={move}
                           className="overflow-hidden"
                         >
-                          {(() => {
-                            const cells = proposedCells(t, proposal, plan, grid);
-                            return proposal.items.map((item, i) => {
-                              const cell = cells.get(item.stepId);
-                              return (
-                                <Row
-                                  key={item.stepId}
-                                  height={subH}
-                                  labelW={labelW}
-                                  layoutId={`tl-sub-${item.stepId}`}
-                                  label={
-                                    <div className="flex min-w-0 items-center gap-2 pl-9 text-text-3">
-                                      <StatusGlyph status="todo" size={12} />
-                                      <span className="t-body-s truncate">{item.title}</span>
-                                    </div>
-                                  }
-                                >
-                                  {cell && (
-                                    <motion.div
-                                      className="absolute rounded-full border border-dashed border-line-strong"
-                                      initial={{ opacity: 0, x: -8 }}
-                                      animate={{ opacity: 1, x: 0, transition: { delay: 0.1 + i * 0.06, ...move } }}
-                                      style={{ left: X(cell.start) + 1, width: Math.max(10, cell.days * dayW - 2), top: (subH - 14) / 2, height: 14 }}
-                                    />
-                                  )}
-                                </Row>
-                              );
-                            });
-                          })()}
+                          {proposal.items.map((item, i) => {
+                            // Where the step sits once accepted (the schedule's step rule, on the proposal preview)
+                            const cell = proposalCells.get(item.stepId);
+                            return (
+                              <Row
+                                key={item.stepId}
+                                height={subH}
+                                labelW={labelW}
+                                layoutId={`tl-sub-${item.stepId}`}
+                                label={
+                                  <div className="flex min-w-0 items-center gap-2 pl-9 text-text-3">
+                                    <StatusGlyph status="todo" size={12} />
+                                    <span className="t-body-s truncate">{item.title}</span>
+                                  </div>
+                                }
+                              >
+                                {cell && (
+                                  <motion.div
+                                    className="absolute rounded-full border border-dashed border-line-strong"
+                                    initial={{ opacity: 0, x: -8 }}
+                                    animate={{ opacity: 1, x: 0, transition: { delay: 0.1 + i * 0.06, ...move } }}
+                                    style={{ left: X(cell.start) + 1, width: Math.max(10, cell.days * dayW - 2), top: (subH - 14) / 2, height: 14 }}
+                                  />
+                                )}
+                              </Row>
+                            );
+                          })}
                           <div className="flex items-center gap-1.5 py-2 pl-9">
                             <span className="t-micro mr-2 text-text-3">Proposed by FORM</span>
                             <button
@@ -310,37 +308,6 @@ export function TimelineView() {
       </div>
     </div>
   );
-}
-
-/**
- * Where the proposed steps would sit once accepted, as cells of the grid (plan §8.2): after the
- * task's own steps, back to back from its start, each ⌈estimate / allocation⌉ working days and cut
- * at its finish: the schedule's step rule (Q1), on the plan's calendar. A step without an estimate,
- * or a task without dates, gets no bar.
- */
-function proposedCells(task: Task, proposal: SubtasksProposal, plan: ProjectPlan, grid: TimelineGrid): ReadonlyMap<StepId, GridBar> {
-  const cells = new Map<StepId, GridBar>();
-  const timing = plan.schedule.timings.get(task.id);
-  if (timing?.kind !== "scheduled" || timing.finish <= timing.es) return cells;
-  const lo = timing.es;
-  const hi = timing.finish;
-  const allocation = task.allocation > 0 && task.allocation <= 1 ? task.allocation : 1;
-  const length = (estimate: number) => Math.ceil(estimate / allocation);
-  const origin = grid.origin;
-  /** The grid cell of a working-day ordinal: calendar days from the origin, or working days in relative mode */
-  const cell = (ordinal: number) => (origin === null ? ordinal - plan.schedule.anchor.ordinal : daysBetween(origin, plan.calendar.dateAt(ordinal)));
-
-  let cursor = lo;
-  for (const s of task.steps) if (s.estimateDays !== null) cursor += length(s.estimateDays);
-  for (const item of proposal.items) {
-    if (item.estimateDays === null) continue;
-    const es = Math.min(cursor, hi - 1);
-    const finish = Math.max(es + 1, Math.min(cursor + length(item.estimateDays), hi));
-    const start = cell(es);
-    cells.set(item.stepId, { start, days: Math.max(1, cell(finish - 1) - start + 1) });
-    cursor += length(item.estimateDays);
-  }
-  return cells;
 }
 
 function ShiftButton({ label, onClick, d }: { label: string; onClick: () => void; d: string }) {

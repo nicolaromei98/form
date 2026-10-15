@@ -4,14 +4,17 @@ import { createContext, createElement, type ReactNode, useContext, useEffect } f
 import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import type { Brief } from "@/lib/compose/brief";
-import type { PersonId, TaskId } from "@/lib/domain/schema/ids";
+import { isSamplePerson } from "@/lib/demo/sample";
+import { PEOPLE_MAX } from "@/lib/domain/limits";
+import type { PersonId, StepId, TaskId } from "@/lib/domain/schema/ids";
 import type { BlockKind, IsoDate, ViewKind } from "@/lib/domain/schema/primitives";
 import type { BriefState, MoodItem, ProjectDoc, Step, Task, ViewConfig } from "@/lib/domain/schema/project";
 import type { Proposal, SubtasksProposal } from "@/lib/domain/schema/proposal";
-import type { Person } from "@/lib/domain/schema/workspace";
+import type { Person, WorkspaceDoc } from "@/lib/domain/schema/workspace";
+import { nextViews } from "@/lib/domain/views";
 import { NEEDS_HINT, type PaletteGroupView, paletteGroups } from "@/lib/ops/palette";
 import type { FocusCandidate, FocusResult, LaneLoad, Metrics, ProjectPlan, TaskTiming } from "@/lib/planning";
-import type { TimelineGrid } from "@/lib/planning/format";
+import type { GridBar, TimelineGrid } from "@/lib/planning/format";
 import { workflowNumbers } from "@/lib/planning/memo";
 import { type Actions, makeActions } from "@/lib/store/actions";
 import { exposeFormHandle, type FormState, type FormStore, getFormStore, type Phase, type StoreCaption } from "@/lib/store/form";
@@ -24,6 +27,7 @@ import {
   selectMoodItems,
   selectPlan,
   selectProject,
+  selectProposalCells,
   selectSubtaskProposal,
   selectTaskIds,
   selectTasksByStatus,
@@ -76,6 +80,8 @@ export const useProject = (): ProjectDoc | null => useForm(selectProject);
 export const useHasProject = (): boolean => useForm((s) => selectProject(s) !== null);
 export const useProjectTitle = (): string | null => useForm((s) => selectProject(s)?.title ?? null);
 export const useViews = (): readonly ViewKind[] => useForm((s) => selectProject(s)?.views ?? NO_VIEWS);
+/** The views the project doesn't have yet, most related to the last one created first (the agent's nodes) */
+export const useNextViews = (): readonly ViewKind[] => useForm(useShallow((s) => nextViews(selectProject(s)?.views)));
 export const useBlocks = (): readonly BlockKind[] => useForm((s) => selectProject(s)?.blocks ?? NO_BLOCKS);
 export const useViewConfig = (): ViewConfig | null => useForm((s) => selectProject(s)?.viewConfig ?? null);
 export const useActiveView = (): ViewKind => useForm((s) => s.local.activeView);
@@ -99,6 +105,12 @@ export const useSubtaskProposal = (taskId: TaskId): SubtasksProposal | null => u
 export const useMembers = (): readonly Person[] => useForm(selectMembers);
 export const usePerson = (id: PersonId | null): Person | null =>
   useForm((s) => (id !== null && Object.hasOwn(s.docs.workspace.people, id) ? s.docs.workspace.people[id] : null));
+/** Every person in the workspace by id, archived ones included (what the brief's text exports name) */
+export const useWorkspacePeople = (): WorkspaceDoc["people"] => useForm((s) => s.docs.workspace.people);
+/** Whether the workspace has room for another person (the reducer refuses past `PEOPLE_MAX`) */
+export const useCanAddPerson = (): boolean => useForm((s) => Object.keys(s.docs.workspace.people).length < PEOPLE_MAX);
+/** Whether a Team row is one of the /demo sample team, so the view can label it as sample data */
+export const useHasSamplePerson = (): boolean => useForm((s) => selectLaneLoads(s).some((l) => isSamplePerson(l.personId)));
 /** Mood items bottom to top */
 export const useMoodItems = (): readonly MoodItem[] => useForm(selectMoodItems);
 export const useBriefState = (): BriefState | null => useForm((s) => selectProject(s)?.brief ?? null);
@@ -111,6 +123,8 @@ export const usePlan = (): ProjectPlan | null => useForm(selectPlan);
 export const useTiming = (id: TaskId): TaskTiming | null => useForm((s) => selectPlan(s)?.schedule.timings.get(id) ?? null);
 /** The schedule on the v0 calendar-day grid */
 export const useTimelineGrid = (): TimelineGrid | null => useForm(selectTimelineGrid);
+/** Where the pending subtasks proposal's steps would sit on that grid once accepted */
+export const useProposalCells = (): ReadonlyMap<StepId, GridBar> => useForm(selectProposalCells);
 export const useMetrics = (): Metrics | null => useForm((s) => selectPlan(s)?.metrics ?? null);
 export const useFocus = (): FocusResult | null => useForm((s) => selectPlan(s)?.focus ?? null);
 /** A task's focus reasons and why, when it is open and not blocked */

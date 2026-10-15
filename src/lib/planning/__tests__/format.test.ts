@@ -16,9 +16,11 @@ import {
   fmtWorkingDays,
   noEstimateSentence,
   scheduleLabel,
+  summaryOf,
   unknownLabel,
 } from "@/lib/planning/format";
 import { schedule, type UnknownTiming } from "@/lib/planning/schedule";
+import * as v0Focus from "../../../../test/legacy/v0/lib/focus";
 import * as v0 from "../../../../test/legacy/v0/lib/selectors";
 import { activeProject, demoState, makeTask, taskByTitle } from "../../../../test/fixtures/v2/build";
 
@@ -139,5 +141,27 @@ describe("the v0 day grid", () => {
     const grid = calendarOffsets(schedule({ ...activeProject(demoState()), tasks: {} }, cal));
     expect(grid.totalDays).toBe(0);
     expect(grid.bars.size).toBe(0);
+  });
+});
+
+describe("the focus sentence", () => {
+  // v0 summaryOf's lead, for every status and estimate shape (the point is focus v2's own why)
+  const legacyLead = (status: "todo" | "active" | "review" | "done", progress: number, estimate: number | null) =>
+    v0Focus.summaryOf({ task: { status, progress, estimate } as never, reasons: [], chosenBy: "form", next: null }).lead;
+
+  it("leads with where the task stands, as v0 did", () => {
+    for (const status of ["todo", "active", "review", "done"] as const) {
+      for (const estimate of [null, 0.5, 1, 2.5, 6]) {
+        const { lead } = summaryOf({ why: "Urgent." }, { status, progress: 30, estimateDays: estimate });
+        expect(lead).toBe(legacyLead(status, 30, estimate));
+      }
+    }
+    expect(summaryOf({ why: "x" }, { status: "active", progress: 30, estimateDays: 6 }).lead).toBe("In progress, 30% done.");
+    expect(summaryOf({ why: "x" }, { status: "review", progress: 85, estimateDays: 1 }).lead).toBe("In review, 1 day of work.");
+    expect(summaryOf({ why: "x" }, { status: "todo", progress: 0, estimateDays: null }).lead).toBe("Not started, no duration yet.");
+  });
+
+  it("points at the candidate's why", () => {
+    expect(summaryOf({ why: "Urgent and on the critical path." }, { status: "active", progress: 30, estimateDays: 6 }).point).toBe("Urgent and on the critical path.");
   });
 });

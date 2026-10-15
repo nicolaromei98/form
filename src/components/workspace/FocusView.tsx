@@ -24,7 +24,7 @@ import { move } from "@/lib/motion";
 import { STATUS_LABEL } from "@/lib/domain/labels";
 import type { TaskId } from "@/lib/domain/schema/ids";
 import type { Task } from "@/lib/domain/schema/project";
-import { fmtDays } from "@/lib/planning/format";
+import { fmtDays, summaryOf } from "@/lib/planning/format";
 import { useViewport } from "@/lib/useViewport";
 import { EditableText, ProposalBlock } from "./parts";
 import { ShuffleText } from "../text/ShuffleText";
@@ -123,16 +123,6 @@ function DecisionItem({
   return <Decision task={task} candidate={candidate} chosenBy={chosenBy} number={number} leaving={leaving} onGone={onGone} />;
 }
 
-/** Where the task stands: the quiet half of the focus sentence (the why is the other half) */
-function leadOf(t: Task): string {
-  const e = t.estimateDays;
-  const days = e !== null ? `${Number.isInteger(e) ? e : e.toFixed(1)} ${e === 1 ? "day" : "days"} of work` : "no duration yet";
-  if (t.status === "active") return `In progress, ${t.progress}% done.`;
-  if (t.status === "review") return `In review, ${days}.`;
-  if (t.status === "done") return "Done.";
-  return `Not started, ${days}.`;
-}
-
 /**
  * Keeps a display title on one line: it never grows past its CSS size, and
  * shrinks just enough when a long title would overflow its column.
@@ -181,8 +171,8 @@ function Decision({
   const steps = useSteps(task.id);
   // The first step not done, when the task has been broken down
   const next = candidate.nextStepId === null ? null : (steps.find((s) => s.id === candidate.nextStepId) ?? null);
-  const lead = leadOf(task);
-  const point = candidate.why;
+  // Where it stands, then why it matters now
+  const { lead, point } = summaryOf(candidate, task);
   const root = useRef<HTMLElement>(null);
   const titleBox = useFitLine(task.title);
   const { commit, select, submit } = useActions();

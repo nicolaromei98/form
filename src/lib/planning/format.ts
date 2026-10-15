@@ -1,6 +1,8 @@
 import { isoWeekday, toDayNum } from "@/lib/domain/dates";
 import type { StepId, TaskId } from "@/lib/domain/schema/ids";
 import type { IsoDate } from "@/lib/domain/schema/primitives";
+import type { Task } from "@/lib/domain/schema/project";
+import type { FocusCandidate } from "@/lib/planning/focus";
 import type { AnchorMode, Schedule, ScheduleAnchor, UnknownTiming } from "@/lib/planning/schedule";
 
 /**
@@ -116,6 +118,31 @@ export function unknownLabel(timing: UnknownTiming, sched: Schedule, titleOf: (i
 /** "{Task} has no estimate, so its dates are unknown." (FORM-v1 §17) */
 export function noEstimateSentence(title: string): string {
   return `${title} has no estimate, so its dates are unknown.`;
+}
+
+/* ------------------------------------------------------------------
+   Focus
+   ------------------------------------------------------------------ */
+
+/**
+ * The Focus sentence (v0 `summaryOf`): where the task stands ("In progress, 30% done."), then why
+ * it matters now, the candidate's own `why` ("Urgent and on the critical path.").
+ */
+export function summaryOf(
+  candidate: Pick<FocusCandidate, "why">,
+  task: Pick<Task, "status" | "progress" | "estimateDays">,
+): { lead: string; point: string } {
+  const e = task.estimateDays;
+  const days = e !== null ? `${Number.isInteger(e) ? e : e.toFixed(1)} ${e === 1 ? "day" : "days"} of work` : "no duration yet";
+  const lead =
+    task.status === "active"
+      ? `In progress, ${task.progress}% done.`
+      : task.status === "review"
+        ? `In review, ${days}.`
+        : task.status === "done"
+          ? "Done."
+          : `Not started, ${days}.`;
+  return { lead, point: candidate.why };
 }
 
 /* ------------------------------------------------------------------

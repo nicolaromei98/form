@@ -3,14 +3,14 @@ import { compareDates, isoWeek } from "@/lib/domain/dates";
 import { resolveOwner, resolvePerson } from "@/lib/domain/invariants/check";
 import { PRIORITY_RANK, STATUS_ORDER } from "@/lib/domain/labels";
 import { compareKeys, sortedByOrder, sortedByZ } from "@/lib/domain/order";
-import type { PersonId, ProjectId, TaskId } from "@/lib/domain/schema/ids";
+import type { PersonId, ProjectId, StepId, TaskId } from "@/lib/domain/schema/ids";
 import type { LocalViewState } from "@/lib/domain/schema/local";
 import type { IsoDate, Status } from "@/lib/domain/schema/primitives";
 import type { MoodItem, ProjectDoc, Task } from "@/lib/domain/schema/project";
 import type { SubtasksProposal } from "@/lib/domain/schema/proposal";
 import type { Person, WorkspaceDoc } from "@/lib/domain/schema/workspace";
-import { type FocusCandidate, type LaneLoad, laneLoads, loadFor, planProject, type ProjectPlan } from "@/lib/planning";
-import { calendarOffsets, type TimelineGrid } from "@/lib/planning/format";
+import { type FocusCandidate, type LaneLoad, laneLoads, loadFor, planProject, type ProjectPlan, schedule } from "@/lib/planning";
+import { calendarOffsets, type GridBar, type TimelineGrid } from "@/lib/planning/format";
 import { type DocsState, isLiveProject } from "@/lib/store/engine";
 
 /**
@@ -227,6 +227,36 @@ export const timelineGridOf = memoByRef(calendarOffsets);
 export function selectTimelineGrid(s: SelectState): TimelineGrid | null {
   const plan = selectPlan(s);
   return plan ? timelineGridOf(plan.schedule) : null;
+}
+
+const NO_CELLS: ReadonlyMap<StepId, GridBar> = new Map();
+
+/**
+ * Where the steps of a subtasks proposal would sit once accepted, as cells of the timeline grid:
+ * the schedule run on the project with the proposed steps appended to their task, so the preview
+ * follows the one step rule (Q1) and lands exactly where accepting puts the steps. A task's
+ * dates never depend on its steps, so the grid's origin and the task's bar are the plan's own.
+ */
+const proposalCellsOf = memoLast((plan: ProjectPlan, proposal: SubtasksProposal): ReadonlyMap<StepId, GridBar> => {
+  const tasks = plan.project.tasks;
+  if (!Object.hasOwn(tasks, proposal.taskId)) return NO_CELLS;
+  const task = tasks[proposal.taskId];
+  const steps = [...task.steps, ...proposal.items.map((item) => ({ id: item.stepId, estimateDays: item.estimateDays }))];
+  const preview = { ...plan.project, tasks: { ...tasks, [task.id]: { ...task, steps } } };
+  const grid = calendarOffsets(schedule(preview, plan.calendar));
+  const cells = new Map<StepId, GridBar>();
+  for (const item of proposal.items) {
+    const cell = grid.steps.get(item.stepId);
+    if (cell !== undefined) cells.set(item.stepId, cell);
+  }
+  return cells;
+});
+
+/** The grid cells of the pending subtasks proposal's steps (empty without one) */
+export function selectProposalCells(s: SelectState): ReadonlyMap<StepId, GridBar> {
+  const plan = selectPlan(s);
+  const proposal = plan?.project.proposal ?? null;
+  return plan !== null && proposal?.kind === "subtasks" ? proposalCellsOf(plan, proposal) : NO_CELLS;
 }
 
 const candidatesOf = memoByRef((focus: ProjectPlan["focus"]): ReadonlyMap<TaskId, FocusCandidate> => {

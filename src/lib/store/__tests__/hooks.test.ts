@@ -4,30 +4,36 @@
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PEOPLE_MAX } from "@/lib/domain/limits";
 import { updateTaskOp } from "@/lib/ops/build";
 import type { FormStore } from "@/lib/store/form";
 import {
   FormStoreProvider,
   useActions,
   useBrief,
+  useCanAddPerson,
   useFocus,
   useFocusFor,
   useFormRuntime,
+  useHasSamplePerson,
   useLaneLoads,
   useMembers,
   useMetrics,
   useMoodItems,
+  useNextViews,
   usePalette,
   useProject,
+  useProposalCells,
   useSuggestions,
   useTask,
   useTaskNumber,
   useTasksByStatus,
   useTimelineGrid,
   useVisibleTaskIds,
+  useWorkspacePeople,
 } from "@/lib/store/hooks";
 import { taskByTitle } from "../../../../test/fixtures/v2/build";
-import { demoStore, NOW_MS, openProject } from "./support";
+import { demoStore, emptyDemo, NOW_MS, openProject, storeOn } from "./support";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -153,6 +159,66 @@ describe("derived hooks", () => {
     change(() => void store.getState().commit([{ op: "setView", patch: { briefAudience: "team" } }], { label: "audience" }));
     expect(brief.values).toHaveLength(2);
     expect(JSON.stringify(brief.last())).toContain("Marta is 4 days over capacity.");
+  });
+});
+
+describe("integration hooks (step 18)", () => {
+  it("useNextViews offers the views the project lacks, and keeps its array while they stay the same", () => {
+    const store = demoStore(["cards"]);
+    const p = probe(store, useNextViews);
+    expect(p.last()).toEqual(["timeline", "board", "team"]);
+    const ui = taskByTitle(openProject(store), "UI Design");
+    change(() => void store.getState().commit([updateTaskOp(ui.id, "title", "Screens")], { label: "rename" }));
+    expect(p.values).toHaveLength(1);
+    change(() => void store.getState().commit([{ op: "addView", view: "timeline" }], { label: "add timeline" }));
+    expect(p.last()).toEqual(["team", "board", "brief"]);
+  });
+
+  it("useHasSamplePerson follows the Team rows", () => {
+    expect(probe(demoStore(["cards", "team"]), useHasSamplePerson).last()).toBe(true);
+    // The demo workspace holds the sample team, but no project means no Team rows
+    expect(probe(storeOn(emptyDemo()), useHasSamplePerson).last()).toBe(false);
+  });
+
+  it("useCanAddPerson turns false where the reducer starts refusing", () => {
+    const store = demoStore(["cards", "team"]);
+    const room = probe(store, useCanAddPerson);
+    expect(room.last()).toBe(true);
+    change(() => {
+      for (let i = Object.keys(store.getState().docs.workspace.people).length; i < PEOPLE_MAX; i++) {
+        const op = { op: "addPerson", personId: store.deps.mint("person"), name: `Extra ${i}`, role: null, email: null, capacityDaysPerWeek: 5, dayRateCents: null } as const;
+        expect(store.getState().commit([op], { label: "add person" }).changed).toBe(true);
+      }
+    });
+    expect(room.last()).toBe(false);
+    // The reducer agrees: one more is refused
+    const refused = store.getState().commit([{ op: "addPerson", personId: store.deps.mint("person"), name: "One too many", role: null, email: null, capacityDaysPerWeek: 5, dayRateCents: null }], { label: "add person" });
+    expect(refused.changed).toBe(false);
+  });
+
+  it("useWorkspacePeople is the workspace's own record", () => {
+    const store = demoStore();
+    const p = probe(store, useWorkspacePeople);
+    expect(p.last()).toBe(store.getState().docs.workspace.people);
+  });
+
+  it("useProposalCells puts a proposal's steps where accepting them schedules them", async () => {
+    const store = demoStore(["cards", "timeline"]);
+    store.getState().setReducedMotion(true);
+    const ui = taskByTitle(openProject(store), "UI Design");
+    const cells = probe(store, useProposalCells);
+    const grid = probe(store, useTimelineGrid);
+    expect(cells.last().size).toBe(0);
+    change(() => store.getState().select(ui.id));
+    await act(() => store.getState().submit("Break this task into smaller steps"));
+    const proposal = openProject(store).proposal;
+    expect(proposal?.kind).toBe("subtasks");
+    const previewed = new Map(cells.last());
+    expect(previewed.size).toBeGreaterThan(0);
+    change(() => store.getState().resolveProposal(true));
+    expect(openProject(store).proposal).toBeNull();
+    expect(cells.last().size).toBe(0);
+    for (const [stepId, cell] of previewed) expect(grid.last()?.steps.get(stepId)).toEqual(cell);
   });
 });
 

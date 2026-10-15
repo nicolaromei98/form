@@ -5,7 +5,6 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState, type FocusEvent
 import { BRIEF_TEXT_MAX } from "@/lib/domain/limits";
 import type { BriefLineId, PersonId, TaskId } from "@/lib/domain/schema/ids";
 import type { Audience, BriefSection as BriefSectionKey } from "@/lib/domain/schema/primitives";
-import type { WorkspaceDoc } from "@/lib/domain/schema/workspace";
 import {
   briefHtml,
   briefPlainText,
@@ -19,6 +18,7 @@ import {
   useProject,
   useTask,
   useViewConfig,
+  useWorkspacePeople,
 } from "@/lib/store/hooks";
 import { ease, move } from "@/lib/motion";
 import { DecodeText } from "../text/TextMotion";
@@ -37,6 +37,8 @@ const STEP = 0.06;
 export function BriefView() {
   const brief = useBrief();
   const project = useProject();
+  // The names the text exports resolve, as the lines on the page do
+  const people = useWorkspacePeople();
   const audience: Audience = useViewConfig()?.brief.audience ?? "client";
   const { commit, addBriefLine } = useActions();
   const [copied, setCopied] = useState<"idle" | "done" | "failed">("idle");
@@ -55,8 +57,8 @@ export function BriefView() {
   const body = brief.sections.filter((s) => s.key !== "note");
 
   const copy = async () => {
-    const shown = asShown(brief);
-    const ok = await copyBrief(briefPlainText(shown, project, NO_PEOPLE), briefHtml(shown, project, NO_PEOPLE));
+    const ws = { people };
+    const ok = await copyBrief(briefPlainText(brief, project, ws), briefHtml(brief, project, ws));
     setCopied(ok ? "done" : "failed");
     setTimeout(() => setCopied("idle"), 1800);
   };
@@ -199,15 +201,6 @@ const wordingOf = (line: BriefLine): string => line.edited ?? (line.kind === "cu
 
 /** A line the user added carries its own id */
 const lineIdOf = (line: BriefLine) => line.id as BriefLineId;
-
-/** The brief with every line pinned to the words on the page, for the text exports */
-function asShown(brief: Brief): Brief {
-  const pin = (line: BriefLine): BriefLine => ({ ...line, edited: wordingOf(line) });
-  return { ...brief, headline: brief.headline.map(pin), sections: brief.sections.map((s) => ({ ...s, lines: s.lines.map(pin) })) };
-}
-
-/** Pinned lines resolve no names, so the exports need no people */
-const NO_PEOPLE: Pick<WorkspaceDoc, "people"> = { people: {} };
 
 function Section({
   section,

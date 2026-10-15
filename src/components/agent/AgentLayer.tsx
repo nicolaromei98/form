@@ -1,8 +1,7 @@
 "use client";
 
 import { AnimatePresence, animate, motion, useMotionValue, useTransform, type Transition } from "motion/react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { nextViews } from "@/lib/domain/views";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import {
   type Rect,
   useActions,
@@ -14,8 +13,8 @@ import {
   useProposal,
   useReducedMotion,
   useSelectedId,
+  useNextViews,
   useSpawn,
-  useViews,
 } from "@/lib/store/hooks";
 import { CREATE, TAB_GROW_MS, ease, springs } from "@/lib/motion";
 import { useViewport } from "@/lib/useViewport";
@@ -42,8 +41,8 @@ export function AgentLayer() {
   const selectedId = useSelectedId();
   const proposal = useProposal();
   const quiet = selectedId === null && proposal === null;
-  const views = useViews();
-  const offers = useMemo(() => nextViews(views), [views]);
+  // The views the project lacks, most related to the last one created first
+  const offers = useNextViews();
   const [nodeHover, setNodeHover] = useState<number | null>(null);
   // A different set of offers (a view added, undone or redone) folds the nodes back into the agent
   // before the new ones bud: nodes never slide into each other's places or sit there unlabelled
