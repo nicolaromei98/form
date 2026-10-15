@@ -63,9 +63,10 @@ export function briefEdit(cmd: Command, project: ProjectDoc | null, local: Local
     // Without a section, the user's line is a note: their own words, under the headline
     const section = BRIEF_SECTION[(add[1] ?? "note").toLowerCase()] ?? "note";
     const line = (text.charAt(0).toUpperCase() + text.slice(1) + end).slice(0, BRIEF_TEXT_MAX).trimEnd();
+    // The line first, so its part leads the caption
     const c = new Collector(project);
-    show(c);
     c.op(makeOp({ op: "addBriefLine", lineId: mint("briefLine"), audience, section, text: line }));
+    show(c);
     return c.result("anchored");
   }
 

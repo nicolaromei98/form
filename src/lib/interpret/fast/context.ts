@@ -136,6 +136,14 @@ export class Collector {
     return this;
   }
 
+  /**
+   * Brings a view on screen as a side effect of a change ("assign …" opens the team): nothing when
+   * it is already the active view, so its caption doesn't repeat (v0's silent setRepresentation).
+   */
+  reveal(view: ViewKind, active: ViewKind): this {
+    return view === active ? this : this.show(view);
+  }
+
   note(note: QueryNote): this {
     this.notes.push(note);
     return this;

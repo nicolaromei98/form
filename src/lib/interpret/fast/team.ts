@@ -74,7 +74,7 @@ function addPeople(add: RegExpMatchArray, project: ProjectDoc, ctx: FastContext)
     );
   }
   if (!joining.length) return clarify(names.length ? `${names.join(" and ")} ${names.length > 1 ? "are" : "is"} already on the team.` : "Who should join the team?");
-  return c.show("team").result("keyword");
+  return c.reveal("team", ctx.local.activeView).result("keyword");
 }
 
 export function team(cmd: Command, ctx: FastContext, project: ProjectDoc): FamilyResult | null {
@@ -84,11 +84,14 @@ export function team(cmd: Command, ctx: FastContext, project: ProjectDoc): Famil
   if (!teamWord && !person) return null;
   const wantsShow = WANTS_SHOW.some((re) => re.test(s));
   const c = new Collector(project);
-  const toTeam = () => c.show("team");
+  // The change happens on the Team view: opened when it isn't on screen
+  const toTeam = () => c.reveal("team", ctx.local.activeView);
 
   // Sample team
   if (/\b(sample|demo|example) team\b/.test(s)) {
-    return c.op(...ctx.demo.sampleTeam(ctx.ws, project)).show("team").result("keyword");
+    c.op(...ctx.demo.sampleTeam(ctx.ws, project));
+    toTeam();
+    return c.result("keyword");
   }
 
   // Add people: "add Giulia and Paolo to the team (as designers) (with 5 days)"

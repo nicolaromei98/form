@@ -39,8 +39,9 @@ export function workspaceRules(
   // The view a sentence names: added when the project doesn't have it, then shown
   const rep = viewIn(s, false);
   if (rep) {
-    c.show(rep.view);
-    if (rep.list) c.op(setViewOp({ layout: "list" }));
+    // "As a list" is about the layout: the tracker opens only when it isn't on screen (v0 said "List")
+    if (rep.list) c.reveal(rep.view, local.activeView).op(setViewOp({ layout: "list" }));
+    else c.show(rep.view);
   }
 
   // Density (skip when the words were about a single emphasised entity)
