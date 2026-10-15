@@ -1,14 +1,13 @@
 import type { Minter } from "@/lib/domain/ids";
 import { resolvePerson } from "@/lib/domain/invariants/check";
-import { compareKeys, sortedByOrder } from "@/lib/domain/order";
+import { compareKeys, nKeys, sortedByOrder } from "@/lib/domain/order";
 import { type PersonId, WorkspaceId } from "@/lib/domain/schema/ids";
 import type { BirthView, Priority, Status, Timestamp } from "@/lib/domain/schema/primitives";
 import type { ProjectDoc, ProjectDraft } from "@/lib/domain/schema/project";
 import type { TaskSeed } from "@/lib/domain/schema/template";
-import type { WorkspaceDoc } from "@/lib/domain/schema/workspace";
+import type { Person, WorkspaceDoc } from "@/lib/domain/schema/workspace";
 import { SAMPLE_OWNER_BY_TITLE, SAMPLE_PEOPLE, SAMPLE_START, type SamplePerson } from "@/lib/demo/sample";
 import { makeOp, type Op, taskSeed } from "@/lib/ops/build";
-import type { LocalIntent } from "@/lib/ops/local-intents";
 
 /**
  * The /demo seed (plan §8.3): the workspace, the website template as v2 task seeds, and the two
@@ -31,10 +30,31 @@ export const DEMO_WORKSPACE_NAME = "Demo studio";
 export const DEMO_CURRENCY = "EUR";
 
 /**
- * The /demo workspace before any project: nobody in it yet (the sample team arrives with the
- * first project or "Add a sample team"), Monday to Friday, in the browser's time zone (plan §8.1).
+ * The /demo workspace before any project: the demo studio and its sample team (Marta, Sara and
+ * Luca at 2, 4 and 5 days a week), Monday to Friday, in the browser's time zone (plan §8.1).
+ *
+ * The team is there from the start, as v0's template brought it with the first project: creating
+ * a project then adds no people, so its caption stays v0's ("Timeline created · 4 tasks") instead
+ * of listing three people first. They join a project only as its members.
  */
 export function demoWorkspace(now: Timestamp, timezone: string): WorkspaceDoc {
+  const orders = nKeys(SAMPLE_PEOPLE.length);
+  const people: Record<PersonId, Person> = {};
+  SAMPLE_PEOPLE.forEach((p, i) => {
+    people[p.id] = {
+      id: p.id,
+      name: p.name,
+      role: p.role,
+      email: null,
+      userId: null,
+      capacityDaysPerWeek: p.capacityDaysPerWeek,
+      dayRateCents: null,
+      timeOff: {},
+      order: orders[i],
+      archived: false,
+      createdAt: now,
+    };
+  });
   return {
     schemaVersion: 2,
     docType: "workspace",
@@ -45,7 +65,7 @@ export function demoWorkspace(now: Timestamp, timezone: string): WorkspaceDoc {
     workingDays: [1, 2, 3, 4, 5],
     closures: {},
     holidayPreset: null,
-    people: {},
+    people,
     templates: {},
     projects: {},
     improveFormOptIn: false,
@@ -201,25 +221,22 @@ export interface DemoProjectRequest {
   replace: boolean;
 }
 
-/** A command's worth of ops and local intents */
-export interface DemoCommand {
-  ops: Op[];
-  local: LocalIntent[];
-}
-
 /**
- * `createDemoProject` (plan §8.3): at most 7 ops in one command and one history entry.
+ * `createDemoProject` (plan §8.3): at most 6 ops in one command and one history entry.
  * 1. deleteProject(open project) when the command replaces it;
  * 2. addPerson or restorePerson for each missing or archived sample person;
  * 3. createProject with the demo draft and the four template seeds;
- * 4. addBlock(moodboard) when asked;
- * 5. the local show of the view it is born as.
+ * 4. addBlock(moodboard) when asked.
+ *
+ * No local show: the runner opens a project the command spawned at its home view, which is the
+ * one view it was born as (plan §5.7), so a show would change nothing and only repeat the view's
+ * name in the caption ("Tracker created · 4 tasks · Tracker").
  */
 export function createDemoProject(
   state: { workspace: Pick<WorkspaceDoc, "people">; project: Pick<ProjectDoc, "id"> | null },
   req: DemoProjectRequest,
   mint: Minter,
-): DemoCommand {
+): Op[] {
   const ops: Op[] = [];
   if (req.replace && state.project !== null) ops.push(makeOp({ op: "deleteProject", projectId: state.project.id }));
   const seats = sampleSeats(state.workspace);
@@ -239,7 +256,7 @@ export function createDemoProject(
     }),
   );
   if (req.wantsMoodboard) ops.push(makeOp({ op: "addBlock", block: "moodboard" }));
-  return { ops, local: [{ kind: "show", view: req.startAs }] };
+  return ops;
 }
 
 /**
