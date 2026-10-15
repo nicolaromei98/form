@@ -129,9 +129,10 @@ export function fastParse(text: string, ctx: FastContext): FastResult {
 
 /**
  * The runner's command for a matched result with something to do (plan §5.7); null for control,
- * for "none" and for a bare clarify, whose reply the caller shows as it is.
+ * for "none" and for a bare clarify, whose reply the caller shows as it is. `source` is the
+ * caller's to say (a typed command is "direct"; the Phase 5 agent passes "agent").
  */
-export function toCommand(result: FastResult, text: string): RunnerCommand | null {
+export function toCommand(result: FastResult, text: string, source: RunnerCommand["source"] = "direct"): RunnerCommand | null {
   if (result.status !== "matched" || "control" in result) return null;
   if (result.ops.length === 0 && result.local.length === 0 && result.notes.length === 0 && result.notices.length === 0) return null;
   return {
@@ -140,7 +141,7 @@ export function toCommand(result: FastResult, text: string): RunnerCommand | nul
     notes: result.notes,
     notices: result.notices,
     ...(result.reply ? { reply: result.reply } : {}),
-    source: "direct",
+    source,
     text,
   };
 }

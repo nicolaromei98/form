@@ -129,6 +129,15 @@ export const CORPUS: readonly CorpusCase[] = [
   ...on("demo", "Compare the two options", "Show me the budget", "", "Fammi il brief per il cliente", "Make it purple"),
   ...on("empty", "Who's overloaded?"),
 
+  // More edges: plural sentences, clamps, no-ops, steps and people that aren't there
+  ...on("demoSelected", "Make it urgent", "Add a step", "Highlight this", "Unpin it", "Set it to 150%", "Remove it", "Make it high priority", "Hide the done ones"),
+  ...on("demo", "Sort by importance", "Make Development high priority", "Give Research to Giulia", "Add Sara to the team", "Add terracotta and sage to the moodboard", "Make it shorter"),
+  ...on("demo", "Start a new board for the summer campaign", "Show all tasks"),
+  ...on("demoTimeline", "Create a new project"),
+  ...on("demoSteps", "Focus on QA pass", "Assign QA pass to Sara", "Add a step called Handoff"),
+  ...on("demoMood3", "Add a note saying call the printer"),
+  ...on("demoBrief", "Make the brief shorter", "Now make it for the team", "Show the team workload"),
+
   // AUDIT §11 false positives, kept in /demo until Phase 5 (plan §8.4)
   ...on("demo", "Set the deadline to 30 November", "Level the schedule", "Zoom the timeline to weeks", "Add a board and then email the client", "Aggiungi una timeline"),
   ...on("demoSelected", "Budget is 12k", "Start QA on the 10th"),

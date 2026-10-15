@@ -90,6 +90,7 @@ export const EXPECTED_DIFFS: readonly ExpectedDiff[] = [
   { fixture: "demo", say: "Show the cards in one column", caption: { v0: "Tracker · 1 column", v2: "1 column · Tracker" }, why: R.partOrder },
   { fixture: "demoFocus", say: "Show me everything again", caption: { v0: "Tracker · everything back", v2: "Tracker" }, why: R.showHome },
   { fixture: "demoFocus", say: "exit focus", caption: { v0: "Tracker · everything back", v2: "Tracker" }, why: R.showHome },
+  { fixture: "demo", say: "Show all tasks", caption: { v0: "Tracker · everything back", v2: "Tracker" }, why: R.showHome },
   { fixture: "demo", say: "Make it bigger", caption: { v0: "Comfortable density", v2: "The cards are already comfortable" }, why: R.honestNoop },
   { fixture: "demo", say: "Back to workflow order", caption: { v0: "Workflow order", v2: "Already in workflow order" }, why: R.honestNoop },
   { fixture: "demo", say: "Remove the highlight", caption: { v0: "Highlight off", v2: "Nothing is highlighted" }, why: R.honestNoop },
@@ -102,6 +103,15 @@ export const EXPECTED_DIFFS: readonly ExpectedDiff[] = [
   { fixture: "demo", say: "Mark Research done", caption: { v0: "Research → Done", v2: "Research is already done" }, why: R.honestNoop },
   { fixture: "demoSelected", say: "Start QA on the 10th", caption: { v0: "UI Design → In progress", v2: "UI Design is already in progress" }, why: R.honestNoop },
   { fixture: "demoSelected", say: "Make this less prominent", caption: { v0: "Emphasis removed", v2: "UI Design isn't emphasised" }, why: R.honestNoop },
+  { fixture: "demoSelected", say: "Unpin it", caption: { v0: "Emphasis removed", v2: "UI Design isn't emphasised" }, why: R.honestNoop },
+  { fixture: "demoSelected", say: "Make it urgent", caption: { v0: "Priority urgent", v2: "UI Design is already urgent priority" }, why: R.honestNoop },
+  { fixture: "demoSelected", say: "Remove it", caption: { v0: "UI Design removed", v2: "UI Design removed · Development now follows Visual Direction" }, why: R.bridge },
+  {
+    fixture: "demoSelected",
+    say: "Set it to 150%",
+    caption: { v0: "Progress 100%", v2: "UI Design → Done" },
+    why: `${R.opCaption} At 100% the status table makes the task Done (plan §5.5), and the caption says the status.`,
+  },
   {
     fixture: "demoSelected",
     say: "It takes 2 weeks",
