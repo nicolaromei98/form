@@ -12,4 +12,4 @@
 - The store, the Claude path and the React-bound modules are not copied.
 - Never edit these files. Check one with `git show b201af8:src/lib/ops.ts | diff - test/legacy/v0/lib/ops.ts`.
 
-`lower.ts` lowers v0 operations to v2 registry ops for the golden parser test (plan §4.5, §10.4). It is a stub until step 15.
+`lower.ts` lowers v0 operations to v2 registry ops and local intents for the golden parser test (plan §4.5, §10.4): one exhaustive switch over the 35 v0 names, applied to the v2 twin that the migration makes of the v0 document (`test/golden/parser-harness.ts`).
