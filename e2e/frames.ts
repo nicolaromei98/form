@@ -6,9 +6,9 @@
 //     page.clock.runFor(t) shows JS timers, rAF and compositor animations at the same instant t.
 // With E2E_TRACE_DIR set, captureFrames also writes a DOM and animation dump next to every frame,
 // to find where two runs (or two builds) diverge.
-import { expect, type Page } from "@playwright/test";
+import type { Page, TestInfo } from "@playwright/test";
 import { writeFileSync } from "node:fs";
-import { THRESHOLD } from "./env";
+import { gate, type Mask } from "./gate";
 
 /** Frame times after a trigger, in ms (§10.8). */
 export const FRAME_TIMES = [0, 120, 240, 480, 900, 1750] as const;
@@ -40,6 +40,8 @@ declare global {
       rendered: (n: number) => Promise<void>;
       /** Resolves once the real tasks already posted on MessageChannel have run */
       drain: () => Promise<void>;
+      /** Restarts both seeded random streams (before each motion trigger) */
+      reseed: () => void;
     };
   }
 }
@@ -54,23 +56,35 @@ function instrument() {
 
   // Seeded randomness: v0 mints ids with Math.random and the collage hashes them, v2 mints with
   // crypto. The same seed on every run and every build keeps ids, and so layouts, reproducible.
-  let seed = 0x5eed1014;
-  const random = () => {
-    seed = (seed + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  // Math.random and crypto draw from two streams, so v2's ids (crypto) never move the values the
+  // text scramble draws from Math.random; reseed() restarts both before each motion trigger, so
+  // what either build drew before it (v0 mints ids with Math.random) can't shift the frames.
+  const MATH_SEED = 0x5eed1014;
+  const CRYPTO_SEED = 0xc0ffee14;
+  const stream = (seed: number) => {
+    let s = seed;
+    return {
+      reset: (to: number) => void (s = to),
+      next: () => {
+        s = (s + 0x6d2b79f5) >>> 0;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      },
+    };
   };
-  Math.random = random;
+  const math = stream(MATH_SEED);
+  const secure = stream(CRYPTO_SEED);
+  Math.random = math.next;
   crypto.getRandomValues = <T extends ArrayBufferView | null>(array: T): T => {
     if (array) {
       const bytes = new Uint8Array(array.buffer, array.byteOffset, array.byteLength);
-      for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(random() * 256);
+      for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(secure.next() * 256);
     }
     return array;
   };
   crypto.randomUUID = () => {
-    const h = Array.from({ length: 32 }, () => Math.floor(random() * 16).toString(16)).join("");
+    const h = Array.from({ length: 32 }, () => Math.floor(secure.next() * 16).toString(16)).join("");
     return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}` as `${string}-${string}-${string}-${string}-${string}`;
   };
 
@@ -97,6 +111,10 @@ function instrument() {
   const state = {
     mutations: 0,
     last: "",
+    reseed: () => {
+      math.reset(MATH_SEED);
+      secure.reset(CRYPTO_SEED);
+    },
     sample: (): Sample => {
       const pending = document
         .getAnimations()
@@ -289,23 +307,37 @@ export async function realFrames(page: Page, n: number) {
 /**
  * Captures the frames of one trigger (§10.8 motion) on a page opened in stepped mode: the trigger
  * runs at frame 0, then the fake clock is stepped to each frame time and every animation follows it.
+ * Each frame goes through the gate (gate.ts) with the trigger's expected-difference masks, at the
+ * 0.1% frame tolerance. Returns the frames that failed, so every frame is captured before the
+ * caller asserts.
  */
-export async function captureFrames(page: Page, name: string, trigger: () => Promise<void>, { keepPointer = false } = {}) {
+export async function captureFrames(
+  page: Page,
+  testInfo: TestInfo,
+  name: string,
+  trigger: () => Promise<void>,
+  { keepPointer = false, masks = [] }: { keepPointer?: boolean; masks?: readonly Mask[] } = {},
+): Promise<string[]> {
+  // Both builds draw the same random values from the trigger on, whatever they drew before it
+  await page.evaluate(() => window.__e2e!.reseed());
   await trigger();
   // A pointer left over the content would change hover states whenever the browser renders a real
   // frame (each screenshot does) as the layout moves under it. Parked in the empty top-left corner
   // at frame 0, it changes nothing after; hover triggers keep it where they put it.
   if (!keepPointer) await page.mouse.move(0, 0);
   let elapsed = 0;
+  const failed: string[] = [];
   for (const t of FRAME_TIMES) {
     await stepClock(page, t - elapsed);
     elapsed = t;
     await page.evaluate(() => window.__e2e!.frames.seek());
     // A fixed number of real frames lets the compositor finish rasterising the paused scene
     await realFrames(page, 12);
-    // Exactly one screenshot per frame, in reference and candidate runs alike. toHaveScreenshot
-    // retakes until two agree, and every take renders real frames the page can react to
-    const shot = await page.screenshot({ animations: "allow", caret: "hide", scale: "device" });
+    // Exactly one screenshot per frame, in reference and candidate runs alike: a retake renders
+    // real frames the page can react to
+    const frame = `${name}-${String(t).padStart(4, "0")}ms.png`;
+    const rec = await gate(page, testInfo, frame, { fullPage: false, once: true, masks, maxDiffPixelRatio: FRAME_TOLERANCE });
+    if (!rec.ok) failed.push(`${frame}: ${rec.failures.join("; ")}`);
     if (process.env.E2E_TRACE_DIR) {
       const dump = await page.evaluate(() => {
         const styled = [...document.querySelectorAll<HTMLElement>("[style]")].map((e) => `${e.tagName}.${String(e.className).slice(0, 40)} ${e.getAttribute("style")}`);
@@ -315,9 +347,6 @@ export async function captureFrames(page: Page, name: string, trigger: () => Pro
       });
       writeFileSync(`${process.env.E2E_TRACE_DIR}/${name}-${t}.txt`, dump);
     }
-    expect(shot, `${name} at ${t} ms`).toMatchSnapshot(`${name}-${String(t).padStart(4, "0")}ms.png`, {
-      maxDiffPixelRatio: FRAME_TOLERANCE,
-      threshold: THRESHOLD,
-    });
   }
+  return failed;
 }

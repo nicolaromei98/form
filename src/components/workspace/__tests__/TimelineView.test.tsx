@@ -77,6 +77,15 @@ describe("TimelineView", () => {
     expect(px(visual, "width")).toBeCloseTo(6 * dayW - 2);
   });
 
+  it("renders the start date as v0's text nodes, so the pill keeps B's pixels (step 19)", () => {
+    const host = mount(demoStore(["timeline"]));
+    const pill = [...host.querySelectorAll("span.rounded-full")].find((s) => (s.textContent ?? "").startsWith("28 Sep 2026"));
+    if (!pill) throw new Error("No start date pill");
+    // v0: {day} {month} {year}, then the sample note; one "28 Sep 2026" node shapes its first glyph differently
+    const nodes = [...pill.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent);
+    expect(nodes).toEqual(["28", " ", "Sep", " ", "2026"]);
+  });
+
   it("names the root of unknown dates and offers a duration only on it", () => {
     const store = demoStore(["timeline"]);
     const ui = taskByTitle(openProject(store), "UI Design");

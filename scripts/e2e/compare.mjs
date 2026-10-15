@@ -10,7 +10,8 @@
 //   … -- <playwright args>                                e.g. -- visual.spec.ts --project chromium-desktop
 //
 // Options: --out <dir> (default e2e/.out/<run>), --workdir <dir> (worktrees; default the system
-// temp dir), --keep (keep the worktrees and their builds for the next run).
+// temp dir), --keep (keep the worktrees and their builds for the next run), --reuse-base (keep the
+// references an earlier run wrote into the same --out and run only the head against them).
 // Never touches port 3417 (the dev server) and never stops a process it didn't start.
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -187,6 +188,9 @@ const appPath = (commit) => (hasFile(commit, "src/app/demo/page.tsx") ? "/demo" 
  */
 const agentExpect = (commit) => process.env.E2E_AGENT_EXPECT ?? (hasFile(commit, "src/components/agent/loop.ts") ? "settled" : "record");
 
+/** The engine `commit` runs: "v2" from the switchover (plan step 18, the v2 store) on, else "v0" */
+const engine = (commit) => (hasFile(commit, "src/lib/store/engine.ts") ? "v2" : "v0");
+
 /** Runs this checkout's specs against one served build. Resolves to Playwright's exit code. */
 function playwright({ port, commit, out, snapshots, update }) {
   const args = ["playwright", "test", "--config", "e2e/playwright.config.ts", ...(update ? ["--update-snapshots=all"] : []), ...passthrough];
@@ -194,11 +198,12 @@ function playwright({ port, commit, out, snapshots, update }) {
     E2E_BASE_URL: `http://localhost:${port}`,
     E2E_APP_PATH: appPath(commit),
     E2E_AGENT_EXPECT: agentExpect(commit),
+    E2E_ENGINE: engine(commit),
     E2E_OUT_DIR: out,
     E2E_SNAPSHOT_DIR: snapshots,
     E2E_ARTIFACTS_DIR: join(out, "artifacts"),
   };
-  console.log(`· playwright → ${env.E2E_BASE_URL}${env.E2E_APP_PATH} (${short(commit)}${update ? ", writing references" : ", comparing"}; agent ${env.E2E_AGENT_EXPECT})`);
+  console.log(`· playwright → ${env.E2E_BASE_URL}${env.E2E_APP_PATH} (${short(commit)}${update ? ", writing references" : ", comparing"}; ${env.E2E_ENGINE}; agent ${env.E2E_AGENT_EXPECT})`);
   return new Promise((done) => {
     const child = spawn("npx", args, { cwd: REPO, env: { ...process.env, ...env }, stdio: "inherit" });
     children.add(child);
@@ -217,6 +222,29 @@ function stats(out) {
   } catch {
     return null;
   }
+}
+
+/**
+ * The pixel gate's records (e2e/gate.ts) of a comparing run, per project and spec: captures
+ * compared, passed, failed, the pixels compared and differing outside the masks, and the expected
+ * differences that masked something.
+ */
+function gateSummary(out) {
+  const root = join(out, "artifacts", "gate");
+  const summary = {};
+  for (const f of files(root).filter((f) => f.endsWith(".json"))) {
+    const [project, spec] = f.split("/");
+    const rec = JSON.parse(readFileSync(join(root, f), "utf8"));
+    const s = (summary[`${project} ${spec}`] ??= { captures: 0, passed: 0, failed: 0, page: 0, crops: 0, compared: 0, differing: 0, maskedBy: {}, failures: [] });
+    s.captures++;
+    s[rec.ok ? "passed" : "failed"]++;
+    s[rec.mode]++;
+    s.compared += rec.compared;
+    s.differing += rec.differing;
+    for (const ed of Object.keys(rec.masked ?? {})) if (rec.masked[ed] > 0) s.maskedBy[ed] = (s.maskedBy[ed] ?? 0) + 1;
+    if (!rec.ok) s.failures.push(`${rec.name}: ${rec.failures.join("; ")}`);
+  }
+  return summary;
 }
 
 /* ------------------------------------------------------------------ */
@@ -300,19 +328,32 @@ async function main() {
   const base = sha(gate.ref);
   const head = sha(opt("head") ?? "HEAD");
   const out = resolve(opt("out") ?? join(REPO, "e2e/.out", `compare-${short(base)}-${short(head)}`));
-  rmSync(out, { recursive: true, force: true });
+  // --reuse-base: the references of an earlier run into the same --out are kept, only the head runs
+  const reuse = flag("reuse-base") && existsSync(join(out, "snapshots"));
+  if (reuse) rmSync(join(out, "head"), { recursive: true, force: true });
+  else rmSync(out, { recursive: true, force: true });
   const snapshots = join(out, "snapshots");
   console.log(`Comparing ${short(head)} (head) with ${short(base)} (base${gate.label ? `, baseline ${gate.label}` : ""})`);
 
   const [baseDir, headDir] = [await prepare(base, workdir), await prepare(head, workdir)];
-  await serve(baseDir, PORTS.base, join(out, "base-server.log"));
+  if (!reuse) await serve(baseDir, PORTS.base, join(out, "base-server.log"));
   await serve(headDir, PORTS.head, join(out, "head-server.log"));
 
-  const baseCode = await playwright({ port: PORTS.base, commit: base, out: join(out, "base"), snapshots, update: true });
+  const baseCode = reuse ? (stats(join(out, "base"))?.failed ? 1 : 0) : await playwright({ port: PORTS.base, commit: base, out: join(out, "base"), snapshots, update: true });
   const headCode = await playwright({ port: PORTS.head, commit: head, out: join(out, "head"), snapshots, update: false });
-  const summary = { base: { commit: base, exitCode: baseCode, ...stats(join(out, "base")) }, head: { commit: head, exitCode: headCode, ...stats(join(out, "head")) } };
+  const gated = gateSummary(join(out, "head"));
+  const summary = {
+    base: { commit: base, exitCode: baseCode, ...stats(join(out, "base")) },
+    head: { commit: head, exitCode: headCode, ...stats(join(out, "head")) },
+    gate: gated,
+  };
   writeFileSync(join(out, "summary.json"), JSON.stringify(summary, null, 2) + "\n");
   console.log(`\nBase ${short(base)}: ${JSON.stringify(summary.base)}\nHead ${short(head)}: ${JSON.stringify(summary.head)}`);
+  for (const [key, s] of Object.entries(gated)) {
+    const masked = Object.entries(s.maskedBy).map(([ed, n]) => `${ed}×${n}`).join(" ");
+    console.log(`Gate ${key}: ${s.passed}/${s.captures} pass (${s.page} page, ${s.crops} crops), ${s.differing} differing of ${s.compared} compared pixels; masked ${masked || "nothing"}`);
+    for (const f of s.failures) console.log(`  ✘ ${f}`);
+  }
   console.log(`Reports: ${relative(REPO, join(out, "head/report"))} (head), ${relative(REPO, join(out, "base/report"))} (base)`);
   return baseCode || headCode;
 }

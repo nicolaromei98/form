@@ -17,6 +17,14 @@ export const BASE_URL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
  */
 export const APP_PATH = process.env.E2E_APP_PATH ?? (existsSync(join(REPO, "src/app/demo/page.tsx")) ? "/demo" : "/");
 
+/**
+ * The engine of the build under test: "v0" up to baseline B, "v2" from the switchover (plan step
+ * 18). compare.mjs reads it from each served commit; otherwise this checkout decides. The expected
+ * differences (e2e/expected-diffs.md) assert their v2 values only on a v2 build.
+ */
+export const ENGINE: "v0" | "v2" = (process.env.E2E_ENGINE as "v0" | "v2" | undefined) ?? (existsSync(join(REPO, "src/lib/store/engine.ts")) ? "v2" : "v0");
+if (ENGINE !== "v0" && ENGINE !== "v2") throw new Error(`E2E_ENGINE is "v0" or "v2", not "${process.env.E2E_ENGINE}"`);
+
 /** Everything a run writes (snapshots aside): reports, test results, measurements, videos. Gitignored. */
 export const OUT_DIR = resolve(process.env.E2E_OUT_DIR ?? join(REPO, "e2e/.out/local"));
 

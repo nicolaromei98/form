@@ -299,7 +299,7 @@ export function TimelineView() {
             <span className="t-micro mr-1 text-text-3">Start</span>
             <ShiftButton label="Start one week earlier" onClick={() => shiftStart(-7)} d="M6.5 2.5L3.5 5l3 2.5" />
             <span className="t-data rounded-full bg-white/70 px-2.5 py-1.5 text-text">
-              {project.startDate === null ? "—" : fmtDateYear(project.startDate)}
+              {project.startDate === null ? "—" : <DateParts text={fmtDateYear(project.startDate)} />}
               {project.startDate !== null && mode === "sample" && <span className="text-text-3"> · sample date</span>}
             </span>
             <ShiftButton label="Start one week later" onClick={() => shiftStart(7)} d="M3.5 2.5L6.5 5l-3 2.5" />
@@ -307,6 +307,20 @@ export function TimelineView() {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * "28 Sep 2026" as v0 rendered it: day, month and year as separate text nodes. Chromium shapes a
+ * text node on its own, so one "28 Sep 2026" node draws the first glyph a fraction of a pixel off
+ * v0's (the step 19 pixel gate caught it against baseline B).
+ */
+function DateParts({ text }: { text: string }) {
+  const [day, month, year] = text.split(" ");
+  return (
+    <>
+      {day} {month} {year}
+    </>
   );
 }
 
