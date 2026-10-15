@@ -1,7 +1,13 @@
-// Property generator for restoreProject: a stub until Phase 1 step 10d, which makes it
-// materialise payloads (src/lib/ops/registry/README.md). Until then the op is never generated.
-import type { OpGen } from "./_pick";
+// Property generator for restoreProject: usually an archived project, otherwise any project of the
+// index (a live one is a no-op, a deleted one is refused) or a missing one.
+import { type OpGen, pick } from "./_pick";
 
-const gen: OpGen = () => null;
+const gen: OpGen = (s, state, mint) => {
+  const entries = Object.values(state.workspace.projects).sort((a, b) => (a.id < b.id ? -1 : 1));
+  const archived = entries.filter((e) => e.archivedAt !== null).map((e) => e.id);
+  if (s.flags[1] && archived.length > 0) return { op: "restoreProject", projectId: pick(archived, s.picks[1]) };
+  const projectId = entries.length > 0 && s.picks[0] % 10 !== 0 ? pick(entries, s.picks[1]).id : mint("project");
+  return { op: "restoreProject", projectId };
+};
 
 export default gen;
