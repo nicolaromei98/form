@@ -56,14 +56,17 @@ export default defineOp({
   },
 
   // "Marta is 4d over capacity · 1 handover proposed. Review it on the team." Nothing moved yet,
-  // so the overload the env reads after the op is the one the proposal answers.
-  caption({ op, env }) {
+  // so the overload the env reads after the op is the one the proposal answers: the person the
+  // moves relieve, else the most overloaded one (v0).
+  caption({ op, after, env }) {
     const owners = op.moves.filter((m) => m.type === "owner").length;
     const shifts = op.moves.length - owners;
     const what = [owners > 0 ? plural(owners, "handover") : null, shifts > 0 ? plural(shifts, "shift") : null]
       .filter((w) => w !== null)
       .join(" and ");
-    const worst = env.overloads()[0];
+    const relieved = new Set(op.moves.map((m) => (m.type === "owner" ? m.from : after.tasks[m.taskId].ownerId)));
+    const overloads = env.overloads();
+    const worst = overloads.find((o) => relieved.has(o.personId)) ?? overloads[0];
     const lead = worst
       ? `${title(worst.name)} is ${formatDays(worst.over)}d over capacity`
       : op.moves.every((m) => m.type === "owner" && m.from === null)

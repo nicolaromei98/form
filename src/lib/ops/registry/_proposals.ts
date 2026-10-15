@@ -4,7 +4,7 @@ import type { PersonId } from "@/lib/domain/schema/ids";
 import type { ProjectDoc, Task } from "@/lib/domain/schema/project";
 import type { WorkspaceDoc } from "@/lib/domain/schema/workspace";
 import { type Rejection, reject } from "@/lib/ops/registry/_contract";
-import { ensureFreshId, title } from "@/lib/ops/registry/_helpers";
+import { ensureFreshId, idIndex, title } from "@/lib/ops/registry/_helpers";
 
 /**
  * Shared by the proposal ops of step 10e (plan §4.4 rows 40–46, §5.6) and imported by nothing
@@ -38,6 +38,17 @@ export function freshIds(d: ProjectDoc, ids: readonly string[]): Rejection | voi
     const taken = ensureFreshId(d, id);
     if (taken) return taken;
   }
+}
+
+/**
+ * `duplicate_id` when an id that accepting would create is already used outside the proposal.
+ * Invariant P3 keeps those ids fresh, so this only guards a document that broke it. `ensureFreshId`
+ * can't answer here: its index counts the pending proposal's own ids as taken.
+ */
+export function freshOutsideProposal(base: ProjectDoc, ids: readonly string[]): Rejection | void {
+  if (ids.length === 0) return;
+  const taken = idIndex({ ...base, proposal: null });
+  if (ids.some((id) => taken.has(id))) return reject("duplicate_id", "That id is already taken, so FORM didn't reuse it.");
 }
 
 /** A person's name for a message, or "no one" for an empty owner */

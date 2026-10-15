@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { resolvePerson } from "@/lib/domain/invariants/check";
 import { applyProgress, applyStatus } from "@/lib/domain/invariants/transitions";
 import { DEPS_MAX, MEMBERS_MAX, PROPOSAL_BULK_MAX, STEPS_MAX, TASKS_MAX } from "@/lib/domain/limits";
 import { nKeysBetween } from "@/lib/domain/order";
@@ -19,15 +18,16 @@ import type {
 import type { StepSeed, TaskSeed } from "@/lib/domain/schema/template";
 import type { WorkspaceDoc } from "@/lib/domain/schema/workspace";
 import { type CaptionPart, defineOp, isRejection, type Rejection, reject } from "@/lib/ops/registry/_contract";
-import { baseOf, formatDays, part, title, unique, workflowOf } from "@/lib/ops/registry/_helpers";
-import { isActivePerson, plural } from "@/lib/ops/registry/_proposals";
+import { baseOf, formatDays, part, setIfChanged, title, unique, workflowOf } from "@/lib/ops/registry/_helpers";
+import { freshOutsideProposal, isActivePerson, plural } from "@/lib/ops/registry/_proposals";
 
 /**
  * Accepts the pending proposal, whole or in part (plan §5.6; v0 acceptProposal and
  * acceptReassign). The id must name the pending proposal (`stale_proposal`); `only` picks items
  * by their key (the step id of a proposed step, else the task id), and the rest are left out.
  * A chosen item that no longer applies (the task was done or changed hands since, the receiver
- * left the team, the value is already there) is skipped. The proposal then becomes null.
+ * left the team, the value is already there) is skipped. The proposal then becomes null, even
+ * after a partial accept: what was left out goes with it, and undo brings it all back.
  *
  * - subtasks: the steps join the task, each keeping its proposed id (the morph keeps its identity);
  * - reassign: owners change (the receiver joins the members) and pinned starts move;
@@ -35,6 +35,10 @@ import { isActivePerson, plural } from "@/lib/ops/registry/_proposals";
  * - estimates: estimates are set;
  * - plan: the seeds become tasks at the end of the workflow, through the status table. A chosen
  *   seed that waits on a left-out one inherits what that one waited on, as removeTask bridges.
+ *   An owner who left the team since leaves the task unassigned; the others join the members.
+ *
+ * The ids a proposal creates are fresh by invariant (plan §3.8 P3); they are checked again outside
+ * the proposal itself, and a collision is `duplicate_id`, never re-minted.
  */
 
 const Payload = z
@@ -134,6 +138,8 @@ function addSeeds(
 ): Rejection | void {
   const count = Object.keys(base.tasks).length + chosen.length;
   if (count > TASKS_MAX) return reject("limit", `That would make ${count} tasks: a project holds at most ${TASKS_MAX}.`);
+  const taken = freshOutsideProposal(base, chosen.flatMap((s) => [s.taskId, ...s.steps.map((st) => st.stepId)]));
+  if (taken) return taken;
   const keep = new Set<TaskId>(chosen.map((s) => s.taskId));
   // A left-out seed stands for what it waited on, so the chosen seeds after it keep their place in the chain
   const bridged = new Map<TaskId, TaskId[]>();
@@ -177,11 +183,11 @@ function addSeeds(
       createdAt: now,
       completedAt: null,
     };
-    // Through the status table (plan §5.5): progress, then status, so status wins
-    const refused = applyProgress(task, seed.progress, d, now);
+    // Through the status table (plan §5.5), from To do at 0%. Seeds are coherent (proposePlan
+    // checks them), so status then progress lands exactly on the seed's pair, and only a seed that
+    // is In progress starts a project still in planning
+    const refused = applyStatus(task, seed.status, d, now) ?? applyProgress(task, seed.progress, d, now);
     if (refused) return refused;
-    const refusedStatus = applyStatus(task, seed.status, d, now);
-    if (refusedStatus) return refusedStatus;
     d.tasks[seed.taskId] = task;
   }
 }
@@ -201,7 +207,9 @@ export default defineOp({
         const task = d.tasks[a.proposal.taskId];
         const count = task.steps.length + a.live.length;
         if (count > STEPS_MAX) return reject("limit", `${title(task.title)} would have ${count} steps: a task holds at most ${STEPS_MAX}.`);
-        // The proposal's step ids are fresh (plan §3.8 P3); each keeps its id, so the proposed row becomes the step
+        const taken = freshOutsideProposal(base, a.live.map((s) => s.stepId));
+        if (taken) return taken;
+        // Each step keeps its proposed id, so the proposed row becomes the step (the morph keeps its identity)
         for (const s of a.live) task.steps.push({ id: s.stepId, title: s.title, done: false, ownerId: null, estimateDays: s.estimateDays });
         break;
       }
@@ -209,19 +217,20 @@ export default defineOp({
         for (const m of a.live) {
           const task = d.tasks[m.taskId];
           if (m.type === "shift") {
-            task.pinnedStart = m.pinnedStart;
+            setIfChanged(task, "pinnedStart", m.pinnedStart);
             continue;
           }
+          // The receiver joins the project, as assignTask does
           const joined = join(d, m.to);
           if (joined) return joined;
-          task.ownerId = m.to;
+          setIfChanged(task, "ownerId", m.to);
         }
         break;
       case "leveling":
-        for (const m of a.live) d.tasks[m.taskId].pinnedStart = m.pinnedStart;
+        for (const m of a.live) setIfChanged(d.tasks[m.taskId], "pinnedStart", m.pinnedStart);
         break;
       case "estimates":
-        for (const i of a.live) d.tasks[i.taskId].estimateDays = i.estimateDays;
+        for (const i of a.live) setIfChanged(d.tasks[i.taskId], "estimateDays", i.estimateDays);
         break;
       case "plan": {
         const refused = addSeeds(d, base, a.proposal.tasks, a.live, ctx.workspace, ctx.now);
