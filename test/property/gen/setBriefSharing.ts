@@ -1,7 +1,7 @@
-// Property generator for setBriefSharing: a stub until Phase 1 step 10b, which makes it
-// materialise payloads (src/lib/ops/registry/README.md). Until then the op is never generated.
+// Property generator for setBriefSharing: the budget shown or hidden, so the current value again
+// is a no-op.
 import type { OpGen } from "./_pick";
 
-const gen: OpGen = () => null;
+const gen: OpGen = (s) => ({ op: "setBriefSharing", field: "showBudgetToClient", value: s.flags[0] });
 
 export default gen;

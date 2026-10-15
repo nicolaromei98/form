@@ -1,7 +1,8 @@
-// Property generator for addView: a stub until Phase 1 step 10b, which makes it
-// materialise payloads (src/lib/ops/registry/README.md). Until then the op is never generated.
-import type { OpGen } from "./_pick";
+// Property generator for addView: any view kind, so a view the project lacks is appended and one
+// it has is a no-op (generated60 starts with all six; demo with the tracker alone).
+import { ViewKind } from "@/lib/domain/schema/primitives";
+import { type OpGen, pick } from "./_pick";
 
-const gen: OpGen = () => null;
+const gen: OpGen = (s) => ({ op: "addView", view: pick(ViewKind.options, s.picks[0]) });
 
 export default gen;
