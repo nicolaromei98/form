@@ -1,15 +1,40 @@
-import { stubOp } from "@/lib/ops/registry/_stub";
+import { z } from "zod";
+import { BRIEF_TEXT_MAX } from "@/lib/domain/limits";
+import { BriefLineId } from "@/lib/domain/schema/ids";
+import { Text } from "@/lib/domain/schema/primitives";
+import { defineOp, isRejection } from "@/lib/ops/registry/_contract";
+import { part, setIfChanged } from "@/lib/ops/registry/_helpers";
+import { lineIndex } from "@/lib/ops/registry/_views";
 
 /**
- * Stub (plan §4.4 row 56); Phase 1 step 10b (views, blocks, setFocus, brief) replaces this file with
- * a real `defineOp`, keeping what the table already fixes below.
- * - Payload: lineId, text (an empty edit becomes removeBriefLine at the producer)
- * - Caption: "Brief line updated"
+ * Rewrites one of the user's own brief lines (plan §4.4 row 56). The text is never empty: an
+ * emptied line becomes removeBriefLine at the producer. The same text again is a no-op.
  */
-export default stubOp({
+export default defineOp({
   name: "updateBriefLine",
   scope: "project",
-  family: "10b",
+  schema: z.object({ op: z.literal("updateBriefLine"), lineId: BriefLineId, text: Text(BRIEF_TEXT_MAX) }).strict(),
+
+  reduce(d, op) {
+    const i = lineIndex(d, op.lineId);
+    if (isRejection(i)) return i;
+    setIfChanged(d.brief.lines[i], "text", op.text);
+  },
+
+  caption: () => part("Brief line updated"),
+  noopCaption: () => "That line already says that",
+
+  undoable: true,
+  activity: "show",
+  idempotent: true,
   deprecates: ["updateBriefLine"],
+  parser: { exempt: "A direct edit in the brief: the user types over their own line." },
+  palette: { exempt: "A direct edit in the brief: the user types over their own line." },
   transport: { tool: "brief", action: "editLine" },
+  // The fixture's first line of the user's own; a fixture with none gives an id that names nothing
+  sample: (fx, mint) => ({
+    op: "updateBriefLine",
+    lineId: fx.project?.brief.lines[0]?.id ?? mint("briefLine"),
+    text: "Homepage preview moves to Monday.",
+  }),
 });
