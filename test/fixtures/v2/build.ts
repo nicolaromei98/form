@@ -4,8 +4,9 @@
 //
 // - emptyState / emptyWorkspace: the /demo workspace before any project ("empty")
 // - demoState: the v0 website template in v2 (plan §8.3: sample people 2/4/5 days a week)
-// - demoExtrasState: the demo after some use, with one of every optional entity (brief lines and
-//   edits, a closure, time off, a user template, an archived person and project, a non-member)
+// - demoExtrasState: the demo after some use, with one of every optional entity (mood items,
+//   brief lines and edits, a closure, time off, a user template, an archived person and project,
+//   a person outside the project)
 // - generated(n, …): an n-task project with steps, a DAG of dependencies and people
 // - multiProject(…): several generated projects on one workspace and one team
 import { addDays } from "@/lib/domain/dates";
@@ -31,6 +32,8 @@ import {
   type Step,
   type Task,
   type TaskId,
+  type Template,
+  type TemplateId,
   Timestamp,
   type ViewKind,
   type WorkspaceDoc,
@@ -282,9 +285,29 @@ export const EXTRA_PEOPLE = {
   paolo: PersonId.parse("per_demopaolo"),
 } as const;
 
+/** The account Marta is linked to in demoExtras ("This is me", Phase 2) */
+export const EXTRA_USER_ID = "user_1";
+
 /** When the archived project was created and archived */
 const ARCHIVED_PROJECT_CREATED = Timestamp.parse("2026-06-01T09:00:00Z");
 const ARCHIVED_AT = Timestamp.parse("2026-09-15T09:00:00Z");
+
+/** A user template the way saveTemplate stores one: the website's four phases and a launch milestone */
+export function websiteTemplate(id: TemplateId): Template {
+  return {
+    id,
+    name: "Website, four phases",
+    kind: "website",
+    tasks: [
+      { title: "Research", kind: "task", estimateDays: 3, dependsOn: [], steps: [], roleHint: "Designer" },
+      { title: "Visual Direction", kind: "task", estimateDays: 4, dependsOn: [0], steps: [], roleHint: "Art director" },
+      { title: "UI Design", kind: "task", estimateDays: 6, dependsOn: [1], steps: ["Wireframes", "Key screens"], roleHint: "Designer" },
+      { title: "Development", kind: "task", estimateDays: 8, dependsOn: [2], steps: [], roleHint: "Developer" },
+      { title: "Launch", kind: "milestone", estimateDays: 0, dependsOn: [3], steps: [], roleHint: null },
+    ],
+    createdAt: FIXTURE_NOW,
+  };
+}
 
 /** The brief edits demoExtras holds: one per audience, the team's keyed to a task */
 export const EXTRA_EDIT_KEYS = { client: "client:head:status", teamTask: (taskId: TaskId) => `team:risks:${taskId}` } as const;
@@ -292,11 +315,12 @@ export const EXTRA_EDIT_KEYS = { client: "client:head:status", teamTask: (taskId
 /**
  * The demo after some use ("demoExtras"): one of every optional entity an op sample may need
  * (plan §4.3 item 3), on top of demoState:
- * - workspace: a studio closure (24 Dec–6 Jan), time off for Marta (2–6 Nov), a user template,
- *   Giulia (active, outside the project, owns nothing), Paolo (archived, owns nothing), and an
- *   archived second project, "Ceramica Bassi", whose document is in `projects`;
- * - the active project: two brief edits (the client's status sentence, the team's risk line on
- *   UI Design) and two lines of the user's own, one per audience.
+ * - workspace: a studio closure (24 Dec–6 Jan), Marta linked to an account and off 2–6 Nov, a
+ *   user template, Giulia (active, outside the project, owns nothing), Paolo (archived, owns
+ *   nothing), and an archived second project, "Ceramica Bassi", whose document is in `projects`;
+ * - the active project: the moodboard shown with three references (an image, a colour, a note),
+ *   two brief edits (the client's status sentence, the team's risk line on UI Design) and two
+ *   lines of the user's own, one per audience.
  * The demo project stays the active one, and its tasks, owners and members are unchanged.
  */
 export function demoExtrasState(o: DemoOptions = {}): FixtureState {
@@ -316,7 +340,13 @@ export function demoExtrasState(o: DemoOptions = {}): FixtureState {
   const marta = base.workspace.people[DEMO_PEOPLE.marta];
   const people: Person[] = [
     ...Object.values(base.workspace.people).map((p) =>
-      p.id === marta.id ? { ...p, timeOff: { [timeOffId]: { id: timeOffId, from: IsoDate.parse("2026-11-02"), to: IsoDate.parse("2026-11-06"), label: "Holiday" } } } : p,
+      p.id === marta.id
+        ? {
+            ...p,
+            userId: EXTRA_USER_ID,
+            timeOff: { [timeOffId]: { id: timeOffId, from: IsoDate.parse("2026-11-02"), to: IsoDate.parse("2026-11-06"), label: "Holiday" } },
+          }
+        : p,
     ),
     makePerson({ id: EXTRA_PEOPLE.giulia, name: "Giulia", role: "Copywriter", capacityDaysPerWeek: 3, order: giuliaOrder }),
     makePerson({ id: EXTRA_PEOPLE.paolo, name: "Paolo", role: "Developer", capacityDaysPerWeek: 5, archived: true, order: paoloOrder }),
@@ -335,29 +365,17 @@ export function demoExtrasState(o: DemoOptions = {}): FixtureState {
     ...base.workspace,
     closures: { [closureId]: { id: closureId, from: IsoDate.parse("2026-12-24"), to: IsoDate.parse("2027-01-06"), label: "Christmas break" } },
     people: byId(people),
-    templates: {
-      [templateId]: {
-        id: templateId,
-        name: "Website, four phases",
-        kind: "website",
-        tasks: [
-          { title: "Research", kind: "task", estimateDays: 3, dependsOn: [], steps: [], roleHint: "Designer" },
-          { title: "Visual Direction", kind: "task", estimateDays: 4, dependsOn: [0], steps: [], roleHint: "Art director" },
-          { title: "UI Design", kind: "task", estimateDays: 6, dependsOn: [1], steps: ["Wireframes", "Key screens"], roleHint: "Designer" },
-          { title: "Development", kind: "task", estimateDays: 8, dependsOn: [2], steps: [], roleHint: "Developer" },
-          { title: "Launch", kind: "milestone", estimateDays: 0, dependsOn: [3], steps: [], roleHint: null },
-        ],
-        createdAt: FIXTURE_NOW,
-      },
-    },
+    templates: { [templateId]: websiteTemplate(templateId) },
     projects: {
       ...base.workspace.projects,
       [archived.id]: { id: archived.id, createdAt: ARCHIVED_PROJECT_CREATED, archivedAt: ARCHIVED_AT, deletedAt: null },
     },
   };
 
-  const withBrief: ProjectDoc = {
+  const lived: ProjectDoc = {
     ...project,
+    blocks: [...project.blocks, "moodboard"],
+    moodboard: { items: byId(moodItems(3, mint)) },
     brief: {
       ...project.brief,
       edits: {
@@ -371,7 +389,7 @@ export function demoExtrasState(o: DemoOptions = {}): FixtureState {
     },
   };
 
-  return { workspace, projects: { ...base.projects, [withBrief.id]: withBrief, [archived.id]: archived }, projectId: withBrief.id };
+  return { workspace, projects: { ...base.projects, [lived.id]: lived, [archived.id]: archived }, projectId: lived.id };
 }
 
 /* ------------------------------------------------------------------

@@ -12,7 +12,7 @@ const gen: OpGen = (s, state, mint) => {
     }
   }
   const free = (Object.keys(state.workspace.people) as PersonId[]).filter((id) => !owners.has(id)).sort();
-  const personId = s.flags[1] && free.length > 0 ? pick(free, s.picks[1]) : pickPerson(s, state, mint, 0);
+  const personId = (s.flags[1] || s.picks[2] % 2 === 0) && free.length > 0 ? pick(free, s.picks[1]) : pickPerson(s, state, mint, 0);
   return { op: "deletePerson", personId };
 };
 

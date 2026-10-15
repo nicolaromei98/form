@@ -1,12 +1,9 @@
 // Property generator for rebalanceOrder, the runner's system op. `rebalancePayload` draws its
 // payloads: fresh keys in workflow order (applied, unless they are the keys already there), the
 // current keys (a no-op), keys that reorder the tasks, share a key, leave a task out or name a
-// missing one (rejected). The unit test `registry/__tests__/tasks.test.ts` runs it as a property.
-//
-// The reducer suite doesn't draw it yet: its property 8 asks every applied op for a caption, and
-// a system op never speaks (plan §4.4 "none (folded into its commit)"; the completeness test
-// exempts it the same way). Once step 16 exempts system ops from property 8, the default export
-// becomes `rebalancePayload`.
+// missing one (rejected). The reducer suite draws it like any op, except that property 8 expects
+// no caption from it: a system op never speaks (plan §4.4 "none (folded into its commit)").
+// `registry/__tests__/tasks.test.ts` also runs it after generated moves, as `rebalancePayload`.
 import { nKeys, nKeysBetween } from "@/lib/domain/order";
 import type { OpGen } from "./_pick";
 import { tasksOf } from "./_pick";
@@ -31,9 +28,13 @@ export const rebalancePayload: OpGen = (s, state, mint) => {
       // Long keys between two neighbours, still in order
       keys = nKeysBetween("a0", "a1", tasks.length);
       break;
-    default:
-      // What the runner sends: nKeys(n) in workflow order
+    case 4:
+      // What the runner sends: nKeys(n) in workflow order (a no-op on fixtures that already have them)
       keys = nKeys(tasks.length);
+      break;
+    default:
+      // Fresh keys one step along, in workflow order: every key changes
+      keys = nKeys(tasks.length + 1).slice(1);
   }
   const entries: [string, string][] = tasks.map((t, i) => [t.id, keys[i]]);
   if (s.picks[1] % 12 === 0) entries.pop();
@@ -41,6 +42,4 @@ export const rebalancePayload: OpGen = (s, state, mint) => {
   return { op: "rebalanceOrder", keys: Object.fromEntries(entries) };
 };
 
-const gen: OpGen = () => null;
-
-export default gen;
+export default rebalancePayload;

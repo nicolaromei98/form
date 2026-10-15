@@ -2,11 +2,9 @@
 // included) or a missing one, a fresh project id (or a taken one now and then), and a title that
 // is sometimes invalid.
 //
-// `spawning` is the real generator. The default export stays off because an applied
-// duplicateProject spawns a project document that reducer.property.test.ts's end-of-run undo
-// can't remove (it only replays patches; plan §5.8 drops spawned documents on undo). Step 16
-// switches it on once the suite drops spawned projects on undo; until then workspace.test.ts runs
-// it under its own spawn-aware property.
+// An applied duplicateProject spawns its copy in the same command (Q9): the property suite
+// validates it, checks it for determinism, plans it, and drops it on undo (plan §5.8). `spawning`
+// is the same generator under its own name, for workspace.test.ts.
 import { type OpGen, pick, titleFrom } from "./_pick";
 
 export const spawning: OpGen = (s, state, mint) => {
@@ -16,7 +14,4 @@ export const spawning: OpGen = (s, state, mint) => {
   return { op: "duplicateProject", sourceId, projectId, title: titleFrom(s, 80) };
 };
 
-// Off until the reducer property drops spawned projects on undo (see above)
-const gen: OpGen = () => null;
-
-export default gen;
+export default spawning;

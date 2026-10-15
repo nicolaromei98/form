@@ -2,19 +2,14 @@
 // fixture; `materialise.ts` turns each intent into a raw op against the state of that moment, so
 // shrinking works on plain numbers and strings.
 import fc from "fast-check";
-import { OP_NAMES, type OpName, REGISTRY } from "@/lib/ops/registry";
+import { OP_NAMES, type OpName } from "@/lib/ops/registry";
 import type { StepIntent } from "./gen/_pick";
 
 /** Task, step, dependency and proposal ops are drawn three times as often */
 const HEAVY = /Task|Step|Dependency|propose|Proposal/;
 
-/**
- * The ops a run draws from: every implemented op (stubs refuse everything, so they are left out
- * until their family fills them), weighted.
- */
-export const WEIGHTED_OP_NAMES: readonly OpName[] = OP_NAMES.filter((name) => !REGISTRY.get(name)!.stub).flatMap((name) =>
-  HEAVY.test(name) ? [name, name, name] : [name],
-);
+/** The ops a run draws from: all 66, weighted */
+export const WEIGHTED_OP_NAMES: readonly OpName[] = OP_NAMES.flatMap((name) => (HEAVY.test(name) ? [name, name, name] : [name]));
 
 export const stepArb: fc.Arbitrary<StepIntent> = fc.record({
   op: fc.constantFrom(...WEIGHTED_OP_NAMES),
@@ -27,8 +22,12 @@ export const stepArb: fc.Arbitrary<StepIntent> = fc.record({
   flags: fc.array(fc.boolean(), { minLength: 4, maxLength: 4 }),
 });
 
-/** The fixture states runs start from (`materialise.ts`, `startState`) */
-export const PROPERTY_FIXTURES = ["empty", "demo", "generated60", "multiProject150"] as const;
+/**
+ * The fixture states runs start from (`materialise.ts`, `startState`): plan §10.3's four, plus
+ * demoExtras, the demo after some use, so ops on closures, time off, templates, archived people
+ * and projects and the user's brief content meet their targets from the first step.
+ */
+export const PROPERTY_FIXTURES = ["empty", "demo", "generated60", "multiProject150", "demoExtras"] as const;
 export type PropertyFixture = (typeof PROPERTY_FIXTURES)[number];
 
 /** A pending proposal the run starts with, so ops that prune proposals meet every kind */

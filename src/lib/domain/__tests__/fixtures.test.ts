@@ -14,6 +14,7 @@ import {
   demoState,
   EXTRA_EDIT_KEYS,
   EXTRA_PEOPLE,
+  EXTRA_USER_ID,
   emptyProjectState,
   emptyState,
   type FixtureState,
@@ -104,10 +105,13 @@ describe("fixture builders", () => {
     expectValid(state, [archived[0].id]);
     expect(state.projects[archived[0].id].title).toBe("Ceramica Bassi");
 
-    // The demo project stays active with its tasks, owners and members; only its brief grows
+    // The demo project stays active with its tasks, owners and members; only its moodboard and brief grow
     const project = activeProject(state);
     expect(project.id).toBe(demo.projectId);
-    expect({ ...project, brief: null }).toEqual({ ...activeProject(demo), brief: null });
+    const rest = (p: typeof project) => ({ ...p, brief: null, moodboard: null, blocks: null });
+    expect(rest(project)).toEqual(rest(activeProject(demo)));
+    expect(project.blocks).toContain("moodboard");
+    expect(Object.values(project.moodboard.items).map((it) => it.kind)).toEqual(["image", "color", "note"]);
     expect(project.brief.lines.map((l) => [l.audience, l.text])).toEqual([
       ["client", "Homepage preview on Friday."],
       ["team", "Copy is late."],
@@ -120,6 +124,7 @@ describe("fixture builders", () => {
     const ws = state.workspace;
     expect(Object.values(ws.closures).map((c) => [c.from, c.to, c.label])).toEqual([["2026-12-24", "2027-01-06", "Christmas break"]]);
     expect(Object.values(ws.people[DEMO_PEOPLE.marta].timeOff).map((t) => [t.from, t.to])).toEqual([["2026-11-02", "2026-11-06"]]);
+    expect(Object.values(ws.people).filter((p) => p.userId !== null).map((p) => [p.name, p.userId])).toEqual([["Marta", EXTRA_USER_ID]]);
     expect(Object.values(ws.templates).map((t) => [t.name, t.tasks.length])).toEqual([["Website, four phases", 5]]);
     expect(ws.people[EXTRA_PEOPLE.giulia]).toMatchObject({ name: "Giulia", archived: false });
     expect(ws.people[EXTRA_PEOPLE.paolo]).toMatchObject({ name: "Paolo", archived: true });
