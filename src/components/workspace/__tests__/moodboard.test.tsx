@@ -98,6 +98,18 @@ describe("MoodboardBlock", () => {
     expect(board(s).map((it) => it.id)).not.toContain(note.id);
   });
 
+  it("lets go quietly of a selected reference that left the board", () => {
+    const s = store();
+    render(s);
+    act(() => button("Note").click());
+    act(() => void s.getState().undo());
+    expect(board(s)).toHaveLength(3);
+    const entries = s.getState().past.length;
+    act(() => void document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace", bubbles: true })));
+    expect(s.getState().past).toHaveLength(entries);
+    expect(s.getState().caption).toBeNull();
+  });
+
   it("arranges the references on the board in one command", () => {
     const s = store();
     render(s);

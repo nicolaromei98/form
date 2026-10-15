@@ -89,6 +89,10 @@ export function MoodboardBlock() {
     };
   }, [addFiles, boardRef]);
 
+  // A selected reference can leave the board (undo, a typed command). Deleting it then does
+  // nothing, as in v0: the op would be refused, and a refusal speaks
+  const selectedOnBoard = selected !== null && items.some((it) => it.id === selected);
+
   // Keyboard: delete the selected reference, Escape lets go
   useEffect(() => {
     if (!selected) return;
@@ -96,7 +100,7 @@ export function MoodboardBlock() {
       if (isEditable(e.target)) return;
       if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
-        actions.commit([{ op: "removeMoodItem", itemId: selected }], { label: "remove reference" });
+        if (selectedOnBoard) actions.commit([{ op: "removeMoodItem", itemId: selected }], { label: "remove reference" });
         setSelected(null);
       } else if (e.key === "Escape") setSelected(null);
     };
@@ -109,7 +113,7 @@ export function MoodboardBlock() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("pointerdown", onDown);
     };
-  }, [selected, actions, boardRef]);
+  }, [selected, selectedOnBoard, actions, boardRef]);
 
   const toggleColour = () => {
     if (colourAt || !colourAnchor) return setColourAt(null);
