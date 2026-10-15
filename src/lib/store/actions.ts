@@ -49,6 +49,15 @@ export function makeActions(store: FormStore) {
   const commit = (ops: readonly Op[], meta: CommitMeta) => state().commit(ops, meta);
 
   return {
+    /**
+     * The session state an event handler reads at the moment it runs (FormApp's keyboard
+     * shortcuts), without subscribing a component to it
+     */
+    peek: (): Readonly<Pick<FormState, "intro" | "composerOpen" | "phase">> & { selectedTaskId: TaskId | null } => {
+      const s = state();
+      return { intro: s.intro, composerOpen: s.composerOpen, phase: s.phase, selectedTaskId: s.local.selectedTaskId };
+    },
+
     /* The store's own actions */
     submit: (text: string) => state().submit(text),
     commit,

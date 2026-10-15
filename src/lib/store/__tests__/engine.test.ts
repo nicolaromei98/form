@@ -1,8 +1,11 @@
 // The store engine (plan §5.7, §5.8): commands with the real planning engine, history entries,
 // undo and redo by patches across documents (spawned projects included), the landing view after
 // undo, gestures recomputed from their base, and the Phase 2 touched paths.
+import { applyPatches, type Patch } from "immer";
 import { describe, expect, it } from "vitest";
 import { seededMinter } from "@/lib/domain/ids";
+import { ORDER_KEY_REBALANCE } from "@/lib/domain/limits";
+import { nKeys } from "@/lib/domain/order";
 import { defaultLocalViewState, type LocalViewState } from "@/lib/domain/schema/local";
 import type { ProjectId, TaskId } from "@/lib/domain/schema/ids";
 import { createDemoProject } from "@/lib/demo/seed";
@@ -27,7 +30,7 @@ import {
   undo,
   type Where,
 } from "@/lib/store/engine";
-import { activeProject, demoState, emptyState, FIXTURE_NOW, FIXTURE_TODAY, taskByTitle } from "../../../../test/fixtures/v2/build";
+import { activeProject, byId, demoState, emptyState, FIXTURE_NOW, FIXTURE_TODAY, makeTask, taskByTitle } from "../../../../test/fixtures/v2/build";
 
 function ctx(): EngineCtx {
   let n = 0;
@@ -111,6 +114,28 @@ describe("history entries", () => {
     expect(redone.projects[spawned.id].blocks).toContain("moodboard");
     expect(landing(redone, entry, "after", { projectId: null, local: where.local })).toEqual({ projectId: spawned.id, local: result.local });
     expect(landing(undone, entry, "before", { projectId: spawned.id, local: result.local }).projectId).toBeNull();
+  });
+
+  it("undo the runner's appended rebalanceOrder with the commit's own patches", () => {
+    const { docs, project } = demo();
+    const mint = seededMinter(8);
+    const long = `a0${"V".repeat(ORDER_KEY_REBALANCE - 1)}`;
+    const keys = nKeys(2);
+    const a = makeTask({ id: mint("task"), title: "A", order: keys[0] });
+    const b = makeTask({ id: mint("task"), title: "B", order: long < keys[1] ? long : keys[1] });
+    const start: DocsState = { ...docs, projects: { [project.id]: { ...project, tasks: byId([a, b]) } } };
+    const where: Where = { projectId: project.id, local: defaultLocalViewState(project) };
+    const result = run(start, command([updateTaskOp(a.id, "priority", "low")]), where, ctx());
+    expect(result.commits[0].result.results.map((r) => r.op)).toMatchObject([{ op: "updateTask" }, { op: "rebalanceOrder" }]);
+    const entry = historyEntry(result, "priority", { ...where, docs: start })!;
+    expect(entry.commits).toHaveLength(1);
+    const commit = entry.commits[0];
+    expect(result.state.projects[project.id].tasks[b.id].order.length).toBeLessThan(long.length);
+    // The commit-level inverse undoes both ops: the priority and the new keys
+    expect(applyPatches(commit.after, commit.inverse as Patch[])).toEqual(start.projects[project.id]);
+    const undone = undo(result.state, entry);
+    expect(undone.projects[project.id]).toBe(start.projects[project.id]);
+    expect(redo(undone, entry).projects[project.id]).toBe(result.state.projects[project.id]);
   });
 
   it("refuses, in development, to undo from a state the entry didn't leave", () => {
