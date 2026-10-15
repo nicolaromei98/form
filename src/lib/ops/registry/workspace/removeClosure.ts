@@ -1,15 +1,40 @@
-import { stubOp } from "@/lib/ops/registry/_stub";
+import { z } from "zod";
+import { compareKeys } from "@/lib/domain/order";
+import { ClosureId } from "@/lib/domain/schema/ids";
+import { defineOp, reject } from "@/lib/ops/registry/_contract";
+import { part } from "@/lib/ops/registry/_helpers";
 
 /**
- * Stub (plan §4.4 row 4); Phase 1 step 10d (workspace and the project index) replaces this file with
- * a real `defineOp`, keeping what the table already fixes below.
- * - Payload: closureId
- * - Caption: "Closure removed"
+ * Removes a closure from the workspace calendar (plan §4.4 row 4). The days become working days
+ * again for every project that inherits the calendar.
  */
-export default stubOp({
+export default defineOp({
   name: "removeClosure",
   scope: "workspace",
-  family: "10d",
+  schema: z.object({ op: z.literal("removeClosure"), closureId: ClosureId }).strict(),
+
+  reduce(d, op) {
+    if (!Object.hasOwn(d.closures, op.closureId)) return reject("not_found", "That closure isn't on the calendar anymore.");
+    delete d.closures[op.closureId];
+  },
+
+  caption: () => part("Closure removed"),
+  // A closure is either there to remove or not_found
+  noopCaption: () => null,
+  undoable: true,
+  activity: "show",
+  idempotent: false,
   deprecates: [],
+  parser: { exempt: "Closures are removed in Settings; a command for them arrives with the Phase 5 parser.", until: 5 },
+  palette: { exempt: "Closures are removed in Settings; a palette phrase arrives with the Phase 5 parser.", until: 5 },
   transport: { exempt: "Settings only: the agent never edits workspace settings." },
+  // The first closure on the calendar; a fresh id when the fixture has none (it then refuses)
+  sample: (fx, mint) => ({
+    op: "removeClosure",
+    closureId: Object.keys(fx.workspace.closures).sort(compareKeys)[0] ?? mint("closure"),
+  }),
+  // Complete, but no named fixture holds a workspace closure yet, so the completeness test can't
+  // apply the sample. The mark keeps the op out of the full-op checks until
+  // test/fixtures/v2/named.ts gains one (reported by step 10d); then delete this line.
+  stub: { family: "10d", until: 1 },
 });

@@ -1,7 +1,10 @@
-// Property generator for deleteTemplate: a stub until Phase 1 step 10d, which makes it
-// materialise payloads (src/lib/ops/registry/README.md). Until then the op is never generated.
-import type { OpGen } from "./_pick";
+// Property generator for deleteTemplate: a user template, or a missing one.
+import { type OpGen, pick } from "./_pick";
 
-const gen: OpGen = () => null;
+const gen: OpGen = (s, state, mint) => {
+  const ids = Object.keys(state.workspace.templates).sort();
+  const templateId = ids.length > 0 && s.picks[0] % 10 !== 0 ? pick(ids, s.picks[0]) : mint("template");
+  return { op: "deleteTemplate", templateId };
+};
 
 export default gen;

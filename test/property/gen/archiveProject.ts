@@ -1,7 +1,11 @@
-// Property generator for archiveProject: a stub until Phase 1 step 10d, which makes it
-// materialise payloads (src/lib/ops/registry/README.md). Until then the op is never generated.
-import type { OpGen } from "./_pick";
+// Property generator for archiveProject: a project of the index (archived ones are a no-op, deleted
+// ones are refused) or a missing one.
+import { type OpGen, pick } from "./_pick";
 
-const gen: OpGen = () => null;
+const gen: OpGen = (s, state, mint) => {
+  const index = Object.keys(state.workspace.projects).sort();
+  const projectId = index.length > 0 && s.picks[0] % 10 !== 0 ? pick(index, s.picks[1]) : mint("project");
+  return { op: "archiveProject", projectId };
+};
 
 export default gen;
