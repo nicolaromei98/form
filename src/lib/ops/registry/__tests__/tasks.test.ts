@@ -2,18 +2,25 @@
 // assignment, links, members, project fields and order. For each op: the happy path with its
 // exact caption and undo by patches, the no-op (same reference plus noopCaption), and every
 // rejection it can produce.
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { seededMinter } from "@/lib/domain/ids";
+import { checkProject } from "@/lib/domain/invariants/check";
 import { LINKS_MAX, MEMBERS_MAX, ORDER_KEY_REBALANCE, STEPS_MAX } from "@/lib/domain/limits";
 import { compareKeys, nKeys, sortedByOrder } from "@/lib/domain/order";
 import type { ClosureId, LinkId, PersonId, StepId, TaskId } from "@/lib/domain/schema/ids";
-import type { ProjectDoc, Step, Task } from "@/lib/domain/schema/project";
+import { type ProjectDoc, ProjectDocSchema, type Step, type Task } from "@/lib/domain/schema/project";
 import type { CaptionPlanning } from "@/lib/ops/caption-env";
+import { applyOp } from "@/lib/ops/reduce";
 import { REGISTRY } from "@/lib/ops/registry";
 import type { CaptionLane } from "@/lib/ops/registry/_contract";
 import { longestOrderKey } from "@/lib/ops/registry/_helpers";
 import { DEMO_PEOPLE, demoState, FIXTURE_NOW, makePerson, taskByTitle } from "../../../../../test/fixtures/v2/build";
 import { namedFixture } from "../../../../../test/fixtures/v2/named";
+import { PROPERTY_FIXTURES, stepArb } from "../../../../../test/property/arbitraries";
+import { GENERATORS } from "../../../../../test/property/gen";
+import { rebalancePayload } from "../../../../../test/property/gen/rebalanceOrder";
+import { type GenState, startState } from "../../../../../test/property/materialise";
 import {
   apply,
   captionOf,
@@ -23,6 +30,7 @@ import {
   expectNoop,
   expectRejection,
   projectOf,
+  reduceCtx,
   run,
   type TestState,
   withDoc,
@@ -858,6 +866,47 @@ describe("rebalanceOrder", () => {
     const r = expectRejection(apply(s, rebalance(keysFor(p, [...nKeys(4)].reverse()))).result, "invalid_state");
     expect(r.message).toBe("Re-keying must keep the workflow order.");
     expectRejection(apply(s, rebalance(keysFor(p, ["a0", "a1", "a2", "a30"]))).result, "invalid_payload");
+  });
+
+  // The reducer suite can't draw a system op yet (gen/rebalanceOrder.ts): the same checks, here.
+  // Runs start from the property fixtures, after a few generated moves that lengthen keys.
+  it("holds the reducer properties over generated payloads", () => {
+    const seen = { applied: 0, noop: 0, rejected: 0 };
+    fc.assert(
+      fc.property(fc.constantFrom(...PROPERTY_FIXTURES), fc.array(stepArb, { minLength: 1, maxLength: 8 }), (fixture, steps) => {
+        const m = seededMinter(steps.length);
+        let state: GenState = startState(fixture, false);
+        for (const s of steps.slice(1)) {
+          const raw = GENERATORS.moveTask({ ...s, op: "moveTask" }, state, m);
+          const p = state.projectId ? state.projects[state.projectId] : null;
+          if (!p) break;
+          const moved = applyOp(p, raw, reduceCtx({ ...state, projectId: state.projectId }));
+          if (moved.kind === "applied") state = { ...state, projects: { ...state.projects, [p.id]: moved.doc } };
+        }
+        if (state.projectId === null) return;
+        const before = state.projects[state.projectId];
+        const raw = deepFreeze(rebalancePayload(steps[0], state, m));
+        const result = applyOp(before, raw, reduceCtx({ ...state, projectId: state.projectId }));
+        seen[result.kind]++;
+        if (result.kind !== "applied") {
+          expect(result.doc).toBe(before);
+          if (result.kind === "rejected") expect(result.rejection.code).not.toBe("invalid_result");
+          return;
+        }
+        expect(ProjectDocSchema.safeParse(result.doc).success).toBe(true);
+        expect(checkProject(result.doc)).toEqual([]);
+        expectInverse(before, result);
+        expect(sortedByOrder(result.doc.tasks).map((t) => t.id)).toEqual(sortedByOrder(before.tasks).map((t) => t.id));
+        expect(applyOp(result.doc, raw, reduceCtx({ ...state, projectId: state.projectId })).kind).toBe("noop");
+        const reversed = JSON.parse(JSON.stringify(before)) as ProjectDoc;
+        const shuffled = { ...reversed, tasks: Object.fromEntries(Object.entries(reversed.tasks).reverse()) };
+        expect(applyOp(shuffled, raw, reduceCtx({ ...state, projectId: state.projectId })).doc).toEqual(result.doc);
+      }),
+      { numRuns: 300 },
+    );
+    expect(seen.applied).toBeGreaterThan(0);
+    expect(seen.noop).toBeGreaterThan(0);
+    expect(seen.rejected).toBeGreaterThan(0);
   });
 });
 
