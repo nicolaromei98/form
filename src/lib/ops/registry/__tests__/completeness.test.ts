@@ -274,7 +274,8 @@ describe("palette phrases", () => {
   });
 
   it("total the 42 v0 phrases once every op is filled", () => {
-    if (defs.some(isStub)) expect(entries.length).toBeLessThan(42);
+    // Finished ops may keep a stub mark until a fixture can apply their sample (wave 4), so all 42 can be placed early
+    if (defs.some(isStub)) expect(entries.length).toBeLessThanOrEqual(42);
     else expect(entries.length).toBe(42);
   });
 

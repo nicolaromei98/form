@@ -183,3 +183,18 @@ Choices not covered by `docs/FORM-v1.md`, or confirmed from its section 3.2. Eac
     - v0's columns/layout rules are kept.
   - **Planning.** `TaskTiming.last` holds the end ordinal. Milestone dates follow the predecessors' end day (or the pin). Absurd chains are capped at `PLAN_SPAN_MAX` = 400,000 working days and marked unknown with reason "horizon". Relative mode measures float against the planned end, steps are clamped into their parent's window, and done tasks carry no risk.
 - **Rejected:** forcing motion frames to be byte-identical across routes, which would have meant patching React's commit timing in the harness.
+
+### 2026-10-15 · Wave 4 outcomes (steps 10a–e, 12, 13, 14)
+- **Context:** the five op families, planning (load, lanes, balance, level, focus), the brief composer v2 and the v0 → v2 migration merged into `phase-1-domain`. Two earlier attempts stopped at the session usage limit. The second left partial work, which was saved as "WIP" commits and finished by the third run, now limited to four agents at a time and committing often.
+- **Choice (accepted deviations):**
+  - **Ten finished ops still carry a stub mark.** They are complete and unit-tested: resetBrief, removeBriefLine, resetBriefLine, updateBriefLine, removeClosure, removeTimeOff, updateTemplate, deleteTemplate, restorePerson and restoreProject. No named fixture holds the entity their sample needs, and the families were not allowed to edit fixtures. The same gap explains three more items:
+    - `addMember` accepts an unknown person id (read as missing at read time, Q7);
+    - the property generators for createProject, duplicateProject and rebalanceOrder return null.
+
+    Wave 5 adds the fixtures and removes the marks. The palette completeness check accepts 42 placed phrases while marks remain.
+  - **Proposals.** `propose*` payloads carry `source` ("parser" | "agent" | "direct"), so a replay keeps it. `only` takes step ids for subtasks and task ids for other kinds. acceptProposal checks fresh ids outside the proposal.
+  - **Moodboard.** addMoodItems now clamps a free spot past the board floor (y 20). v0 could produce an invalid document there. updateMoodItem has captions, because the completeness test requires one.
+  - **Focus.** A pinned task wins while it is open, even if blocked, so "Focus on Development" still works in the demo. A blocked pin's why reads "Waits on <task>." The two strongest reasons are joined with " and " (two adjectives) or "; " (clauses).
+  - **Brief.** "X starts after Y" names X's last-ending unfinished predecessor, following dependencies. Risk phrases rank by FOCUS_WEIGHTS, at most 2 per task, as in v0.
+  - **Migration.** memberIds are every imported person: v0's Team showed all of doc.people. readV0 returns the whole stored value. A missing sample flag reads as "sample", so nothing shows as late. Totality repairs (parent loops, duplicate names, size guards) are each reported.
+- **Rejected:** families editing shared fixtures in parallel, which would have caused merge conflicts.
