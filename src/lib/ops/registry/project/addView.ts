@@ -31,7 +31,9 @@ export default defineOp({
   },
 
   caption: ({ op }) => part(`${VIEW_LABEL[op.view]} view added`, captionKey.viewAdded(op.view)),
-  noopCaption: ({ op }) => `The project already has a ${VIEW_LABEL[op.view]} view`,
+  // A view that is already there says nothing: "Add the tracker" on a project that has it reads as
+  // the show caption alone ("Tracker"), as in v0, where opening an existing view only showed it
+  noopCaption: () => null,
 
   undoable: true,
   activity: "show",

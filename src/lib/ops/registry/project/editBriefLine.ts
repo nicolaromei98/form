@@ -2,7 +2,7 @@ import { z } from "zod";
 import { BRIEF_BASIS, BRIEF_TEXT_MAX } from "@/lib/domain/limits";
 import { BriefEditKey } from "@/lib/domain/schema/project";
 import { defineOp, reject } from "@/lib/ops/registry/_contract";
-import { part, setIfChanged } from "@/lib/ops/registry/_helpers";
+import { baseOf, part, setIfChanged } from "@/lib/ops/registry/_helpers";
 import { fitsDoc, namesMissing, recordBytes } from "@/lib/ops/registry/_views";
 
 /**
@@ -31,7 +31,8 @@ export default defineOp({
   reduce(d, op) {
     if (namesMissing(op.key, d)) return reject("not_found", "That sentence's task isn't in this project anymore.");
     const edits = d.brief.edits;
-    const existing = Object.hasOwn(edits, op.key) ? edits[op.key] : undefined;
+    const committed = baseOf(d).brief.edits;
+    const existing = Object.hasOwn(committed, op.key) ? committed[op.key] : undefined;
     // Writing back FORM's own wording restores it
     if (op.text === op.basis.trim()) {
       if (existing) delete edits[op.key];
