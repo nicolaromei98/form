@@ -1,13 +1,33 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useForm } from "@/lib/store";
+import { PRIORITY_LABEL, PRIORITY_ORDER, STATUS_LABEL, STATUS_ORDER } from "@/lib/domain/labels";
+import { ESTIMATE_MAX_DAYS } from "@/lib/domain/limits";
+import { formatMoney } from "@/lib/domain/money";
+import type { TaskId } from "@/lib/domain/schema/ids";
+import type { Status } from "@/lib/domain/schema/primitives";
+import type { Task } from "@/lib/domain/schema/project";
 import { ease, springs, move } from "@/lib/motion";
-import { fmtDays, fmtEuro } from "@/lib/selectors";
-import { PRIORITY_LABEL, PRIORITY_ORDER, STATUS_LABEL, STATUS_ORDER, type Priority, type Status, type Task } from "@/lib/schema";
+import { fmtDays } from "@/lib/planning/format";
+import { useActions, useIsSelected, useProject, useSteps, useSubtaskProposal, useViewConfig } from "@/lib/store/hooks";
 import { ShuffleText } from "../text/ShuffleText";
+
+/* ------------------------------------------------------------------
+   The task a control reads
+   ------------------------------------------------------------------ */
+
+/**
+ * The fields a task control reads from its task. Every surface on the store passes a `Task`.
+ * Until the step 18 integration, the views still on the v0 store (Timeline, Team, Focus) hand
+ * these controls their own task objects, so the id is a plain string here and only the fields
+ * both shapes share are required. Integration narrows the id to `TaskId` and drops `asTaskId`.
+ */
+export type TaskFields<K extends keyof Task = never> = Readonly<Pick<Task, K>> & { readonly id: string };
+
+/** A task id as the store knows it (see TaskFields) */
+export const asTaskId = (id: string): TaskId => id as TaskId;
 
 /* ------------------------------------------------------------------
    Status
@@ -102,8 +122,8 @@ export function Popover({
   );
 }
 
-export function StatusControl({ task, variant = "chip" }: { task: Task; variant?: "chip" | "glyph" | "bare" }) {
-  const update = useForm((s) => s.updateTask);
+export function StatusControl({ task, variant = "chip" }: { task: TaskFields<"status">; variant?: "chip" | "glyph" | "bare" }) {
+  const { commit } = useActions();
   const { setAnchor: statusPopAnchor, anchor: statusPopEl, pos: statusPopPos, open: statusPopOpen, toggle: statusPopToggle, close: statusPopClose } = usePopover<HTMLButtonElement>();
 
   const cls =
@@ -142,7 +162,8 @@ export function StatusControl({ task, variant = "chip" }: { task: Task; variant?
               aria-checked={task.status === s}
               type="button"
               onClick={() => {
-                if (s !== task.status) update(task.id, { status: s });
+                // The §5.7 table moves progress with the status
+                if (s !== task.status) commit([{ op: "updateTask", taskId: asTaskId(task.id), field: "status", value: s }], { label: "status" });
                 statusPopClose();
               }}
               className={`focus-ring t-body-s flex h-9 cursor-pointer items-center gap-2.5 rounded-full px-3 text-left transition-colors ${
@@ -164,8 +185,8 @@ export function StatusControl({ task, variant = "chip" }: { task: Task; variant?
    Priority — four volumes, the fourth turns signal-red when urgent
    ------------------------------------------------------------------ */
 
-export function PriorityControl({ task, label = false }: { task: Task; label?: boolean }) {
-  const update = useForm((s) => s.updateTask);
+export function PriorityControl({ task, label = false }: { task: TaskFields<"priority">; label?: boolean }) {
+  const { commit } = useActions();
   const level = PRIORITY_ORDER.indexOf(task.priority);
   return (
     <div className="flex items-center gap-2" role="group" aria-label={`Priority: ${PRIORITY_LABEL[task.priority]}`}>
@@ -179,7 +200,7 @@ export function PriorityControl({ task, label = false }: { task: Task; label?: b
             aria-pressed={task.priority === p}
             onClick={(e) => {
               e.stopPropagation();
-              if (p !== task.priority) update(task.id, { priority: p as Priority });
+              if (p !== task.priority) commit([{ op: "updateTask", taskId: asTaskId(task.id), field: "priority", value: p }], { label: "priority" });
             }}
             className="focus-ring group grid h-[18px] w-[13px] cursor-pointer place-items-center rounded-full"
           >
@@ -212,31 +233,41 @@ export function ProgressControl({
   className = "",
   showLabel = true,
 }: {
-  task: Task;
+  task: TaskFields<"title" | "progress">;
   size?: "m" | "s";
   className?: string;
   showLabel?: boolean;
 }) {
-  const update = useForm((s) => s.updateTask);
-  const checkpoint = useForm((s) => s.checkpoint);
+  const { commit, beginGesture, live, endGesture } = useActions();
   const track = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const h = size === "m" ? 6 : 4;
+  const taskId = asTaskId(task.id);
 
+  // A drag is one gesture: each frame is recomputed from where it began, and the release seals one change
   const fromEvent = (e: RPointerEvent) => {
     const r = track.current!.getBoundingClientRect();
     const pct = Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * 20) * 5;
-    if (pct !== task.progress) update(task.id, { progress: pct }, { history: false });
+    if (pct !== task.progress) live([{ op: "updateTask", taskId, field: "progress", value: pct }]);
+  };
+  const release = () => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    endGesture();
+  };
+
+  const set = (value: number) => {
+    if (value !== task.progress) commit([{ op: "updateTask", taskId, field: "progress", value }], { label: "progress" });
   };
 
   const onKey = (e: KeyboardEvent) => {
     const step = { ArrowRight: 5, ArrowUp: 5, ArrowLeft: -5, ArrowDown: -5 }[e.key];
     if (step) {
       e.preventDefault();
-      update(task.id, { progress: Math.max(0, Math.min(100, task.progress + step)) });
+      set(Math.max(0, Math.min(100, task.progress + step)));
     } else if (e.key === "Home" || e.key === "End") {
       e.preventDefault();
-      update(task.id, { progress: e.key === "Home" ? 0 : 100 });
+      set(e.key === "Home" ? 0 : 100);
     }
   };
 
@@ -257,12 +288,12 @@ export function ProgressControl({
           e.stopPropagation();
           e.currentTarget.setPointerCapture(e.pointerId);
           dragging.current = true;
-          checkpoint();
+          beginGesture();
           fromEvent(e);
         }}
         onPointerMove={(e) => dragging.current && fromEvent(e)}
-        onPointerUp={() => (dragging.current = false)}
-        onPointerCancel={() => (dragging.current = false)}
+        onPointerUp={release}
+        onPointerCancel={release}
         className="focus-ring group relative flex-1 cursor-ew-resize touch-none rounded-full py-2"
       >
         <div className="relative w-full rounded-full bg-[var(--c-track)]" style={{ height: h }}>
@@ -289,16 +320,33 @@ export function ProgressControl({
    Estimate
    ------------------------------------------------------------------ */
 
-export function EstimateControl({ task }: { task: Task }) {
-  const update = useForm((s) => s.updateTask);
-  if (task.estimate == null) {
+/**
+ * The duration stepper. A task with no estimate shows "+ Duration", which opens the stepper empty
+ * ("—"): nothing is written until the first "+", which sets half a day, and "−" closes it again
+ * (Q3: FORM never invents a duration).
+ */
+export function EstimateControl({
+  task,
+}: {
+  // Optional only until the step 18 integration: the v0 tasks the Timeline still passes name it `estimate`
+  task: TaskFields & { readonly estimateDays?: Task["estimateDays"] };
+}) {
+  const { commit } = useActions();
+  const [open, setOpen] = useState(false);
+  const days = task.estimateDays ?? null;
+  // Once there is an estimate the empty stepper has done its job: clearing it later shows "+ Duration" again
+  if (open && days !== null) setOpen(false);
+
+  const set = (value: number) => commit([{ op: "updateTask", taskId: asTaskId(task.id), field: "estimateDays", value }], { label: "duration" });
+
+  if (days === null && !open) {
     return (
       <button
         type="button"
         data-interactive
         onClick={(e) => {
           e.stopPropagation();
-          update(task.id, { estimate: 1 });
+          setOpen(true);
         }}
         className="focus-ring t-data cursor-pointer rounded-full border border-dashed border-[var(--c-line)] px-2.5 py-1 text-[var(--c-fg-3)] transition-colors hover:text-[var(--c-fg)]"
       >
@@ -307,16 +355,21 @@ export function EstimateControl({ task }: { task: Task }) {
     );
   }
   const step = (d: number) => {
-    const cur = task.estimate!;
-    const inc = cur < 2 || (cur === 2 && d < 0) ? 0.5 : 1;
-    update(task.id, { estimate: Math.max(0.5, Math.min(90, cur + d * inc)) });
+    if (days === null) {
+      if (d > 0) set(0.5);
+      else setOpen(false);
+      return;
+    }
+    const inc = days < 2 || (days === 2 && d < 0) ? 0.5 : 1;
+    const next = Math.max(0.5, Math.min(ESTIMATE_MAX_DAYS, days + d * inc));
+    if (next !== days) set(next);
   };
   return (
     <div className="group flex items-center" data-interactive onClick={(e) => e.stopPropagation()}>
       <StepButton label="Shorter" onClick={() => step(-1)}>
         <path d="M3 6h6" />
       </StepButton>
-      <span className="t-data min-w-[28px] text-center text-[var(--c-fg-2)]">{fmtDays(task.estimate)}</span>
+      <span className="t-data min-w-[28px] text-center text-[var(--c-fg-2)]">{fmtDays(days)}</span>
       <StepButton label="Longer" onClick={() => step(1)}>
         <path d="M3 6h6M6 3v6" />
       </StepButton>
@@ -339,9 +392,16 @@ function StepButton({ label, onClick, children }: { label: string; onClick: () =
   );
 }
 
-export function CostTag({ task }: { task: Task }) {
-  if (task.cost == null) return null;
-  return <span className="t-data rounded-full bg-[var(--c-chip)] px-2.5 py-1 text-[var(--c-fg-2)]">{fmtEuro(task.cost)}</span>;
+export function CostTag({ task }: { task: TaskFields<"costCents"> }) {
+  if (task.costCents === null) return null;
+  return <CostFigure cents={task.costCents} />;
+}
+
+/** A manual cost in the project's currency; its own component, so only tasks with a cost read the project */
+function CostFigure({ cents }: { cents: number }) {
+  const currency = useProject()?.currency;
+  if (currency === undefined) return null;
+  return <span className="t-data rounded-full bg-[var(--c-chip)] px-2.5 py-1 text-[var(--c-fg-2)]">{formatMoney(cents, currency)}</span>;
 }
 
 /* ------------------------------------------------------------------
@@ -404,10 +464,12 @@ export function EditableText({
    Number badge — selection handle (Point & Ask)
    ------------------------------------------------------------------ */
 
-export function NumberBadge({ task, number, inline = false }: { task: Task; number: string; inline?: boolean }) {
-  const selected = useForm((s) => s.selectedId === task.id);
-  const select = useForm((s) => s.select);
-  const urgent = useForm((s) => s.doc.view.highlightUrgent && task.priority === "urgent" && task.status !== "done");
+export function NumberBadge({ task, number, inline = false }: { task: TaskFields<"title" | "priority" | "status">; number: string; inline?: boolean }) {
+  const taskId = asTaskId(task.id);
+  const selected = useIsSelected(taskId);
+  const { select } = useActions();
+  const highlightUrgent = useViewConfig()?.highlightUrgent ?? false;
+  const urgent = highlightUrgent && task.priority === "urgent" && task.status !== "done";
   return (
     // The wrapper rides the layout (position only, so it stays round while the card morphs).
     // A new badge can't track a morphing corner (it has no previous box), so the button
@@ -425,7 +487,7 @@ export function NumberBadge({ task, number, inline = false }: { task: Task; numb
         aria-label={selected ? `Deselect ${task.title}` : `Select ${task.title} to ask FORM about it`}
         onClick={(e) => {
           e.stopPropagation();
-          select(selected ? null : task.id);
+          select(selected ? null : taskId);
         }}
         className={`focus-ring t-micro relative grid h-[30px] w-[30px] cursor-pointer place-items-center rounded-full tabular-nums transition-[background-color,color,scale] duration-200 hover:scale-105 ${
           selected ? "bg-ink text-on-ink" : "bg-[#f6f6f4] text-text-2 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_4px_12px_-6px_rgba(0,0,0,0.25)]"
@@ -439,16 +501,14 @@ export function NumberBadge({ task, number, inline = false }: { task: Task; numb
 }
 
 /* ------------------------------------------------------------------
-   Subtasks (relationship: parentId)
+   Steps (task.steps)
    ------------------------------------------------------------------ */
 
-export function SubtaskList({ parentId, dense = false }: { parentId: string; dense?: boolean }) {
-  const tasks = useForm((s) => s.doc.tasks);
-  const subs = useMemo(() => Object.values(tasks).filter((t) => t.parentId === parentId), [tasks, parentId]);
-  const update = useForm((s) => s.updateTask);
-  const commit = useForm((s) => s.commit);
+export function SubtaskList({ parentId, dense = false }: { parentId: TaskId; dense?: boolean }) {
+  const subs = useSteps(parentId);
+  const { commit } = useActions();
   if (!subs.length) return null;
-  const done = subs.filter((s) => s.status === "done").length;
+  const done = subs.filter((s) => s.done).length;
   return (
     <motion.div layout="position" className={`flex flex-col ${dense ? "mt-1 px-2 pb-1" : "mt-4"}`}>
       <div className="t-micro mb-1.5 flex justify-between text-[var(--c-fg-3)]">
@@ -470,31 +530,31 @@ export function SubtaskList({ parentId, dense = false }: { parentId: string; den
             <button
               type="button"
               data-interactive
-              aria-label={s.status === "done" ? `Mark ${s.title} not done` : `Mark ${s.title} done`}
+              aria-label={s.done ? `Mark ${s.title} not done` : `Mark ${s.title} done`}
               onClick={(e) => {
                 e.stopPropagation();
-                update(s.id, { status: s.status === "done" ? "todo" : "done" });
+                commit([{ op: "updateStep", taskId: parentId, stepId: s.id, field: "done", value: !s.done }], { label: "step done" });
               }}
               className="focus-ring grid h-[22px] w-[22px] shrink-0 cursor-pointer place-items-center rounded-full text-[var(--c-fg)]"
             >
-              <StatusGlyph status={s.status === "done" ? "done" : "todo"} size={13} />
+              <StatusGlyph status={s.done ? "done" : "todo"} size={13} />
             </button>
             <EditableText
               value={s.title}
               label="Step title"
-              onCommit={(v) => update(s.id, { title: v })}
-              className={`t-body-s min-w-0 flex-1 ${s.status === "done" ? "text-[var(--c-fg-3)] line-through decoration-1" : ""}`}
+              onCommit={(v) => commit([{ op: "updateStep", taskId: parentId, stepId: s.id, field: "title", value: v }], { label: "rename step" })}
+              className={`t-body-s min-w-0 flex-1 ${s.done ? "text-[var(--c-fg-3)] line-through decoration-1" : ""}`}
             />
             {/* Duration and remove share one slot: the action replaces the figure on hover */}
             <span className="relative grid h-[22px] min-w-[30px] shrink-0 place-items-center">
-              <span className="t-data text-[var(--c-fg-3)] transition-opacity group-hover:opacity-0">{fmtDays(s.estimate)}</span>
+              <span className="t-data text-[var(--c-fg-3)] transition-opacity group-hover:opacity-0">{fmtDays(s.estimateDays)}</span>
               <button
                 type="button"
                 data-interactive
                 aria-label={`Remove ${s.title}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  commit([{ op: "removeTask", id: s.id }], "remove step");
+                  commit([{ op: "removeStep", taskId: parentId, stepId: s.id }], { label: "remove step" });
                 }}
                 className="focus-ring absolute inset-0 grid cursor-pointer place-items-center rounded-full text-[var(--c-fg-3)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--c-fg)] focus-visible:opacity-100"
               >
@@ -514,9 +574,10 @@ export function SubtaskList({ parentId, dense = false }: { parentId: string; den
    Proposal — agent suggestions the user must accept
    ------------------------------------------------------------------ */
 
+// `parentId` stays a string until the step 18 integration: the Focus view still passes v0 ids (see TaskFields)
 export function ProposalBlock({ parentId, dense = false }: { parentId: string; dense?: boolean }) {
-  const proposal = useForm((s) => (s.doc.proposal?.parentId === parentId ? s.doc.proposal : null));
-  const resolve = useForm((s) => s.resolveProposal);
+  const proposal = useSubtaskProposal(asTaskId(parentId));
+  const { resolveProposal: resolve } = useActions();
   return (
     <AnimatePresence>
       {proposal && (
@@ -536,14 +597,15 @@ export function ProposalBlock({ parentId, dense = false }: { parentId: string; d
               <span>Proposed by FORM</span>
               <span className="tabular-nums">
                 {proposal.items.length} steps
-                {proposal.items.every((i) => i.estimate != null) && ` · ${fmtDays(proposal.items.reduce((s, i) => s + (i.estimate ?? 0), 0))}`}
+                {proposal.items.every((i) => i.estimateDays !== null) && ` · ${fmtDays(proposal.items.reduce((s, i) => s + (i.estimateDays ?? 0), 0))}`}
               </span>
             </div>
             <ul className="flex flex-col gap-1">
+              {/* A proposed step keeps its id when accepted, so it morphs into the step list */}
               {proposal.items.map((item, i) => (
                 <motion.li
-                  key={item.id}
-                  layoutId={`sub-${item.id}`}
+                  key={item.stepId}
+                  layoutId={`sub-${item.stepId}`}
                   layout="position"
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0, transition: { delay: 0.12 + i * 0.06, ...move } }}
@@ -553,7 +615,7 @@ export function ProposalBlock({ parentId, dense = false }: { parentId: string; d
                     <StatusGlyph status="todo" size={13} />
                   </span>
                   <span className="t-body-s min-w-0 flex-1 truncate">{item.title}</span>
-                  <span className="t-data text-[var(--c-fg-3)]">{fmtDays(item.estimate)}</span>
+                  <span className="t-data text-[var(--c-fg-3)]">{fmtDays(item.estimateDays)}</span>
                 </motion.li>
               ))}
             </ul>
