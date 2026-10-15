@@ -232,11 +232,19 @@ async function capture(page: Page, opts: GateOptions): Promise<Capture> {
   const fullPage = opts.fullPage ?? true;
   const collapsed = opts.collapse ?? [];
   const scale = await page.evaluate(() => devicePixelRatio);
-  // With collapsed regions: the page as it is (its size, and where they were), then without them
+  // With collapsed regions: the page as it is (its size, and where they were), then without them.
+  // Measured before any screenshot: in phone emulation a full-page screenshot fires a resize, after
+  // which the moodboard's board has been seen measuring a zero width (B and C alike), so a capture
+  // taken first would report the board missing
   const sidecar = {} as Sidecar;
   if (collapsed.length) {
-    const whole = PNG.sync.read(await stableShot(page, fullPage, opts.once));
-    sidecar.full = { width: whole.width, height: whole.height, collapsed: await measure(page, collapsed, false) };
+    const whole = await page.evaluate((fullPage) => {
+      const el = document.documentElement;
+      const w = fullPage ? Math.max(el.scrollWidth, innerWidth) : innerWidth;
+      const h = fullPage ? Math.max(el.scrollHeight, innerHeight) : innerHeight;
+      return { width: Math.round(w * devicePixelRatio), height: Math.round(h * devicePixelRatio) };
+    }, fullPage);
+    sidecar.full = { ...whole, collapsed: await measure(page, collapsed, false) };
     await collapse(page, collapsed);
   }
   const shot = await stableShot(page, fullPage, opts.once);
