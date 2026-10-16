@@ -109,6 +109,8 @@ export interface GateRecord {
   failures: string[];
   /** The retry protocol's steps, when the first capture differed (see `gate`) */
   retries?: string[];
+  /** After retries: the pair of captures that matched, which the record's figures describe */
+  matched?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -153,40 +155,39 @@ async function collapse(page: Page, regions: readonly Mask[]) {
 }
 
 /**
- * Holds the page's layout still while Chromium takes full-page screenshots (stills), or lets it go.
+ * Holds the document's width while Chromium takes full-page screenshots (stills), or lets it go.
  *
  * Chromium takes a full-page screenshot (Page.captureScreenshot with captureBeyondViewport) by
  * emulating a 1×1 view, then the capture size, then restoring the page (page_handler.cc, the
  * crbug.com/40727379 workaround). Now and then, mostly on a screenshot taken right after another,
- * the renderer lays the page out and paints at that 1×1 view. The containers Blink composites with
- * their own paint offset (the backdrop-filter glass of the view tabs and of the metrics, the fixed
- * "Ask FORM" pill, which useViewport also moves on the resize) land on other subpixel positions, and
- * their text is painted there. Blink doesn't repaint the descendants of such a container when it
- * moves back by a fraction of a pixel (paint_invalidator.cc, crbug.com/833083), so the capture shows
- * that text 1 CSS px off: a second image of the same page, drawn by B and C alike (chromium-phone
- * tracker-list, e2e/expected-diffs.md). With the document's width held and the app's resize
- * listeners kept from the capture's transient sizes, nothing moves, and every capture paints the
- * page as it is at rest. WebKit snapshots the page in one pass without resizing it, so it isn't held.
+ * the page is laid out at that tiny view (under a flag that made it frequent, each of the 9 such
+ * captures logged a 1×1 resize and none of 39 others did; the path inside Chromium wasn't traced).
+ * The containers Blink composites with their own paint offset (the backdrop-filter glass of the view
+ * tabs and of the metrics) reflow onto other subpixel positions, and their text is painted there.
+ * Blink doesn't repaint the descendants of such a container when it moves back by a fraction of a
+ * pixel (paint_invalidator.cc, crbug.com/833083), so the capture shows that text 1 CSS px off: a
+ * second image of the same page, drawn by B and C alike (chromium-phone tracker-list,
+ * e2e/expected-diffs.md). With the document's width held, the page doesn't reflow at that view, and
+ * every capture paints it as it is at rest.
+ *
+ * Only the width is held. The app still sees the capture's transient sizes: in Chromium the window's
+ * listeners run in the order they were added, capture or not, so none added here could run before
+ * the app's (added at mount). Fixed elements sized from the window move during the capture and back:
+ * on tracker-list the "Ask FORM" pill (useViewport) goes to whole-pixel positions at the 4×4 view the
+ * held width leaves, and its text comes back as it was. A geometry that put it on a fraction would
+ * draw a second image in both builds, which fails the gate rather than hiding a change. Leaving the
+ * resize to the app also keeps what 380da0b's gate saw: a candidate whose resize handling changes
+ * the page still shows it in a Chromium phone capture. WebKit snapshots the page in one pass without
+ * resizing it, so it isn't held.
  */
 async function hold(page: Page, on: boolean) {
   await page.evaluate((on) => {
-    const w = window as unknown as { __e2eHold?: () => void };
-    w.__e2eHold?.();
-    delete w.__e2eHold;
+    document.getElementById("e2e-capture-hold")?.remove();
     if (!on) return;
     const style = document.createElement("style");
     style.id = "e2e-capture-hold";
     style.textContent = `html { width: ${document.documentElement.getBoundingClientRect().width}px !important; }`;
     document.head.append(style);
-    // At the target, capture listeners run before the app's own: the resize never reaches them
-    const quiet = (e: Event) => e.stopImmediatePropagation();
-    addEventListener("resize", quiet, { capture: true });
-    visualViewport?.addEventListener("resize", quiet, { capture: true });
-    w.__e2eHold = () => {
-      style.remove();
-      removeEventListener("resize", quiet, { capture: true });
-      visualViewport?.removeEventListener("resize", quiet, { capture: true });
-    };
   }, on);
 }
 
@@ -275,13 +276,17 @@ interface Capture {
  * Real time between taking the collapsed regions out and the first screenshot.
  *
  * WebKit draws the ground's dot grid (`.ground`, a radial-gradient tiled every 11 px) from one tile
- * it rasterises and caches for a few seconds (StyleGradientImage). A snapshot painted before the
- * rendering update that follows a layout change can make that tile itself, in a second, harder-edged
- * rasterisation, and every later screenshot of the page reuses it: 1 to 5 grey levels on every dot of
- * the first viewport, B and C alike. The collapse is such a layout change: straight after it,
- * brief-client drew that second image in 12 of 72 captures of B and 28 of 72 of C, and none did with
- * 20 ms or more here. Only here: on a page at rest the same wait made that image likelier, not less
- * (webkit-desktop composer, C: 5 of 42 captures with it, 0 of 40 without).
+ * it rasterises and caches for a few seconds (StyleGradientImage, in WebKit's main-branch source). A
+ * snapshot painted before the rendering update that follows a layout change can make that tile
+ * itself, in a second, harder-edged rasterisation (by which path wasn't established), and every later
+ * screenshot of the page reuses it: 1 to 5 grey levels on every dot of the first viewport, B and C
+ * alike. The collapse is such a layout change. Straight after it, brief-client drew that second image
+ * in 12 of 72 captures of B and 28 of 72 of C; with a screenshot before the collapse, or 1 s after it,
+ * in none of 112. brief-team on B drew it in none of 48 trials 20, 60 or 200 ms after the collapse,
+ * and with this wait both builds have drawn one image of brief-client in every capture since
+ * (e2e/expected-diffs.md). Only after a collapse: on a page at rest, a first version's wait was
+ * followed by that image more often, not less (webkit-desktop composer, C: 5 of 42 captures with it,
+ * 0 of 40 without), an observation too small to call an effect, but no reason to wait there.
  */
 const COLLAPSE_RENDER_MS = 200;
 
@@ -372,8 +377,14 @@ export interface Again {
   reference?: () => Promise<Page>;
 }
 
-/** Rounds of the retry protocol at most: each reaches the state again on the candidate, then on the reference */
-const RETRY_ROUNDS = 2;
+/**
+ * Rounds of the retry protocol: each reaches the state again on the candidate, then on the
+ * reference. One round, two captures per build at most, as before 2026-10-16. Every extra candidate
+ * capture is one more chance for a change that shows on only some of the candidate's page loads to
+ * pass: with two rounds, a change on two loads in three passed where one round fails it
+ * (e2e/expected-diffs.md, "Retry protocol").
+ */
+const RETRY_ROUNDS = 1;
 
 /**
  * Captures `name` and compares it with the reference build's capture outside the expected
@@ -383,11 +394,12 @@ const RETRY_ROUNDS = 2;
  * from one load to the next. The two such quirks the gate runs have met (Chromium's 1×1 layout
  * during full-page screenshots, WebKit's dot tile right after the collapse) are held off at capture
  * (`hold`, COLLAPSE_RENDER_MS); this is the backstop for any other. When a still differs, the state is
- * reached again in a fresh context, on the candidate and then on the reference build, for up to
- * RETRY_ROUNDS rounds: up to three captures per build, the first ones included. Each new capture is
- * compared with every capture of the other build so far, and the gate passes only on an exact match
- * outside the expected differences (no pixel budget). A change in the candidate's code fails every
- * pair. Every capture and comparison is recorded, in order.
+ * reached again in a fresh context on the candidate, then on the reference build (RETRY_ROUNDS): two
+ * captures per build at most, the first ones included. Each new capture is compared with every
+ * capture of the other build so far, and the gate passes only on an exact match outside the expected
+ * differences (no pixel budget). A change in the candidate's code fails every pair. Every capture and
+ * comparison is recorded, in order, with the pair a pass rests on (`matched`): a pass after a retry is
+ * not a clean pass, and compare.mjs reports it as such.
  */
 export async function gate(page: Page, testInfo: TestInfo, name: string, opts: GateOptions = {}, again: Again = {}): Promise<GateRecord> {
   const ref = testInfo.snapshotPath(name);
@@ -433,9 +445,11 @@ export async function gate(page: Page, testInfo: TestInfo, name: string, opts: G
     const cands = [mine];
     const pair = (r: number, c: number) => {
       const res = compare(refs[r], cands[c], ratio);
-      retries.push(`reference capture ${r + 1} against candidate capture ${c + 1}: ${res.failure ?? "matches"}`);
+      const which = `reference capture ${r + 1} against candidate capture ${c + 1}`;
+      retries.push(`${which}: ${res.failure ?? "matches"}`);
       if (res.failure) return false;
       result = res;
+      rec.matched = which;
       describe(rec, refs[r], cands[c]);
       return true;
     };

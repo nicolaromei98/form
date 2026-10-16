@@ -229,7 +229,9 @@ function stats(out) {
 /**
  * The pixel gate's records (e2e/gate.ts) of a comparing run, per project and spec: captures
  * compared, passed, failed, the pixels compared and differing outside the masks, and the expected
- * differences that masked something.
+ * differences that masked something. A still that passed only after the retry protocol is listed
+ * apart (`passedAfterRetry`): its first capture differed, so it is either a raster quirk the gate
+ * doesn't hold off yet or a change that shows on only some page loads, and needs a look.
  */
 function gateSummary(out) {
   const root = join(out, "artifacts", "gate");
@@ -237,9 +239,11 @@ function gateSummary(out) {
   for (const f of files(root).filter((f) => f.endsWith(".json"))) {
     const [project, spec] = f.split("/");
     const rec = JSON.parse(readFileSync(join(root, f), "utf8"));
-    const s = (summary[`${project} ${spec}`] ??= { captures: 0, passed: 0, failed: 0, page: 0, collapsed: 0, compared: 0, differing: 0, maskedBy: {}, failures: [] });
+    const s = (summary[`${project} ${spec}`] ??= { captures: 0, passed: 0, failed: 0, retried: 0, page: 0, collapsed: 0, compared: 0, differing: 0, maskedBy: {}, failures: [], passedAfterRetry: [] });
     s.captures++;
     s[rec.ok ? "passed" : "failed"]++;
+    if (rec.retries) s.retried++;
+    if (rec.retries && rec.ok) s.passedAfterRetry.push(`${rec.name}: ${rec.retries.join(" → ")}`);
     s[rec.mode] = (s[rec.mode] ?? 0) + 1;
     s.compared += rec.compared;
     s.differing += rec.differing;
@@ -346,18 +350,23 @@ async function main() {
   const reference = appPath(base) === appPath(head) ? `http://localhost:${PORTS.base}` : undefined;
   const headCode = await playwright({ port: PORTS.head, commit: head, out: join(out, "head"), snapshots, update: false, reference });
   const gated = gateSummary(join(out, "head"));
+  const afterRetry = Object.values(gated).reduce((n, s) => n + s.passedAfterRetry.length, 0);
   const summary = {
     base: { commit: base, exitCode: baseCode, ...stats(join(out, "base")) },
     head: { commit: head, exitCode: headCode, ...stats(join(out, "head")) },
     gate: gated,
+    gatePassedAfterRetry: afterRetry,
   };
   writeFileSync(join(out, "summary.json"), JSON.stringify(summary, null, 2) + "\n");
   console.log(`\nBase ${short(base)}: ${JSON.stringify(summary.base)}\nHead ${short(head)}: ${JSON.stringify(summary.head)}`);
   for (const [key, s] of Object.entries(gated)) {
     const masked = Object.entries(s.maskedBy).map(([ed, n]) => `${ed}×${n}`).join(" ");
-    console.log(`Gate ${key}: ${s.passed}/${s.captures} pass (${s.page} page, ${s.collapsed} collapsed), ${s.differing} differing of ${s.compared} compared pixels; masked ${masked || "nothing"}`);
+    const retried = s.passedAfterRetry.length ? `, ${s.passedAfterRetry.length} of them only after a retry` : "";
+    console.log(`Gate ${key}: ${s.passed}/${s.captures} pass (${s.page} page, ${s.collapsed} collapsed${retried}), ${s.differing} differing of ${s.compared} compared pixels; masked ${masked || "nothing"}`);
     for (const f of s.failures) console.log(`  ✘ ${f}`);
+    for (const r of s.passedAfterRetry) console.log(`  ! passed after a retry: ${r}`);
   }
+  if (afterRetry) console.log(`${afterRetry} still(s) passed only after a retry: their first capture differed (e2e/expected-diffs.md, "Retry protocol")`);
   console.log(`Reports: ${relative(REPO, join(out, "head/report"))} (head), ${relative(REPO, join(out, "base/report"))} (base)`);
   return baseCode || headCode;
 }
