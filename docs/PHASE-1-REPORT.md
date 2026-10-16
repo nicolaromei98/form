@@ -51,8 +51,9 @@
 
 **Pixel gate, the new engine (C) against baseline B**
 - B is v0 plus the route move, Q14 and the agent fix.
-- **Stills:** 0 differing pixels outside the expected differences, in all 92 stills: 23 states × desktop and phone × Chromium and WebKit. That is about 288 million compared pixels.
-- **Motion:** 66/66 animation frames within 0.1%. 62 are exact, and the worst is 0.041%.
+- **Final run:** on `a82554d` (the branch head before this report update; `src/` unchanged since `4210fd6`), `E2E_CHROMIUM_ARGS=--disable-gpu npm run e2e:compare`, 4 workers. Head: 145 passed, 0 failed.
+- **Stills:** 0 differing pixels outside the expected differences, in all 92 stills: 23 states × desktop and phone × Chromium and WebKit. That is about 288 million compared pixels. 91 matched at the first capture. One, `composer` on webkit-desktop, matched after a retry (see Known limits).
+- **Motion:** 66/66 animation frames within 0.1%. 62 are exact, and the worst is 0.047% (`focus-enter` at 900 ms).
 - **Expected differences:** ED-1 to ED-12 in `e2e/expected-diffs.md`. Each has a reason, a decision and an assertion that replaces the pixels:
   - working-day dates;
   - the timeline footer;
@@ -91,15 +92,24 @@
 - Plan §12 item 17 expected this. Code splitting is Phase 6.
 
 ## Known limits and follow-ups
-- **Gate commit.** The full pixel gate ran on `4210fd6`. Later commits change only gate records and docs, and `src/` is identical. Rerun it once with the machine awake:
+- **Gate hardening (2026-10-16).** The first full run on the final commit (`380da0b`) failed 2 of 92 stills: tracker-list on chromium-phone (6,382 px) and brief-client on webkit-phone (1,966 px).
+  - Neither was a regression. Each is a browser drawing the same page in one of two ways from one load to the next, and B and C both draw both images.
+  - **Chromium:** a full-page screenshot can lay the page out at a 1×1 view, leaving the glass text 1 CSS px off.
+  - **WebKit:** a snapshot taken right after the gate's collapse can rasterise the dot-grid tile harder-edged.
+  - The 2+2-capture retry couldn't absorb either.
+  - The gate now holds the document's width during Chromium full-page stills and waits 200 ms after a collapse. The retry stays at two captures per build, and a pass after a retry is listed apart in the run's output and `summary.json`.
+  - Adversarial review checked that every visible C-only change tried still fails.
+  - The details, measurements and what was not established are in `e2e/expected-diffs.md` and DECISIONS "Gate hardening after the final-commit run".
+- **Residual quirk.** WebKit page stills, which get no wait, can still now and then draw the second dot-grid image. In the final run, `composer` on webkit-desktop did, at 16,166 px: the same count the hardening work had already measured for that image. It matched on the retry and was reported as a pass after a retry. If CI ever fails on a WebKit still at a count like that, rerun before investigating. Phase 6 can remove the quirk.
+- **Running the gate.** A locked screen stalls headless Chromium, and sleep on battery breaks the runs. Keep the machine awake:
 
   ```
   E2E_CHROMIUM_ARGS=--disable-gpu npm run e2e:compare
   ```
-
-  A locked screen stalls headless Chromium, and sleep on battery breaks the runs.
 - **CI.** The macOS e2e job runs on pull requests and on demand only, because of its cost.
-- **`useWidth`** sometimes reads width 0 on the phone moodboard after a full-page screenshot, in both v0 and v2. Phase 3 should check it.
+- **`useWidth`** sometimes reads width 0 on the phone moodboard after a full-page screenshot, in both v0 and v2.
+  - It is very likely the same 1×1 view inside Chromium's full-page capture, so a test artefact rather than something users meet. That was not reproduced on the moodboard itself.
+  - Phase 3 should still check that `useWidth` survives a zero-width ResizeObserver entry.
 - **Bundle size** is over the Phase 6 target. It was measured and left for code splitting.
 - **Repository and fonts.** The repository must stay private (Satoshi licence), and the Aeonik files must be purged from git history before it is ever made public.
 

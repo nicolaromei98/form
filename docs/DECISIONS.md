@@ -305,3 +305,7 @@ Choices not covered by `docs/FORM-v1.md`, or confirmed from its section 3.2. Eac
   - Forcing `will-change: transform` on the glass. It makes the paint independent of history too, but every capture becomes the second image, so B would need new references, and it changes `src/`.
   - Going back to `4210fd6`'s order (an uncollapsed screenshot first). It fixes WebKit, but brings back the screenshot before the collapsed regions are measured (the phone moodboard).
   - More retries alone. At brief-client's rates, three captures per build would still fail about 3.5% of runs, and each extra capture makes an intermittent C-only change likelier to pass.
+- **Outcome, full gate on `a82554d`** (4 workers, `E2E_CHROMIUM_ARGS=--disable-gpu`, `compare.mjs` as written): head 145 passed, 0 failed. All 92 stills at 0 differing pixels outside the expected differences; 66 of 66 frames within 0.1% (62 exact, worst 0.047%).
+  - 91 stills matched at the first capture.
+  - `composer` on webkit-desktop matched only after a retry, and `compare.mjs` listed it apart. Its first capture differed by 16,166 px, the count the hardening had already measured for WebKit's second dot image on that still. That still is a page state, where the gate doesn't wait, by the choice above.
+  - So WebKit page stills can still draw that image now and then. The retry absorbs it and the run reports it. Removing it is left to Phase 6 (`docs/PHASE-1-REPORT.md`, Known limits).
