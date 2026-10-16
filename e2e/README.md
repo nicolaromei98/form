@@ -37,7 +37,7 @@ node scripts/e2e/a11y-baseline.mjs <run>/base/artifacts <A's commit>   # a11y.sp
 - **masked**: the union of both builds' boxes is painted over both images;
 - **collapsed**: a region whose size changes is taken out of the layout in both builds before the capture.
 
-On a v2 build each masked or collapsed value is asserted as text or state. Two raster quirks that draw one page in two ways in both builds are held off at capture: Chromium's full-page stills hold the layout (its 1×1 view), and a collapsed still waits 200 ms after the collapse before its first screenshot (WebKit's dot tile). A still that differs anyway is reached again on fresh contexts of both builds, up to three captures per build, and passes only on an exact match (the retry protocol, `expected-diffs.md`). Each comparison writes `artifacts/gate/<project>/<spec>/<name>.json`: mode, pixels compared and differing, area masked per ED, sizes, retries.
+On a v2 build each masked or collapsed value is asserted as text or state. Two raster quirks that draw one page in two ways in both builds are held off at capture: Chromium's full-page stills hold the document's width (its 1×1 view), and a collapsed still waits 200 ms after the collapse before its first screenshot (WebKit's dot tile). A still that differs anyway is reached again on fresh contexts of both builds, two captures per build at most, and passes only on an exact match (the retry protocol, `expected-diffs.md`). Each comparison writes `artifacts/gate/<project>/<spec>/<name>.json`: mode, pixels compared and differing, area masked per ED, sizes, retries and the pair that matched. `compare.mjs` lists a still that passed only after a retry apart from the clean passes.
 
 ## Baselines
 
