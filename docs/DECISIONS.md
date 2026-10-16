@@ -275,3 +275,28 @@ Choices not covered by `docs/FORM-v1.md`, or confirmed from its section 3.2. Eac
   - **Bundle.** The +71.9 KB gzip growth is accepted for Phase 1. Code splitting stays in Phase 6.
 - **Phase 1 is closed** on `phase-1-domain` and waits for Nicola's review before Phase 2.
 - **Rejected:** loosening the 0-pixel threshold to absorb shifted text.
+
+### 2026-10-16 · Gate hardening after the final-commit run
+- **Context:** the full gate run on `380da0b` (`E2E_CHROMIUM_ARGS=--disable-gpu`) passed 90 of 92 stills, although `src/` is byte-identical to `4210fd6`, whose run passed all 92.
+  - The failures: `tracker-list` on chromium-phone (6,382 px, text in the glass tabs, the metric eyebrows and the Ask FORM pill) and `brief-client` on webkit-phone (1,966 px, the ground's dot grid in the first viewport).
+  - The retry protocol, two captures per build, got the same count in all four comparisons.
+  - Four investigations measured both. Each is one page drawn two ways, and B and C draw both:
+    - tracker-list: two images over 562 captures; B drew the second in 10 of 281, C in 20 of 281.
+    - brief-client: B 12 of 72, C 28 of 72.
+  - **Chromium.** A full-page screenshot emulates a 1×1 view before the capture size. When the page is laid out at 1×1 in between, Blink moves the composited glass by a fraction of a pixel and back, and doesn't repaint its text (crbug.com/833083).
+  - **WebKit.** The dot grid is drawn from a cached 11 px tile. A snapshot taken right after a layout change can rasterise that tile harder-edged, and the page keeps it. `658bb10` put the first screenshot right after the collapse.
+- **Choice:**
+  - **Hold the layout during Chromium's full-page stills** (`gate.ts` `hold`). While `stableShot` takes its screenshots, the document's width is fixed and `resize` events don't reach the app. WebKit doesn't resize the view for a full-page snapshot, so it isn't held.
+  - **Wait 200 ms of real time after the collapse** (`COLLAPSE_RENDER_MS`), so the browser renders the collapsed layout before the first screenshot.
+  - **Retry protocol, two rounds.** Up to three captures per build. Every new capture is compared with every capture of the other build, an exact match is required, and every capture and comparison is recorded.
+  - **Measured** (2 workers, `--disable-gpu`, B writing one reference per repeat, C compared with B's server up):
+    - The two stills, 30 times each on both phone projects: C matched B at the first capture in 120 of 120, with no retry. With `380da0b`'s gate in the same harness, tracker-list's first capture differed 8 times in 30, and brief-client's 17 times, 3 of them failing after the retries.
+    - All 23 states on all four projects: 92 of 92 at the first capture. B's 64 page stills are byte-identical to `e2e/baselines/B.json`.
+    - Sensitivity: a 1 CSS px shift of the tab labels in C's glass tablist, or its ink pill 3 levels lighter, failed 16 of 16, each after all nine pairs. A 1-level change passes, as before (`THRESHOLD`).
+    - Cost: a passing still pays two page calls for the hold in Chromium and 200 ms per collapsed capture. A failing still takes four more reaches of its state, about 60 to 90 s instead of 15.
+- **Rejected:**
+  - Holding and waiting before every still, in both engines. That was the first version. On a page at rest the wait made WebKit's second dot image likelier: the webkit-desktop composer on C drew it in 5 of 42 captures with the wait, and in 0 of 40 without.
+  - Raising `THRESHOLD`, a pixel budget, or masking the glass text or the dot grid. Each would also hide a real 1 px shift of that text, or a change to the ground.
+  - Forcing `will-change: transform` on the glass. It makes the paint independent of history too, but every capture becomes the second image, so B would need new references, and it changes `src/`.
+  - Going back to `4210fd6`'s order (an uncollapsed screenshot first). It fixes WebKit, but brings back the screenshot before the collapsed regions are measured (the phone moodboard).
+  - More retries alone. At brief-client's rates, three captures per build would still fail about 3.5% of runs. Each extra pair also makes an intermittent C-only image likelier to pass.
