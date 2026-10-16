@@ -152,18 +152,62 @@ async function collapse(page: Page, regions: readonly Mask[]) {
   });
 }
 
+/**
+ * Holds the page's layout still while Chromium takes full-page screenshots (stills), or lets it go.
+ *
+ * Chromium takes a full-page screenshot (Page.captureScreenshot with captureBeyondViewport) by
+ * emulating a 1×1 view, then the capture size, then restoring the page (page_handler.cc, the
+ * crbug.com/40727379 workaround). Now and then, mostly on a screenshot taken right after another,
+ * the renderer lays the page out and paints at that 1×1 view. The containers Blink composites with
+ * their own paint offset (the backdrop-filter glass of the view tabs and of the metrics, the fixed
+ * "Ask FORM" pill, which useViewport also moves on the resize) land on other subpixel positions, and
+ * their text is painted there. Blink doesn't repaint the descendants of such a container when it
+ * moves back by a fraction of a pixel (paint_invalidator.cc, crbug.com/833083), so the capture shows
+ * that text 1 CSS px off: a second image of the same page, drawn by B and C alike (chromium-phone
+ * tracker-list, e2e/expected-diffs.md). With the document's width held and the app's resize
+ * listeners kept from the capture's transient sizes, nothing moves, and every capture paints the
+ * page as it is at rest. WebKit snapshots the page in one pass without resizing it, so it isn't held.
+ */
+async function hold(page: Page, on: boolean) {
+  await page.evaluate((on) => {
+    const w = window as unknown as { __e2eHold?: () => void };
+    w.__e2eHold?.();
+    delete w.__e2eHold;
+    if (!on) return;
+    const style = document.createElement("style");
+    style.id = "e2e-capture-hold";
+    style.textContent = `html { width: ${document.documentElement.getBoundingClientRect().width}px !important; }`;
+    document.head.append(style);
+    // At the target, capture listeners run before the app's own: the resize never reaches them
+    const quiet = (e: Event) => e.stopImmediatePropagation();
+    addEventListener("resize", quiet, { capture: true });
+    visualViewport?.addEventListener("resize", quiet, { capture: true });
+    w.__e2eHold = () => {
+      style.remove();
+      removeEventListener("resize", quiet, { capture: true });
+      visualViewport?.removeEventListener("resize", quiet, { capture: true });
+    };
+  }, on);
+}
+
 /** Screenshots until two in a row agree (the page is settled; this only waits out raster work). */
 async function stableShot(page: Page, fullPage: boolean, once = false): Promise<Buffer> {
   // Frames keep their animations where frame control seeked them; stills disable them as toHaveScreenshot did
   if (once) return page.screenshot({ fullPage, animations: "allow", caret: "hide", scale: "device" });
   const take = () => page.screenshot({ fullPage, animations: "disabled", caret: "hide", scale: "device" });
-  let prev = await take();
-  for (let i = 0; i < 4; i++) {
-    const next = await take();
-    if (next.equals(prev)) return next;
-    prev = next;
+  const held = fullPage && page.context().browser()?.browserType().name() === "chromium";
+  if (held) await hold(page, true);
+  try {
+    let prev = await take();
+    for (let i = 0; i < 4; i++) {
+      const next = await take();
+      if (next.equals(prev)) return next;
+      prev = next;
+    }
+    return prev;
+  } finally {
+    if (held) await hold(page, false);
   }
-  return prev;
 }
 
 /* ------------------------------------------------------------------ */
@@ -227,6 +271,20 @@ interface Capture {
   sidecar: Sidecar;
 }
 
+/**
+ * Real time between taking the collapsed regions out and the first screenshot.
+ *
+ * WebKit draws the ground's dot grid (`.ground`, a radial-gradient tiled every 11 px) from one tile
+ * it rasterises and caches for a few seconds (StyleGradientImage). A snapshot painted before the
+ * rendering update that follows a layout change can make that tile itself, in a second, harder-edged
+ * rasterisation, and every later screenshot of the page reuses it: 1 to 5 grey levels on every dot of
+ * the first viewport, B and C alike. The collapse is such a layout change: straight after it,
+ * brief-client drew that second image in 12 of 72 captures of B and 28 of 72 of C, and none did with
+ * 20 ms or more here. Only here: on a page at rest the same wait made that image likelier, not less
+ * (webkit-desktop composer, C: 5 of 42 captures with it, 0 of 40 without).
+ */
+const COLLAPSE_RENDER_MS = 200;
+
 /** One capture of the page as the gate compares it, with where its masks (and collapsed regions) were */
 async function capture(page: Page, opts: GateOptions): Promise<Capture> {
   const fullPage = opts.fullPage ?? true;
@@ -246,6 +304,8 @@ async function capture(page: Page, opts: GateOptions): Promise<Capture> {
     }, fullPage);
     sidecar.full = { ...whole, collapsed: await measure(page, collapsed, false) };
     await collapse(page, collapsed);
+    // Let the browser render the collapsed layout before the first screenshot (WebKit's dot tile)
+    await page.waitForTimeout(COLLAPSE_RENDER_MS);
   }
   const shot = await stableShot(page, fullPage, opts.once);
   const png = PNG.sync.read(shot);
@@ -312,16 +372,22 @@ export interface Again {
   reference?: () => Promise<Page>;
 }
 
+/** Rounds of the retry protocol at most: each reaches the state again on the candidate, then on the reference */
+const RETRY_ROUNDS = 2;
+
 /**
  * Captures `name` and compares it with the reference build's capture outside the expected
  * differences. Returns the record; the caller asserts `ok` (so a frame loop can finish first).
  *
- * Retry protocol, for stills: Chromium's phone emulation now and then rasterises the text of a
- * composited glass layer one device pixel off (the same build, the same state, two runs; seen on
- * about 1 still in 50, never on desktop). When a still differs, the state is reached again in a
- * fresh context on the candidate and, if that still differs, on the reference build too; the gate
- * passes only if some reference capture and some candidate capture match exactly outside the
- * expected differences. Every retry is recorded.
+ * Retry protocol, for stills: a browser can rasterise the same page of the same build in two ways
+ * from one load to the next. The two such quirks the gate runs have met (Chromium's 1×1 layout
+ * during full-page screenshots, WebKit's dot tile right after the collapse) are held off at capture
+ * (`hold`, COLLAPSE_RENDER_MS); this is the backstop for any other. When a still differs, the state is
+ * reached again in a fresh context, on the candidate and then on the reference build, for up to
+ * RETRY_ROUNDS rounds: up to three captures per build, the first ones included. Each new capture is
+ * compared with every capture of the other build so far, and the gate passes only on an exact match
+ * outside the expected differences (no pixel budget). A change in the candidate's code fails every
+ * pair. Every capture and comparison is recorded, in order.
  */
 export async function gate(page: Page, testInfo: TestInfo, name: string, opts: GateOptions = {}, again: Again = {}): Promise<GateRecord> {
   const ref = testInfo.snapshotPath(name);
@@ -361,28 +427,28 @@ export async function gate(page: Page, testInfo: TestInfo, name: string, opts: G
   let result = compare(theirs, mine, ratio);
 
   if (result.failure && (again.candidate || again.reference)) {
-    rec.retries = [`first capture: ${result.failure}`];
-    const candidates = [mine];
-    if (again.candidate) {
-      const fresh = await capture(await again.candidate(), opts);
-      candidates.push(fresh);
-      const r = compare(theirs, fresh, ratio);
-      rec.retries.push(`candidate reached again: ${r.failure ?? "matches"}`);
-      if (!r.failure) {
-        result = r;
-        describe(rec, theirs, fresh);
+    const retries = (rec.retries = [`first capture: ${result.failure}`]);
+    // Reference capture 1 is the one the reference run wrote, candidate capture 1 this test's first
+    const refs = [theirs];
+    const cands = [mine];
+    const pair = (r: number, c: number) => {
+      const res = compare(refs[r], cands[c], ratio);
+      retries.push(`reference capture ${r + 1} against candidate capture ${c + 1}: ${res.failure ?? "matches"}`);
+      if (res.failure) return false;
+      result = res;
+      describe(rec, refs[r], cands[c]);
+      return true;
+    };
+    for (let round = 0; result.failure && round < RETRY_ROUNDS; round++) {
+      if (again.candidate) {
+        cands.push(await capture(await again.candidate(), opts));
+        retries.push(`candidate capture ${cands.length}: reached again`);
+        if (refs.some((_, r) => pair(r, cands.length - 1))) break;
       }
-    }
-    if (result.failure && again.reference) {
-      const fresh = await capture(await again.reference(), opts);
-      for (const [i, c] of candidates.entries()) {
-        const r = compare(fresh, c, ratio);
-        rec.retries.push(`reference reached again, against candidate capture ${i + 1}: ${r.failure ?? "matches"}`);
-        if (!r.failure) {
-          result = r;
-          describe(rec, fresh, c);
-          break;
-        }
+      if (again.reference) {
+        refs.push(await capture(await again.reference(), opts));
+        retries.push(`reference capture ${refs.length}: reached again`);
+        if (cands.some((_, c) => pair(refs.length - 1, c))) break;
       }
     }
   }
