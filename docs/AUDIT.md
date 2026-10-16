@@ -186,6 +186,8 @@ The phases follow v1 §18. Additions from this audit are marked **+**.
 This document, the reference docs, `DECISIONS.md` and the audit harnesses. Then stop.
 
 ### Phase 1 · Domain
+> **Status, 2026-10-16: done on `phase-1-domain`, waiting for review.** See `docs/PHASE-1-REPORT.md`. Every audit addition listed here landed, apart from code splitting (Phase 6).
+
 As in v1, plus:
 - **+** The test infrastructure comes first: Vitest and fast-check, with the audit harnesses moved into `scripts/` and `e2e/`.
 - **+** Deterministic reducer:

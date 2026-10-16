@@ -263,3 +263,15 @@ Choices not covered by `docs/FORM-v1.md`, or confirmed from its section 3.2. Eac
   - **Page heights** change where ED-4 and ED-5 shorten text, so full-page stills need clipped captures.
   - **Harness hover.** The harness leaves the pointer near the dock after dismissing the ED-10 caption.
   - **Random stream.** v2 mints ids without Math.random, so the seeded stream sits at a different offset (scramble glyphs, agent volumes).
+
+### 2026-10-16 · Wave 8 outcomes (step 19, verification gate) and Phase 1 close
+- **Context:** the pixel gate compared the new engine (C) with baseline B. The results are in `docs/PHASE-1-REPORT.md`.
+- **Choice:**
+  - **ED-11** (Undo availability after tab switches, Q6) and **ED-12** (collage positions from v2 ids) are added to the plan's ED-1 to ED-10. Each is replaced by an explicit assertion (`e2e/expected-diffs.md`).
+  - **Text that changes height.** Regions whose height changes by design are collapsed in both builds, and the rest of the page is compared whole at 0 px. Per-element crops of a shifted page can't reach 0 px, because fractional offsets rasterise differently.
+  - **Phone retries.** A phone still that differs is captured again in fresh contexts on both builds. It passes only on an exact match, and every retry is recorded. This is Chromium phone-emulation noise, about 1 still in 50.
+  - **GPU.** Chromium e2e runs with `--disable-gpu` (`E2E_CHROMIUM_ARGS`) on both builds. A locked screen stalls GPU compositing.
+  - **The one regression found** (the timeline start date drawn as one text node instead of v0's three) is fixed, with a test.
+  - **Bundle.** The +71.9 KB gzip growth is accepted for Phase 1. Code splitting stays in Phase 6.
+- **Phase 1 is closed** on `phase-1-domain` and waits for Nicola's review before Phase 2.
+- **Rejected:** loosening the 0-pixel threshold to absorb shifted text.
