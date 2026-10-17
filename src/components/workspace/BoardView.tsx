@@ -1,21 +1,28 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo, type Ref } from "react";
-import { useForm } from "@/lib/store";
+import type { Ref } from "react";
+import { STATUS_LABEL, STATUS_ORDER } from "@/lib/domain/labels";
+import type { TaskId } from "@/lib/domain/schema/ids";
+import type { Status } from "@/lib/domain/schema/primitives";
+import type { Task } from "@/lib/domain/schema/project";
 import { move } from "@/lib/motion";
-import { taskNumber, tasksByStatus } from "@/lib/selectors";
-import { STATUS_LABEL, STATUS_ORDER, type Status, type Task } from "@/lib/schema";
+import { useActions, useTasksByStatus, useViewConfig } from "@/lib/store/hooks";
 import { CostTag, EditableText, EstimateControl, NumberBadge, PriorityControl, ProgressControl, ProposalBlock, StatusGlyph, SubtaskList } from "./parts";
-import { Clip, InkSkin, Reveal, useTaskSurface } from "./TaskCard";
+import { Clip, InkSkin, Reveal, useSurfaceTask, useTaskSurface } from "./TaskCard";
 import { useReveal } from "./reveal";
 import { ShuffleText } from "../text/ShuffleText";
 
+/** A board card on its lane's glass. Dimmed (Q14), the surface, frame and shadow recede to 55% and the text stays */
+const CARD = "rgba(255,255,255,0.72)";
+const CARD_DIM = "rgba(255,255,255,0.4)";
+const CARD_SHADOW = "0 1px 0 rgba(255,255,255,0.9) inset, 0 10px 24px -18px rgba(0,0,0,0.3)";
+const CARD_SHADOW_DIM = "0 1px 0 rgba(255,255,255,0.495) inset, 0 10px 24px -18px rgba(0,0,0,0.165)";
+
 /** Representation: board — the same tasks, grouped into status lanes. */
 export function BoardView() {
-  const doc = useForm((s) => s.doc);
-  const lanes = useMemo(() => tasksByStatus(doc), [doc]);
-  const hideDone = doc.view.hideDone;
+  const lanes = useTasksByStatus();
+  const hideDone = useViewConfig()?.hideDone ?? false;
   const statuses = hideDone ? STATUS_ORDER.filter((s) => s !== "done") : STATUS_ORDER;
   let spawn = 0;
 
@@ -25,8 +32,8 @@ export function BoardView() {
         {statuses.map((status, ci) => (
           <Lane key={status} status={status} index={ci} count={lanes[status].length}>
             <AnimatePresence mode="popLayout">
-              {lanes[status].map((t) => (
-                <BoardCard key={t.id} task={t} number={taskNumber(doc, t.id)} spawnIndex={spawn < 6 ? spawn++ : null} />
+              {lanes[status].map((id) => (
+                <BoardCard key={id} id={id} spawnIndex={spawn < 6 ? spawn++ : null} />
               ))}
             </AnimatePresence>
           </Lane>
@@ -74,13 +81,28 @@ function Lane({ status, index, count, children }: { status: Status; index: numbe
   );
 }
 
-function BoardCard({ task, number, spawnIndex, ref }: { task: Task; number: string; spawnIndex: number | null; ref?: Ref<HTMLElement> }) {
+interface CardProps {
+  spawnIndex: number | null;
+  ref?: Ref<HTMLElement>;
+}
+
+/** A board card: the task's id in, the store's task out (kept through its exit, as when it changes lane) */
+function BoardCard({ id, ...rest }: CardProps & { id: TaskId }) {
+  const { task, number } = useSurfaceTask(id);
+  return task === null ? null : <BoardSurface task={task} number={number} {...rest} />;
+}
+
+function BoardSurface({ task, number, spawnIndex, ref }: CardProps & { task: Task; number: string }) {
   const { selected, view, dim, onClick, highlight } = useTaskSurface(task);
-  const update = useForm((s) => s.updateTask);
+  const { commit } = useActions();
   const reveal = useReveal(spawnIndex);
+  if (view === null) return null;
   const f = view.fields;
   const compact = view.density === "compact";
   const i = STATUS_ORDER.indexOf(task.status);
+  const rename = (v: string) => commit([{ op: "updateTask", taskId: task.id, field: "title", value: v }], { label: "rename task" });
+  // The lane arrows change the status; the §5.7 table moves progress with it
+  const moveTo = (status: Status) => commit([{ op: "updateTask", taskId: task.id, field: "status", value: status }], { label: "status" });
 
   return (
     <motion.article
@@ -91,13 +113,13 @@ function BoardCard({ task, number, spawnIndex, ref }: { task: Task; number: stri
       data-spawn={spawnIndex ?? undefined}
       onClick={onClick}
       initial={reveal != null ? { opacity: 0 } : false}
-      animate={{ backgroundColor: task.emphasis ? "#0c0c0c" : "rgba(255,255,255,0.72)", opacity: reveal != null ? 1 : dim ? 0.55 : 1 }}
+      animate={{ backgroundColor: task.emphasis ? "#0c0c0c" : dim ? CARD_DIM : CARD, opacity: 1 }}
       exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.2 } }}
       transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
       className={`${task.emphasis ? "tone-dark" : "tone-light"} group relative cursor-pointer ${
         selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""
       }`}
-      style={{ borderRadius: 22, boxShadow: "0 1px 0 rgba(255,255,255,0.9) inset, 0 10px 24px -18px rgba(0,0,0,0.3)" }}
+      style={{ borderRadius: 22, boxShadow: dim ? CARD_SHADOW_DIM : CARD_SHADOW }}
     >
       <InkSkin reveal={reveal} />
       <NumberBadge task={task} number={number} />
@@ -107,7 +129,7 @@ function BoardCard({ task, number, spawnIndex, ref }: { task: Task; number: stri
           <EditableText
             value={task.title}
             label="Task title"
-            onCommit={(v) => update(task.id, { title: v })}
+            onCommit={rename}
             className={compact ? "t-body" : "t-body-l"}
           />
         </Reveal>
@@ -123,8 +145,8 @@ function BoardCard({ task, number, spawnIndex, ref }: { task: Task; number: stri
           )}
           {f.progress && <ProgressControl task={task} size="s" />}
           <div className="flex items-center justify-between">
-            <LaneButton dir={-1} disabled={i === 0} onClick={() => update(task.id, { status: STATUS_ORDER[i - 1] })} label={i > 0 ? STATUS_LABEL[STATUS_ORDER[i - 1]] : ""} />
-            <LaneButton dir={1} disabled={i === STATUS_ORDER.length - 1} onClick={() => update(task.id, { status: STATUS_ORDER[i + 1] })} label={i < 3 ? STATUS_LABEL[STATUS_ORDER[i + 1]] : ""} />
+            <LaneButton dir={-1} disabled={i === 0} onClick={() => moveTo(STATUS_ORDER[i - 1])} label={i > 0 ? STATUS_LABEL[STATUS_ORDER[i - 1]] : ""} />
+            <LaneButton dir={1} disabled={i === STATUS_ORDER.length - 1} onClick={() => moveTo(STATUS_ORDER[i + 1])} label={i < 3 ? STATUS_LABEL[STATUS_ORDER[i + 1]] : ""} />
           </div>
         </Reveal>
         <SubtaskList parentId={task.id} />

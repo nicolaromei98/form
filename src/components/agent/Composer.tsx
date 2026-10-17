@@ -2,11 +2,10 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { useForm } from "@/lib/store";
+import { useActions, useCommandHistory, useHasProject, usePhase, useSelectedTask, useSuggestions } from "@/lib/store/hooks";
 import { ease } from "@/lib/motion";
 import { useViewport } from "@/lib/useViewport";
 import type { Capsule, Circle } from "./geometry";
-import { suggestionsFor } from "./suggestions";
 import { CommandSheet } from "./CommandSheet";
 import { ShuffleText } from "../text/ShuffleText";
 
@@ -21,13 +20,12 @@ interface Props {
 
 export function Composer({ open, frame, placement }: Props) {
   const { h: vh } = useViewport();
-  const doc = useForm((s) => s.doc);
-  const selectedId = useForm((s) => s.selectedId);
-  const phase = useForm((s) => s.phase);
-  const history = useForm((s) => s.commandHistory);
-  const submit = useForm((s) => s.submit);
-  const close = useForm((s) => s.closeComposer);
-  const select = useForm((s) => s.select);
+  const hasProject = useHasProject();
+  const selected = useSelectedTask();
+  const suggestions = useSuggestions();
+  const phase = usePhase();
+  const history = useCommandHistory();
+  const { submit, closeComposer: close, select } = useActions();
 
   const [value, setValue] = useState("");
   const [sheet, setSheet] = useState(false);
@@ -75,8 +73,6 @@ export function Composer({ open, frame, placement }: Props) {
     return () => window.removeEventListener("pointerdown", onDown, true);
   }, [open, close]);
 
-  const selected = selectedId ? doc.tasks[selectedId] : null;
-  const suggestions = suggestionsFor(doc, selectedId);
   const busy = phase !== "rest";
 
   async function run(text: string) {
@@ -110,7 +106,7 @@ export function Composer({ open, frame, placement }: Props) {
 
   const { body, satellite } = frame;
   const below = placement === "center";
-  const placeholder = selected ? `Ask about ${selected.title}` : doc.tool ? "Change the workspace" : "Describe what you need";
+  const placeholder = selected ? `Ask about ${selected.title}` : hasProject ? "Change the workspace" : "Describe what you need";
 
   return (
     <AnimatePresence>
@@ -257,8 +253,6 @@ export function Composer({ open, frame, placement }: Props) {
                 <CommandSheet
                   key="sheet"
                   query={value}
-                  hasTool={!!doc.tool}
-                  hasSelection={!!selected}
                   origin={below ? "top" : "bottom"}
                   maxHeight={Math.max(240, below ? vh - (body.y + body.h + 14) - 24 : body.y - 14 - 84)}
                   onRun={run}

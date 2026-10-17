@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { uid } from "./seed";
 
 /**
- * Moodboard image store. Files are downscaled and kept in this browser's
- * IndexedDB; the document only holds their ids, so localStorage stays small
- * and undo/redo never copies image data.
+ * Moodboard image store. Files are downscaled and kept in this browser's IndexedDB; documents
+ * only hold their ids, so localStorage stays small and undo/redo never copies image data.
+ *
+ * v2 ids are `ast_…`, minted by the action creator that adds the image (plan §8.1). A v0 save
+ * kept its blobs under `img-…` keys; the first-load migration doesn't copy them (plan §7.3), it
+ * maps each new asset id to its legacy key instead (`assetAliases` in the demo envelope). The
+ * store registers those aliases here, and a lookup falls back to the legacy key when the asset id
+ * has no blob of its own.
  */
 
 const DB_NAME = "form-assets";
@@ -14,7 +18,10 @@ const STORE = "images";
 const MAX_SIDE = 1600;
 
 let dbPromise: Promise<IDBDatabase> | null = null;
+/** Object URLs by the id they were asked for */
 const urls = new Map<string, string>();
+/** ast_… → the legacy IndexedDB key "img-…" */
+let aliases: ReadonlyMap<string, string> = new Map();
 
 function db(): Promise<IDBDatabase> {
   if (!dbPromise) {
@@ -47,10 +54,30 @@ async function get(id: string): Promise<Blob | null> {
   });
 }
 
+/** Registers the demo envelope's asset aliases (the store calls this when it loads) */
+export function setAssetAliases(map: Readonly<Record<string, string>>): void {
+  aliases = new Map(Object.entries(map));
+}
+
+/** The keys a blob may be stored under, in lookup order: its own id, then its legacy alias */
+export function assetKeys(id: string, map: ReadonlyMap<string, string> = aliases): string[] {
+  const legacy = map.get(id);
+  return legacy !== undefined && legacy !== id ? [id, legacy] : [id];
+}
+
+/** The first blob found under `keys`, through `read` (IndexedDB in the app, a stub in tests) */
+export async function findBlob(keys: readonly string[], read: (key: string) => Promise<Blob | null>): Promise<Blob | null> {
+  for (const key of keys) {
+    const blob = await read(key).catch(() => null);
+    if (blob) return blob;
+  }
+  return null;
+}
+
 export async function assetUrl(id: string): Promise<string | null> {
   const cached = urls.get(id);
   if (cached) return cached;
-  const blob = await get(id).catch(() => null);
+  const blob = await findBlob(assetKeys(id), get);
   if (!blob) return null;
   const url = URL.createObjectURL(blob);
   urls.set(id, url);
@@ -73,9 +100,18 @@ export function useAssetUrl(id: string | null): { url: string | null; missing: b
 
 export const isImageFile = (f: File) => f.type.startsWith("image/");
 
-/** Downscales an image file, stores it, and returns its id and natural proportions (h / w). */
-export async function ingestImage(file: File): Promise<{ asset: string; aspect: number }> {
-  const asset = uid("img");
+/** A v0-style key ("img-…"), for callers that don't pass an id (the v0 components until step 18) */
+const legacyId = () => `img-${Math.random().toString(36).slice(2, 8)}`;
+
+/**
+ * Downscales an image file, stores it under `assetId` (an `ast_…` id minted by the caller), and
+ * returns that id and the image's natural proportions (h / w).
+ *
+ * The v0 Moodboard maps files straight through (`images.map(ingestImage)`), which passes the
+ * index second: anything but a string mints a v0-style key, until step 18 passes `ast_` ids.
+ */
+export async function ingestImage(file: File, assetId?: string | number): Promise<{ asset: string; aspect: number }> {
+  const asset = typeof assetId === "string" ? assetId : legacyId();
   let blob: Blob = file;
   let aspect = 0.75;
   try {

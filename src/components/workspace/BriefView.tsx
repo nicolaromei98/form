@@ -1,11 +1,26 @@
 "use client";
 
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
-import { useForm } from "@/lib/store";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
+import { BRIEF_TEXT_MAX } from "@/lib/domain/limits";
+import type { BriefLineId, PersonId, TaskId } from "@/lib/domain/schema/ids";
+import type { Audience, BriefSection as BriefSectionKey } from "@/lib/domain/schema/primitives";
+import {
+  briefHtml,
+  briefPlainText,
+  type Brief,
+  type BriefLine,
+  type BriefSection,
+  useActions,
+  useBrief,
+  useIsSelected,
+  usePerson,
+  useProject,
+  useTask,
+  useViewConfig,
+  useWorkspacePeople,
+} from "@/lib/store/hooks";
 import { ease, move } from "@/lib/motion";
-import { briefHtml, briefPlainText, composeBrief, lineText, type Audience, type Brief, type BriefLine, type BriefSection } from "@/lib/brief";
-import { BRIEF_TEXT_MAX, type BriefSectionKey, type Doc } from "@/lib/schema";
 import { DecodeText } from "../text/TextMotion";
 import { ShuffleText } from "../text/ShuffleText";
 
@@ -15,16 +30,17 @@ const STEP = 0.06;
 /**
  * Representation: brief. The project as a written status update on a sheet of
  * paper — the only view that is prose rather than space. FORM composes it from
- * the document on every change; the user can rewrite any line, hide it, or add
- * their own. A rewritten line whose facts later change is flagged, with FORM's
- * new wording beside it, so the brief never quietly drifts from the project.
+ * the documents and their plan on every change; the user can rewrite any line,
+ * hide it, or add their own. A rewritten line whose facts later change is flagged,
+ * with FORM's new wording beside it, so the brief never quietly drifts from the project.
  */
 export function BriefView() {
-  const doc = useForm((s) => s.doc);
-  const commit = useForm((s) => s.commit);
-  const audience: Audience = doc.view.briefAudience ?? "client";
-  const short = doc.view.briefShort ?? false;
-  const brief = useMemo(() => composeBrief(doc, audience, short), [doc, audience, short]);
+  const brief = useBrief();
+  const project = useProject();
+  // The names the text exports resolve, as the lines on the page do
+  const people = useWorkspacePeople();
+  const audience: Audience = useViewConfig()?.brief.audience ?? "client";
+  const { commit, addBriefLine } = useActions();
   const [copied, setCopied] = useState<"idle" | "done" | "failed">("idle");
   // Which section is taking a new line from the user ("note" sits under the headline)
   const [adding, setAdding] = useState<BriefSectionKey | null>(null);
@@ -35,19 +51,21 @@ export function BriefView() {
     return () => clearTimeout(t);
   }, []);
 
-  if (!brief) return null;
+  if (!brief || !project) return null;
   const offsets = sectionOffsets(brief);
   const note = brief.sections.find((s) => s.key === "note");
   const body = brief.sections.filter((s) => s.key !== "note");
 
   const copy = async () => {
-    const ok = await copyBrief(briefPlainText(brief, doc), briefHtml(brief, doc));
+    const ws = { people };
+    const ok = await copyBrief(briefPlainText(brief, project, ws), briefHtml(brief, project, ws));
     setCopied(ok ? "done" : "failed");
     setTimeout(() => setCopied("idle"), 1800);
   };
   const addLine = (section: BriefSectionKey, text: string) => {
     setAdding(null);
-    if (text.trim()) commit([{ op: "addBriefLine", audience, section, text }], "add to brief");
+    const words = oneLine(text);
+    if (words) addBriefLine(audience, section, words);
   };
 
   return (
@@ -70,7 +88,7 @@ export function BriefView() {
           ))}
         </p>
         <div className="flex items-center gap-1.5">
-          <AudienceSwitch value={audience} onChange={(a) => commit([{ op: "setView", patch: { briefAudience: a } }], `brief for the ${a}`)} />
+          <AudienceSwitch value={audience} onChange={(a) => commit([{ op: "setView", patch: { briefAudience: a } }], { label: `brief for the ${a}` })} />
           <button
             type="button"
             onClick={copy}
@@ -84,7 +102,7 @@ export function BriefView() {
       <h2 className="t-display-l relative mt-10 md:mt-12">
         <AnimatePresence mode="popLayout">
           {brief.headline.map((line, i) => (
-            <Row key={line.key} line={line} doc={doc} delay={rowDelay(settled, i)} className={`block ${i === 1 ? "text-text-3" : ""}`} plainMentions />
+            <Row key={line.key} line={line} delay={rowDelay(settled, i)} className={`block ${i === 1 ? "text-text-3" : ""}`} plainMentions />
           ))}
         </AnimatePresence>
       </h2>
@@ -95,7 +113,7 @@ export function BriefView() {
 
       {/* A personal note sits under the headline: "Hi Anna, here's where we are" */}
       {note || adding === "note" ? (
-        <Section section={note ?? { key: "note", label: "Note", lines: [] }} doc={doc} settled={settled} from={2} adding={adding === "note"} onAdd={setAdding} onAdded={addLine} first />
+        <Section section={note ?? { key: "note", label: "Note", lines: [] }} settled={settled} from={2} adding={adding === "note"} onAdd={setAdding} onAdded={addLine} first />
       ) : (
         <button
           type="button"
@@ -109,7 +127,7 @@ export function BriefView() {
 
       <div className="mt-6 flex flex-col">
         {body.map((sec) => (
-          <Section key={sec.key} section={sec} doc={doc} settled={settled} from={offsets[sec.key]} adding={adding === sec.key} onAdd={setAdding} onAdded={addLine} />
+          <Section key={sec.key} section={sec} settled={settled} from={offsets[sec.key]} adding={adding === sec.key} onAdd={setAdding} onAdded={addLine} />
         ))}
 
         {brief.palette.length > 0 && (
@@ -137,7 +155,8 @@ export function BriefView() {
             {brief.hidden.length > 0 && (
               <button
                 type="button"
-                onClick={() => commit(brief.hidden.map((key) => ({ op: "resetBriefLine" as const, key })), "show hidden lines")}
+                // Every hidden line back in one command (one history entry)
+                onClick={() => commit([{ op: "resetBriefLine", keys: [...brief.hidden] }], { label: "show hidden lines" })}
                 className="focus-ring t-data cursor-pointer rounded-full px-3 py-1.5 text-text-2 transition-colors hover:bg-black/[0.05] hover:text-text"
               >
                 Show {brief.hidden.length} hidden
@@ -145,7 +164,7 @@ export function BriefView() {
             )}
             <button
               type="button"
-              onClick={() => commit([{ op: "resetBrief", audience }], "reset brief")}
+              onClick={() => commit([{ op: "resetBrief", audience }], { label: "reset brief" })}
               className="focus-ring t-data cursor-pointer rounded-full bg-black/[0.05] px-3 py-1.5 text-text-2 transition-colors hover:bg-black/[0.08] hover:text-text"
             >
               {brief.changes} {brief.changes === 1 ? "edit" : "edits"} · Reset to FORM&rsquo;s version
@@ -167,9 +186,24 @@ function sectionOffsets(brief: Brief): Record<string, number> {
 
 const rowDelay = (settled: boolean, order: number) => (settled ? 0.12 : 0.25 + order * STEP);
 
+/**
+ * The user's words as the brief stores them: one trimmed line within the stored limit (v0 did
+ * this in the reducer; the v2 ops refuse anything else, so the producer does it).
+ */
+const oneLine = (t: string) => t.replace(/\s+/g, " ").trim().slice(0, BRIEF_TEXT_MAX).trim();
+
+/**
+ * What a line says now: the user's wording, or FORM's. FORM's plain wording is the composer's own
+ * (`composed`), with task and person names already resolved against the project and the
+ * workspace, so the view never resolves a name a second time.
+ */
+const wordingOf = (line: BriefLine): string => line.edited ?? (line.kind === "custom" ? String(line.runs[0] ?? "") : line.composed);
+
+/** A line the user added carries its own id */
+const lineIdOf = (line: BriefLine) => line.id as BriefLineId;
+
 function Section({
   section,
-  doc,
   settled,
   from,
   adding,
@@ -178,7 +212,6 @@ function Section({
   first = false,
 }: {
   section: BriefSection;
-  doc: Doc;
   settled: boolean;
   from: number;
   adding: boolean;
@@ -196,7 +229,7 @@ function Section({
       <div className="relative flex min-w-0 flex-col gap-1.5">
         <AnimatePresence mode="popLayout">
           {section.lines.map((line, i) => (
-            <Row key={line.key} line={line} doc={doc} delay={rowDelay(settled, from + i)} className="t-body-l block text-text" />
+            <Row key={line.key} line={line} delay={rowDelay(settled, from + i)} className="t-body-l block text-text" />
           ))}
         </AnimatePresence>
         {adding ? (
@@ -226,12 +259,12 @@ function Section({
  * One line of the brief. FORM's wording keeps its task mentions (Point & Ask);
  * the user's wording is plain text. Click the text, or the pencil, to rewrite it.
  */
-function Row({ line, doc, delay, className, plainMentions = false }: { line: BriefLine; doc: Doc; delay: number; className: string; plainMentions?: boolean }) {
-  const commit = useForm((s) => s.commit);
+function Row({ line, delay, className, plainMentions = false }: { line: BriefLine; delay: number; className: string; plainMentions?: boolean }) {
+  const { commit } = useActions();
   const [editing, setEditing] = useState(false);
   // FORM's wording when the edit began: if the facts move on mid-edit, the line is flagged rather than silently re-based
   const basis = useRef(line.composed);
-  const text = lineText(line, doc);
+  const text = wordingOf(line);
   const mine = line.kind === "custom" || line.edited != null;
 
   const begin = () => {
@@ -240,9 +273,16 @@ function Row({ line, doc, delay, className, plainMentions = false }: { line: Bri
   };
   const save = (next: string) => {
     setEditing(false);
-    if (next.replace(/\s+/g, " ").trim() === text.trim()) return;
-    if (line.kind === "custom") commit([{ op: "updateBriefLine", id: line.id, text: next }], next.trim() ? "edit brief line" : "remove brief line");
-    else commit([{ op: "editBriefLine", key: line.key, text: next, basis: basis.current }], next.trim() ? "edit brief" : "hide brief line");
+    const words = oneLine(next);
+    if (words === text.trim()) return;
+    if (line.kind === "custom") {
+      // An emptied line of the user's own is removed
+      const lineId = lineIdOf(line);
+      commit([words ? { op: "updateBriefLine", lineId, text: words } : { op: "removeBriefLine", lineId }], { label: words ? "edit brief line" : "remove brief line" });
+    } else {
+      // An emptied composed line is hidden ("" is the hide)
+      commit([{ op: "editBriefLine", key: line.key, text: words, basis: basis.current }], { label: words ? "edit brief" : "hide brief line" });
+    }
   };
   const startEditing = (e: MouseEvent<HTMLSpanElement>) => {
     // Mentions keep selecting their task; everything else in the line opens the editor
@@ -277,18 +317,18 @@ function Row({ line, doc, delay, className, plainMentions = false }: { line: Bri
               exit={{ opacity: 0, filter: "blur(6px)", transition: { duration: 0.22 } }}
               transition={{ duration: 0.55, ease: ease.out }}
             >
-              {mine ? text : <Runs line={line} doc={doc} plainMentions={plainMentions} />}
+              {mine ? text : <Runs line={line} plainMentions={plainMentions} />}
             </motion.span>
           </AnimatePresence>
           <LineTools line={line} onEdit={begin} />
         </span>
       )}
-      {line.stale && !editing && <Stale line={line} doc={doc} />}
+      {line.stale && !editing && <Stale line={line} />}
     </motion.div>
   );
 }
 
-function Runs({ line, doc, plainMentions }: { line: BriefLine; doc: Doc; plainMentions: boolean }) {
+function Runs({ line, plainMentions }: { line: BriefLine; plainMentions: boolean }) {
   return (
     <>
       {line.runs.map((run, j) =>
@@ -297,18 +337,22 @@ function Runs({ line, doc, plainMentions }: { line: BriefLine; doc: Doc; plainMe
         ) : "task" in run ? (
           <TaskMention key={j} id={run.task} plain={plainMentions} />
         ) : (
-          <span key={j} className="font-medium">
-            {doc.people.find((p) => p.id === run.person)?.name}
-          </span>
+          <PersonMention key={j} id={run.person} />
         ),
       )}
     </>
   );
 }
 
+/** A person named in the text, by their name in the workspace (nothing when they're gone) */
+function PersonMention({ id }: { id: PersonId }) {
+  const person = usePerson(id);
+  return <span className="font-medium">{person?.name}</span>;
+}
+
 /** Quiet controls after a line: edit, and undo the user's version or remove their own line */
 function LineTools({ line, onEdit }: { line: BriefLine; onEdit: () => void }) {
-  const commit = useForm((s) => s.commit);
+  const { commit } = useActions();
   const tool =
     "focus-ring ml-1.5 inline-grid h-[22px] w-[22px] translate-y-[-0.12em] cursor-pointer place-items-center rounded-full align-middle text-text-3 transition-[color,opacity,background-color] hover:bg-black/[0.06] hover:text-text focus-visible:opacity-100 sm:opacity-0 sm:group-hover/line:opacity-100";
   return (
@@ -319,14 +363,26 @@ function LineTools({ line, onEdit }: { line: BriefLine; onEdit: () => void }) {
         </svg>
       </button>
       {line.kind === "composed" && line.edited != null && (
-        <button type="button" aria-label="Back to FORM's wording" title="Back to FORM's wording" onClick={() => commit([{ op: "resetBriefLine", key: line.key }], "reset brief line")} className={tool}>
+        <button
+          type="button"
+          aria-label="Back to FORM's wording"
+          title="Back to FORM's wording"
+          onClick={() => commit([{ op: "resetBriefLine", keys: [line.key] }], { label: "reset brief line" })}
+          className={tool}
+        >
           <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M2.5 4.5h5a2.5 2.5 0 010 5H5M2.5 4.5L4.5 2.5M2.5 4.5l2 2" />
           </svg>
         </button>
       )}
       {line.kind === "custom" && (
-        <button type="button" aria-label="Remove this line" title="Remove" onClick={() => commit([{ op: "removeBriefLine", id: line.id }], "remove brief line")} className={tool}>
+        <button
+          type="button"
+          aria-label="Remove this line"
+          title="Remove"
+          onClick={() => commit([{ op: "removeBriefLine", lineId: lineIdOf(line) }], { label: "remove brief line" })}
+          className={tool}
+        >
           <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" aria-hidden>
             <path d="M2 2l6 6M8 2l-6 6" />
           </svg>
@@ -337,9 +393,10 @@ function LineTools({ line, onEdit }: { line: BriefLine; onEdit: () => void }) {
 }
 
 /** The data moved on since the user rewrote this line: show FORM's new wording and let them choose */
-function Stale({ line, doc }: { line: BriefLine; doc: Doc }) {
-  const commit = useForm((s) => s.commit);
-  const now = lineText({ ...line, edited: null }, doc);
+function Stale({ line }: { line: BriefLine }) {
+  const { commit } = useActions();
+  // FORM's wording now, without the user's edit
+  const now = line.composed;
   return (
     <motion.div
       className="t-data mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-text-3"
@@ -353,14 +410,15 @@ function Stale({ line, doc }: { line: BriefLine; doc: Doc }) {
       </span>
       <button
         type="button"
-        onClick={() => commit([{ op: "resetBriefLine", key: line.key }], "use FORM's version")}
+        onClick={() => commit([{ op: "resetBriefLine", keys: [line.key] }], { label: "use FORM's version" })}
         className="focus-ring cursor-pointer rounded-full bg-black/[0.05] px-2.5 py-1 text-text-2 transition-colors hover:bg-black/[0.08] hover:text-text"
       >
         Use FORM&rsquo;s
       </button>
       <button
         type="button"
-        onClick={() => commit([{ op: "editBriefLine", key: line.key, text: line.edited ?? "", basis: line.composed }], "keep my wording")}
+        // The same words, now on FORM's new wording: the flag clears
+        onClick={() => commit([{ op: "editBriefLine", key: line.key, text: line.edited ?? "", basis: line.composed }], { label: "keep my wording" })}
         className="focus-ring cursor-pointer rounded-full px-2.5 py-1 text-text-2 transition-colors hover:bg-black/[0.05] hover:text-text"
       >
         Keep mine
@@ -446,7 +504,7 @@ function Editor({ initial, className, placeholder, onDone, onCancel }: { initial
       onKeyDown={onKeyDown}
       onInput={onInput}
       onBlur={onBlur}
-      className={`${className} -mx-2 rounded-[10px] bg-black/[0.04] px-2 outline-none empty:before:text-text-4 empty:before:content-[attr(data-placeholder)]`}
+      className={`${className} -mx-2 rounded-[10px] bg-black/[0.04] px-2 outline-none empty:before:text-text-3 empty:before:content-[attr(data-placeholder)]`}
     />
   );
 }
@@ -460,10 +518,10 @@ function Plus() {
 }
 
 /** A task named in the text. Clicking it selects the task, so Point & Ask works from the prose. */
-function TaskMention({ id, plain }: { id: string; plain: boolean }) {
-  const task = useForm((s) => s.doc.tasks[id]);
-  const selected = useForm((s) => s.selectedId === id);
-  const select = useForm((s) => s.select);
+function TaskMention({ id, plain }: { id: TaskId; plain: boolean }) {
+  const task = useTask(id);
+  const selected = useIsSelected(id);
+  const { select } = useActions();
   if (!task) return null;
   const a11y = {
     "aria-pressed": selected,

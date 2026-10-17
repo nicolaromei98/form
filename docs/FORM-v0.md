@@ -1,5 +1,7 @@
 # FORM v0 · Documento di contesto della demo attuale
 
+> **Nota (16 ottobre 2026):** dalla Fase 1 la demo su `/demo` gira sul dominio v2 (`docs/PHASE-1-REPORT.md`). Questo documento resta la descrizione della v0, cioè del riferimento da cui la v2 è partita.
+
 Descrive FORM com'è oggi (commit 177e822, 14 ottobre 2026), ricostruito da un inventario del codice. È il riferimento "v0" citato da `docs/FORM-v1.md`. Le stringhe dell'interfaccia e i comandi sono tra virgolette in inglese, esattamente come appaiono o come vanno digitati. Le imprecisioni trovate nell'audit di Fase 0 sono corrette qui e annotate in `docs/AUDIT.md`.
 
 ---

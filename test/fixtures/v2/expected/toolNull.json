@@ -1,0 +1,35 @@
+{
+  "people": [],
+  "project": null,
+  "idMap": {
+    "project": {},
+    "tasks": {},
+    "steps": {},
+    "people": {},
+    "moodItems": {},
+    "briefLines": {},
+    "proposal": null,
+    "proposalItems": {},
+    "assets": {}
+  },
+  "local": {
+    "activeView": null
+  },
+  "report": {
+    "source": "main",
+    "salvaged": [],
+    "dropped": [],
+    "promoted": 0,
+    "repaired": [],
+    "notices": [],
+    "sample": {
+      "team": false,
+      "start": false
+    },
+    "assets": {
+      "referenced": []
+    },
+    "capacityUnknown": [],
+    "changes": 8
+  }
+}

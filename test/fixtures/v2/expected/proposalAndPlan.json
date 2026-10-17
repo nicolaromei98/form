@@ -1,0 +1,307 @@
+{
+  "people": [
+    {
+      "id": "per_demomarta",
+      "name": "Marta",
+      "role": "Art director",
+      "email": null,
+      "userId": null,
+      "capacityDaysPerWeek": 2,
+      "dayRateCents": null,
+      "timeOff": {},
+      "order": "a0",
+      "archived": false,
+      "createdAt": "2026-10-14T09:00:00Z"
+    },
+    {
+      "id": "per_demosara",
+      "name": "Sara",
+      "role": "Designer",
+      "email": null,
+      "userId": null,
+      "capacityDaysPerWeek": 4,
+      "dayRateCents": null,
+      "timeOff": {},
+      "order": "a1",
+      "archived": false,
+      "createdAt": "2026-10-14T09:00:00Z"
+    },
+    {
+      "id": "per_demoluca",
+      "name": "Luca",
+      "role": "Developer",
+      "email": null,
+      "userId": null,
+      "capacityDaysPerWeek": 5,
+      "dayRateCents": null,
+      "timeOff": {},
+      "order": "a2",
+      "archived": false,
+      "createdAt": "2026-10-14T09:00:00Z"
+    }
+  ],
+  "project": {
+    "schemaVersion": 2,
+    "docType": "project",
+    "id": "prj_gfic6fo0xvd2r05c",
+    "workspaceId": "wsp_demoworkspace",
+    "title": "New website",
+    "client": null,
+    "kind": "website",
+    "goal": null,
+    "status": "active",
+    "startDate": "2026-09-28",
+    "startConfirmed": false,
+    "deadline": null,
+    "deadlineKind": "soft",
+    "currency": "EUR",
+    "budgetCents": null,
+    "leadId": null,
+    "memberIds": [
+      "per_demomarta",
+      "per_demosara",
+      "per_demoluca"
+    ],
+    "requireReview": false,
+    "autoChain": true,
+    "calendarOverride": null,
+    "links": [],
+    "tags": [],
+    "views": [
+      "cards",
+      "board",
+      "timeline",
+      "team",
+      "focus",
+      "brief"
+    ],
+    "blocks": [
+      "header",
+      "metrics",
+      "collection"
+    ],
+    "viewConfig": {
+      "density": "comfortable",
+      "layout": "grid",
+      "columns": null,
+      "sort": "manual",
+      "hideDone": false,
+      "highlightUrgent": false,
+      "fields": {
+        "priority": true,
+        "estimate": true,
+        "progress": true,
+        "owner": false,
+        "due": false,
+        "cost": false
+      },
+      "filters": {
+        "ownerIds": [],
+        "statuses": [],
+        "priorities": [],
+        "tags": [],
+        "due": "any"
+      },
+      "focusPin": null,
+      "brief": {
+        "audience": "client",
+        "short": false
+      }
+    },
+    "tasks": {
+      "tsk_fx2n9reynw971n85": {
+        "id": "tsk_fx2n9reynw971n85",
+        "title": "Research",
+        "kind": "task",
+        "description": null,
+        "status": "done",
+        "priority": "low",
+        "progress": 100,
+        "estimateDays": 3,
+        "allocation": 1,
+        "pinnedStart": null,
+        "dueDate": null,
+        "dependsOn": [],
+        "ownerId": "per_demosara",
+        "costCents": null,
+        "tags": [],
+        "links": [],
+        "emphasis": false,
+        "steps": [],
+        "order": "a0",
+        "createdAt": "2026-10-14T09:00:00Z",
+        "completedAt": null
+      },
+      "tsk_la1yksrnahl0eqs7": {
+        "id": "tsk_la1yksrnahl0eqs7",
+        "title": "Visual Direction",
+        "kind": "task",
+        "description": null,
+        "status": "review",
+        "priority": "high",
+        "progress": 85,
+        "estimateDays": 4,
+        "allocation": 1,
+        "pinnedStart": null,
+        "dueDate": null,
+        "dependsOn": [
+          "tsk_fx2n9reynw971n85"
+        ],
+        "ownerId": "per_demomarta",
+        "costCents": null,
+        "tags": [],
+        "links": [],
+        "emphasis": false,
+        "steps": [],
+        "order": "a1",
+        "createdAt": "2026-10-14T09:00:00Z",
+        "completedAt": null
+      },
+      "tsk_e3l0eh2dhcswejmi": {
+        "id": "tsk_e3l0eh2dhcswejmi",
+        "title": "UI Design",
+        "kind": "task",
+        "description": null,
+        "status": "active",
+        "priority": "urgent",
+        "progress": 30,
+        "estimateDays": 6,
+        "allocation": 1,
+        "pinnedStart": null,
+        "dueDate": null,
+        "dependsOn": [
+          "tsk_la1yksrnahl0eqs7"
+        ],
+        "ownerId": "per_demomarta",
+        "costCents": null,
+        "tags": [],
+        "links": [],
+        "emphasis": false,
+        "steps": [],
+        "order": "a2",
+        "createdAt": "2026-10-14T09:00:00Z",
+        "completedAt": null
+      },
+      "tsk_p9e9rzj27jlyj0xi": {
+        "id": "tsk_p9e9rzj27jlyj0xi",
+        "title": "Development",
+        "kind": "task",
+        "description": null,
+        "status": "todo",
+        "priority": "medium",
+        "progress": 0,
+        "estimateDays": 8,
+        "allocation": 1,
+        "pinnedStart": null,
+        "dueDate": null,
+        "dependsOn": [
+          "tsk_e3l0eh2dhcswejmi"
+        ],
+        "ownerId": "per_demoluca",
+        "costCents": null,
+        "tags": [],
+        "links": [],
+        "emphasis": false,
+        "steps": [],
+        "order": "a3",
+        "createdAt": "2026-10-14T09:00:00Z",
+        "completedAt": null
+      }
+    },
+    "moodboard": {
+      "items": {}
+    },
+    "brief": {
+      "edits": {},
+      "lines": [],
+      "sent": [],
+      "sharing": {
+        "showBudgetToClient": false
+      }
+    },
+    "proposal": {
+      "id": "prp_hybhwum6ajundkb0",
+      "createdAt": "2026-10-14T09:00:00Z",
+      "source": "parser",
+      "kind": "subtasks",
+      "taskId": "tsk_e3l0eh2dhcswejmi",
+      "items": [
+        {
+          "stepId": "stp_agrq30nvsczjjv68",
+          "title": "Wireframes & flows",
+          "estimateDays": 1.5
+        },
+        {
+          "stepId": "stp_uhzo16pusi0fgk0w",
+          "title": "Key screens",
+          "estimateDays": 2
+        },
+        {
+          "stepId": "stp_fpvy68gltx6qrs27",
+          "title": "Component library",
+          "estimateDays": 1.5
+        },
+        {
+          "stepId": "stp_p5mvuohfq3nmswjg",
+          "title": "Prototype & handoff",
+          "estimateDays": 1
+        }
+      ]
+    },
+    "createdAt": "2026-10-14T09:00:00Z"
+  },
+  "idMap": {
+    "project": {
+      "tool-vby9bn": "prj_gfic6fo0xvd2r05c"
+    },
+    "tasks": {
+      "t-research": "tsk_fx2n9reynw971n85",
+      "t-visual": "tsk_la1yksrnahl0eqs7",
+      "t-ui": "tsk_e3l0eh2dhcswejmi",
+      "t-dev": "tsk_p9e9rzj27jlyj0xi"
+    },
+    "steps": {},
+    "people": {
+      "p-marta": "per_demomarta",
+      "p-sara": "per_demosara",
+      "p-luca": "per_demoluca"
+    },
+    "moodItems": {},
+    "briefLines": {},
+    "proposal": "prp_hybhwum6ajundkb0",
+    "proposalItems": {
+      "p-gn9zwd": "stp_agrq30nvsczjjv68",
+      "p-7eu76g": "stp_uhzo16pusi0fgk0w",
+      "p-gsoiln": "stp_fpvy68gltx6qrs27",
+      "p-uo1rfh": "stp_p5mvuohfq3nmswjg"
+    },
+    "assets": {}
+  },
+  "local": {
+    "activeView": "cards"
+  },
+  "report": {
+    "source": "main",
+    "salvaged": [],
+    "dropped": [
+      {
+        "what": "the pending workload plan",
+        "why": "one proposal is kept, the breakdown; Balance the workload makes the plan again"
+      }
+    ],
+    "promoted": 0,
+    "repaired": [],
+    "notices": [
+      "weekendsNow"
+    ],
+    "sample": {
+      "team": true,
+      "start": true
+    },
+    "assets": {
+      "referenced": []
+    },
+    "capacityUnknown": [],
+    "changes": 9
+  }
+}

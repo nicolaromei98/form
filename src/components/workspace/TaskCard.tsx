@@ -1,19 +1,32 @@
 "use client";
 
 import { AnimatePresence, LayoutGroup, motion, useIsPresent } from "motion/react";
-import type { MouseEvent, ReactNode, Ref } from "react";
-import { useForm } from "@/lib/store";
+import { type MouseEvent, type ReactNode, type Ref, useState } from "react";
+import type { TaskId } from "@/lib/domain/schema/ids";
+import type { Task } from "@/lib/domain/schema/project";
 import { CREATE, ease, move } from "@/lib/motion";
-import type { Task } from "@/lib/schema";
-import { CostTag, EditableText, EstimateControl, NumberBadge, PriorityControl, ProgressControl, ProposalBlock, StatusControl, SubtaskList } from "./parts";
+import { useActions, useIsSelected, useSteps, useSubtaskProposal, useTask, useTaskNumber, useViewConfig } from "@/lib/store/hooks";
+import {
+  CostTag,
+  EditableText,
+  EstimateControl,
+  NumberBadge,
+  PriorityControl,
+  ProgressControl,
+  ProposalBlock,
+  StatusControl,
+  SubtaskList,
+  type TaskFields,
+} from "./parts";
 import { useReveal } from "./reveal";
 
 const GLASS = "rgba(255,255,255,0.52)";
+/** A dimmed card (Q14): the surface recedes to 55% of the glass, its text never does */
+const GLASS_DIM = "rgba(255,255,255,0.29)";
 const INK = "#0c0c0c";
 
 interface Props {
-  task: Task;
-  number: string;
+  id: TaskId;
   spawnIndex: number | null;
   variant: "card" | "row";
   /** Columns in the current grid, so emphasis never creates implicit tracks */
@@ -22,20 +35,38 @@ interface Props {
 }
 
 /** Shared behaviour for every task surface: selection, emphasis, highlight, creation skin. */
-export function useTaskSurface(task: Task) {
-  const selected = useForm((s) => s.selectedId === task.id);
-  const select = useForm((s) => s.select);
-  const view = useForm((s) => s.doc.view);
-  const hasProposal = useForm((s) => s.doc.proposal?.parentId === task.id);
+export function useTaskSurface(task: TaskFields<"priority" | "status" | "emphasis">) {
+  const taskId = task.id;
+  const selected = useIsSelected(taskId);
+  const { select } = useActions();
+  const view = useViewConfig();
+  const hasProposal = useSubtaskProposal(taskId) !== null;
+  const highlightUrgent = view?.highlightUrgent ?? false;
   const urgent = task.priority === "urgent" && task.status !== "done";
   // Highlighting urgent work recedes the rest — except what the user is focused on
-  const dim = view.highlightUrgent && !urgent && !task.emphasis && !selected;
+  const dim = highlightUrgent && !urgent && !task.emphasis && !selected;
   const onClick = (e: MouseEvent) => {
     if ((e.target as HTMLElement).closest("[data-interactive]")) return;
     e.stopPropagation();
-    select(selected ? null : task.id);
+    select(selected ? null : taskId);
   };
-  return { selected, view, hasProposal, urgent, dim, onClick, highlight: view.highlightUrgent && urgent };
+  return { selected, view, hasProposal, urgent, dim, onClick, highlight: highlightUrgent && urgent };
+}
+
+/**
+ * A task surface's task and workflow number. While the surface is in the view they are the
+ * store's. Once it leaves (its task removed, or a board card moving to another lane), it keeps
+ * what it last showed through its exit animation, as the v0 surfaces kept the props they were
+ * given; the rest of what it reads (selection, the view) stays live, as it did in v0.
+ */
+export function useSurfaceTask(id: TaskId): { task: Task | null; number: string } {
+  const present = useIsPresent();
+  const task = useTask(id);
+  const number = useTaskNumber(id);
+  const [shown, setShown] = useState({ task, number });
+  const live = present && task !== null;
+  if (live && (shown.task !== task || shown.number !== number)) setShown({ task, number });
+  return live ? { task, number } : shown;
 }
 
 export function InkSkin({ reveal }: { reveal: number | null }) {
@@ -92,17 +123,25 @@ export function Clip({ scope, className = "", children }: { scope: "card" | "row
   );
 }
 
-export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props) {
+/** A tracker card or row: the task's id in, the store's task out (kept through its exit) */
+export function TaskCard({ id, ...rest }: Props) {
+  const { task, number } = useSurfaceTask(id);
+  return task === null ? null : <TaskSurface task={task} number={number} {...rest} />;
+}
+
+function TaskSurface({ task, number, spawnIndex, variant, cols, ref }: Omit<Props, "id"> & { task: Task; number: string }) {
   const { selected, view, hasProposal, dim, onClick, highlight } = useTaskSurface(task);
-  const hasSubs = useForm((s) => Object.values(s.doc.tasks).some((t) => t.parentId === task.id));
+  const hasSubs = useSteps(task.id).length > 0;
   const reveal = useReveal(spawnIndex);
+  const { commit } = useActions();
+  if (view === null) return null;
+  const rename = (v: string) => commit([{ op: "updateTask", taskId: task.id, field: "title", value: v }], { label: "rename task" });
   const emphasis = task.emphasis;
   const f = view.fields;
 
-  const surface = {
-    backgroundColor: emphasis ? INK : GLASS,
-    opacity: dim ? 0.55 : 1,
-  };
+  // Dimming lightens the surface, its frame and its shadow; the content keeps full contrast
+  const surface = { backgroundColor: emphasis ? INK : dim ? GLASS_DIM : GLASS };
+  const shadow = dim ? "var(--shadow-card-dim)" : "var(--shadow-card)";
 
   const row = variant === "row";
   const tall = hasSubs || hasProposal;
@@ -118,7 +157,7 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
       data-spawn={spawnIndex ?? undefined}
       onClick={onClick}
       initial={reveal != null ? { opacity: 0 } : false}
-      animate={{ ...surface, opacity: reveal != null ? 1 : surface.opacity }}
+      animate={{ ...surface, opacity: 1 }}
       transition={{ layout: move, opacity: reveal != null ? { delay: reveal, duration: 0 } : { duration: 0.3 }, backgroundColor: { duration: 0.35 } }}
       className={`${emphasis ? "tone-dark" : "tone-light"} relative cursor-pointer backdrop-blur-[22px] ${row ? "" : "flex flex-col"} ${
         selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""
@@ -127,13 +166,13 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
         row
           ? {
               borderRadius: tall ? 28 : 31,
-              boxShadow: emphasis ? "0 24px 48px -26px rgba(0,0,0,0.55)" : "var(--shadow-card)",
+              boxShadow: emphasis ? "0 24px 48px -26px rgba(0,0,0,0.55)" : shadow,
               gridColumn: emphasis && cols > 1 ? "1 / -1" : undefined,
             }
           : {
               borderRadius: 28,
               minHeight: 272,
-              boxShadow: emphasis ? "0 30px 60px -30px rgba(0,0,0,0.6)" : "var(--shadow-card)",
+              boxShadow: emphasis ? "0 30px 60px -30px rgba(0,0,0,0.6)" : shadow,
               gridColumn: emphasis && cols > 1 ? `span ${Math.min(2, cols)}` : undefined,
             }
       }
@@ -150,7 +189,7 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
                 <EditableText
                   value={task.title}
                   label="Task title"
-                  onCommit={(v) => useForm.getState().updateTask(task.id, { title: v })}
+                  onCommit={rename}
                   className="t-body min-w-0 truncate"
                 />
               </div>
@@ -180,7 +219,7 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
             <Reveal reveal={reveal} className="flex items-center justify-between gap-2 pr-4">
               <StatusControl task={task} />
               {highlight && (
-                <span className="t-micro flex items-center gap-1.5 text-signal">
+                <span className="t-micro flex items-center gap-1.5 text-signal-text">
                   <span className="h-[6px] w-[6px] rounded-full bg-signal" />
                   Urgent
                 </span>
@@ -191,7 +230,7 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
               <EditableText
                 value={task.title}
                 label="Task title"
-                onCommit={(v) => useForm.getState().updateTask(task.id, { title: v })}
+                onCommit={rename}
                 className={emphasis ? "t-display-m" : "t-title"}
               />
             </Reveal>
@@ -213,7 +252,7 @@ export function TaskCard({ task, number, spawnIndex, variant, cols, ref }: Props
                 </div>
               )}
               {f.progress && <ProgressControl task={task} showLabel={false} />}
-              {(f.priority || task.cost != null) && (
+              {(f.priority || task.costCents !== null) && (
                 <div className="flex items-center justify-between gap-2">
                   {f.priority ? <PriorityControl task={task} label /> : <span />}
                   <CostTag task={task} />

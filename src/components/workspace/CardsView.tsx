@@ -1,20 +1,20 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo } from "react";
-import { useForm } from "@/lib/store";
 import { move } from "@/lib/motion";
-import { taskNumber, visibleTasks } from "@/lib/selectors";
+import { useViewConfig, useVisibleTaskIds } from "@/lib/store/hooks";
 import { useWidth } from "@/lib/useWidth";
 import { TaskCard } from "./TaskCard";
 import { EmptyFilter } from "./EmptyFilter";
 
 /** Representation: tracker — glass cards (comfortable) or capsule rows (compact). */
 export function CardsView() {
-  const doc = useForm((s) => s.doc);
-  const tasks = useMemo(() => visibleTasks(doc), [doc]);
+  const ids = useVisibleTaskIds();
+  const view = useViewConfig();
   const [ref, width] = useWidth<HTMLDivElement>();
-  const { density, layout, columns } = doc.view;
+  const density = view?.density ?? "comfortable";
+  const layout = view?.layout ?? "grid";
+  const columns = view?.columns ?? null;
 
   const variant = density === "compact" ? "row" : "card";
   const minCol = variant === "row" ? 380 : 228;
@@ -31,12 +31,12 @@ export function CardsView() {
         transition={move}
       >
         <AnimatePresence mode="popLayout">
-          {tasks.map((t, i) => (
-            <TaskCard key={t.id} task={t} number={taskNumber(doc, t.id)} spawnIndex={i < 6 ? i : null} variant={variant} cols={cols} />
+          {ids.map((id, i) => (
+            <TaskCard key={id} id={id} spawnIndex={i < 6 ? i : null} variant={variant} cols={cols} />
           ))}
         </AnimatePresence>
       </motion.div>
-      {!tasks.length && <EmptyFilter />}
+      {!ids.length && <EmptyFilter />}
     </div>
   );
 }

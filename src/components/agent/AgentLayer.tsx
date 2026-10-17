@@ -1,8 +1,21 @@
 "use client";
 
 import { AnimatePresence, animate, motion, useMotionValue, useTransform, type Transition } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
-import { useForm, type Rect } from "@/lib/store";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import {
+  type Rect,
+  useActions,
+  useComposerOpen,
+  useFx,
+  useHasProject,
+  useIntro,
+  usePhase,
+  useProposal,
+  useReducedMotion,
+  useSelectedId,
+  useNextViews,
+  useSpawn,
+} from "@/lib/store/hooks";
 import { CREATE, TAB_GROW_MS, ease, springs } from "@/lib/motion";
 import { useViewport } from "@/lib/useViewport";
 import { NODE, agentScale, agentShape, compactFrame, composerFrame, nodeFrames, type AgentMode, type Capsule, type Vec } from "./geometry";
@@ -13,23 +26,23 @@ import { CompactPill } from "./CompactPill";
 import { Caption } from "./Caption";
 import { NODE_TIMING, NodeBlobs, NodeLabels } from "./ViewNodes";
 import { VIEW_OFFER } from "./suggestions";
-import { nextViews } from "@/lib/views";
 
 export function AgentLayer() {
   const { w: vw, h: vh } = useViewport();
-  const hasTool = useForm((s) => !!s.doc.tool);
-  const composerOpen = useForm((s) => s.composerOpen);
-  const phase = useForm((s) => s.phase);
-  const spawn = useForm((s) => s.spawn);
-  const fxSeq = useForm((s) => s.fx.seq);
-  const reduced = useForm((s) => s.reducedMotion);
-  const openComposer = useForm((s) => s.openComposer);
-  const submit = useForm((s) => s.submit);
-  const intro = useForm((s) => s.intro);
-  // Nodes only speak when nothing else is being decided: no selection, proposal or plan
-  const quiet = useForm((s) => !s.selectedId && !s.doc.proposal && !s.doc.plan);
-  const views = useForm((s) => s.doc.tool?.views);
-  const offers = useMemo(() => nextViews(views), [views]);
+  const hasTool = useHasProject();
+  const composerOpen = useComposerOpen();
+  const phase = usePhase();
+  const spawn = useSpawn();
+  const fxSeq = useFx().seq;
+  const reduced = useReducedMotion();
+  const { openComposer, submit } = useActions();
+  const intro = useIntro();
+  // Nodes only speak when nothing else is being decided: no selection and no proposal (steps or a plan)
+  const selectedId = useSelectedId();
+  const proposal = useProposal();
+  const quiet = selectedId === null && proposal === null;
+  // The views the project lacks, most related to the last one created first
+  const offers = useNextViews();
   const [nodeHover, setNodeHover] = useState<number | null>(null);
   // A different set of offers (a view added, undone or redone) folds the nodes back into the agent
   // before the new ones bud: nodes never slide into each other's places or sit there unlabelled
@@ -73,6 +86,13 @@ export function AgentLayer() {
       { ...springs.pill, delay: mode === "input" && !hasTool ? 0.14 : 0 };
 
   const showHit = mode === "idle" || mode === "hover";
+  // Only the idle ring and the docked pill come to rest; hover, input, processing and creation never sleep (plan §9.1)
+  const rest = (mode === "idle" || mode === "compact") && phase === "rest";
+
+  // The agent's goo works over its own box; during creation, over the whole screen as in v0
+  const goo = useRef<SVGGElement>(null);
+  const gooFilter = useRef<SVGFilterElement>(null);
+  useGooRegion(goo, gooFilter, phase === "creating");
 
   // Views to create next, budding off the docked agent once it has settled
   const nodes = nodeFrames(dock, vw, offers);
@@ -84,16 +104,23 @@ export function AgentLayer() {
 
   return (
     <>
-      <svg className="pointer-events-none fixed inset-0 z-40" width={vw} height={vh} aria-hidden>
+      {/* Its own compositing layer: the agent's frames repaint the agent, not the page under it */}
+      <svg className="pointer-events-none fixed inset-0 z-40" style={{ willChange: "transform" }} width={vw} height={vh} aria-hidden>
         <defs>
+          {/* v0's goo, unchanged: Focus's volumes (an HTML layer) use it from FocusView, and a user-space region would clip them */}
           <filter id="form-goo" x="-50%" y="-50%" width="200%" height="200%" colorInterpolationFilters="sRGB">
             <feGaussianBlur in="SourceGraphic" stdDeviation="8.5" result="b" />
             <feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 34 -15" />
           </filter>
+          {/* The agent's own goo, the same filter over its own box: the region (filterUnits, x, y, width, height) is set by useGooRegion */}
+          <filter ref={gooFilter} id="form-agent-goo" colorInterpolationFilters="sRGB">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="8.5" result="b" />
+            <feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 34 -15" />
+          </filter>
         </defs>
-        <g filter="url(#form-goo)" fill="var(--ink)">
+        <g ref={goo} filter="url(#form-agent-goo)" fill="var(--ink)">
           <Body target={shape.body} transition={bodyT} />
-          <Fluid mode={mode} anchor={anchor} scale={sc} targets={shape.blobs} satellite={shape.satellite} pressed={pressed} reduced={reduced} />
+          <Fluid mode={mode} anchor={anchor} scale={sc} targets={shape.blobs} satellite={shape.satellite} pressed={pressed} reduced={reduced} rest={rest} />
           <NodeBlobs frames={nodes.frames} origin={nodeOrigin} shown={nodesShown} reduced={reduced} />
           {phase === "creating" &&
             spawn?.map((r, i) => <SpawnBlob key={`${fxSeq}-${i}`} origin={center} rect={r} index={i} />)}
@@ -169,8 +196,8 @@ export function AgentLayer() {
         onHover={setNodeHover}
         // The same path as typing it: the agent takes it in, answers with a caption, and Undo removes the view
         onPick={(view, keyboard) =>
-          // Canned phrases the demo parser routes: deterministic and immediate on any engine
-          void submit(VIEW_OFFER[view], { engine: "demo" }).then((ok) => {
+          // Canned phrases the demo parser routes: deterministic and immediate
+          void submit(VIEW_OFFER[view]).then((ok) => {
             // Keyboard users land on the new tab once it has grown
             if (!ok || !keyboard) return;
             setTimeout(() => {
@@ -189,6 +216,88 @@ export function AgentLayer() {
 }
 
 /* ------------------------------------------------------------------ */
+
+/** The goo blur's reach: 3σ of its 8.5 px deviation, rounded up. Beyond it the filter draws nothing. */
+const GOO_MARGIN = 26;
+/** The region follows the ink only when one of its edges would move by more than this (px). */
+const GOO_SLACK = 8;
+
+interface Box {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+const num = (el: Element, name: string) => Number.parseFloat(el.getAttribute(name) ?? "");
+
+/** The union box of what the goo group draws: the fluid's volumes, the body and node capsules, any spawn blob. */
+function inkBox(group: SVGGElement): Box | null {
+  let box: Box | null = null;
+  const add = (x0: number, y0: number, x1: number, y1: number) => {
+    if (!(x1 > x0 && y1 > y0)) return; // empty, collapsed or not drawn yet
+    box = box ? { x0: Math.min(box.x0, x0), y0: Math.min(box.y0, y0), x1: Math.max(box.x1, x1), y1: Math.max(box.y1, y1) } : { x0, y0, x1, y1 };
+  };
+  for (const el of group.children) {
+    if (el.tagName === "ellipse") {
+      // A volume's ellipse turns about its own centre, so its larger radius bounds it
+      const r = Math.max(num(el, "rx"), num(el, "ry"));
+      const cx = num(el, "cx");
+      const cy = num(el, "cy");
+      add(cx - r, cy - r, cx + r, cy + r);
+    } else if (el.tagName === "rect") {
+      const x = num(el, "x");
+      const y = num(el, "y");
+      add(x, y, x + num(el, "width"), y + num(el, "height"));
+    }
+  }
+  return box;
+}
+
+/** Writes only the attributes that change, so an unchanged region costs no mutation. */
+function setAttrs(el: Element, attrs: Record<string, string>) {
+  for (const [name, value] of Object.entries(attrs)) if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+}
+
+/**
+ * Plan §9.1 A2: the agent's goo filter region is the ink's union box plus the blur's reach, in user
+ * space, instead of v0's −50%/200% of the group's box. It moves only when one of its edges would shift by
+ * more than GOO_SLACK, so the ink always stays at least GOO_MARGIN − GOO_SLACK inside it and a still
+ * agent writes nothing. The ink is read from the group's own attributes whenever one changes, so
+ * every shape counts, whoever animates it. With `viewport` (creation) the region is v0's, which the
+ * spawn blobs stretch over the screen.
+ */
+function useGooRegion(group: RefObject<SVGGElement | null>, filter: RefObject<SVGFilterElement | null>, viewport: boolean) {
+  useLayoutEffect(() => {
+    const g = group.current;
+    const f = filter.current;
+    if (!g || !f) return;
+    if (viewport) {
+      setAttrs(f, { filterUnits: "objectBoundingBox", x: "-50%", y: "-50%", width: "200%", height: "200%" });
+      return;
+    }
+    let applied: Box | null = null;
+    const follow = () => {
+      const ink = inkBox(g);
+      // Nothing drawn: the region stays where it was
+      if (!ink) return;
+      const want: Box = {
+        x0: Math.floor(ink.x0 - GOO_MARGIN),
+        y0: Math.floor(ink.y0 - GOO_MARGIN),
+        x1: Math.ceil(ink.x1 + GOO_MARGIN),
+        y1: Math.ceil(ink.y1 + GOO_MARGIN),
+      };
+      const at = applied;
+      if (at && Math.max(Math.abs(want.x0 - at.x0), Math.abs(want.y0 - at.y0), Math.abs(want.x1 - at.x1), Math.abs(want.y1 - at.y1)) <= GOO_SLACK) return;
+      applied = want;
+      setAttrs(f, { filterUnits: "userSpaceOnUse", x: String(want.x0), y: String(want.y0), width: String(want.x1 - want.x0), height: String(want.y1 - want.y0) });
+    };
+    follow();
+    const observer = new MutationObserver(follow);
+    observer.observe(g, { subtree: true, childList: true, attributes: true, attributeFilter: ["cx", "cy", "rx", "ry", "x", "y", "width", "height"] });
+    return () => observer.disconnect();
+  }, [group, filter, viewport]);
+}
 
 function Body({ target, transition }: { target: Capsule; transition: Transition }) {
   const x = useMotionValue(target.x);

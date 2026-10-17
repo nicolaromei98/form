@@ -3,11 +3,24 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState, type PointerEvent as RPointerEvent } from "react";
 import { createPortal } from "react-dom";
-import { useForm } from "@/lib/store";
+import { PEOPLE_MAX } from "@/lib/domain/limits";
+import type { PersonId, TaskId } from "@/lib/domain/schema/ids";
+import type { ProjectDoc, Task } from "@/lib/domain/schema/project";
+import type { ReassignMove, ReassignProposal } from "@/lib/domain/schema/proposal";
+import type { Person } from "@/lib/domain/schema/workspace";
 import { ease, move } from "@/lib/motion";
-import { fmtLoad, initials, loadsOf, ownersOf, type Load } from "@/lib/team";
+import {
+  type LaneLoad,
+  useActions,
+  useCanAddPerson,
+  useHasSamplePerson,
+  useLaneLoads,
+  usePerson,
+  usePhase,
+  useProject,
+  useProposal,
+} from "@/lib/store/hooks";
 import { useWidth } from "@/lib/useWidth";
-import { PEOPLE_MAX, type Doc, type Person, type ReassignPlan, type Task } from "@/lib/schema";
 import { EditableText } from "./parts";
 import { useTaskSurface } from "./TaskCard";
 import { ShuffleText } from "../text/ShuffleText";
@@ -20,13 +33,56 @@ const SEG_H = 42;
 const PAD = (TRACK_H - SEG_H) / 2;
 const GAP = 4;
 const NONE = "__unassigned";
-const SAMPLE_IDS = ["p-marta", "p-sara", "p-luca"];
 const HATCH = "repeating-linear-gradient(-45deg, rgba(214,69,69,0.2) 0 5px, rgba(214,69,69,0.06) 5px 10px)";
+/**
+ * Segment surfaces. A dimmed segment (50%) and one leaving in a balance preview (40%) recede by
+ * their surface and shadow only; the text keeps full contrast (Q14).
+ */
+const SEG = "rgba(255,255,255,0.9)";
+const SEG_DIM = "rgba(255,255,255,0.45)";
+const SEG_LEAVING = "rgba(255,255,255,0.36)";
+const SEG_INK = "#0a0a0a";
 
 const wipe = (open: boolean) => `inset(0px ${open ? "0%" : "100%"} 0px 0px round ${TRACK_H / 2}px)`;
 
-interface Drag {
+type Tasks = ProjectDoc["tasks"];
+const NO_TASKS: Tasks = Object.freeze({}) as Tasks;
+const NO_IDS: readonly TaskId[] = Object.freeze([]);
+
+/** Days as the captions print them (4, 4.5), so the screen and the agent never show two figures */
+function fmtLoad(days: number) {
+  return Number.isInteger(days) ? `${days}` : `${Math.round(days * 10) / 10}`;
+}
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
+}
+
+/** The open tasks a lane lists, in its (workflow) order */
+const tasksOf = (ids: readonly TaskId[], tasks: Tasks): Task[] => ids.flatMap((id) => (Object.hasOwn(tasks, id) ? [tasks[id]] : []));
+
+/** Where a lane's segments end, in days: each sized by estimate, a task with no estimate (or under a day) takes one */
+const tailOf = (ids: readonly TaskId[], tasks: Tasks) => tasksOf(ids, tasks).reduce((s, t) => s + Math.max(1, t.estimateDays ?? 1), 0);
+
+/**
+ * A person's lane before they carry any work here: one standard week, as `laneLoads` gives a
+ * member with no work. Only a reassign preview needs it, for a receiver who isn't a member yet
+ * (accepting makes them one).
+ */
+function restingLane(personId: PersonId | null, capacity: number | null): LaneLoad {
+  return { personId, taskIds: NO_IDS, days: 0, unsized: 0, capacity, over: capacity === null ? null : 0, free: capacity, otherProjectsDays: 0, weeks: [] };
+}
+
+/** One row: a lane now (null for a preview-only receiver) and the same lane with the proposal applied */
+interface RowSpec {
   id: string;
+  lane: LaneLoad | null;
+  next: LaneLoad | null;
+}
+
+interface Drag {
+  id: TaskId;
   title: string;
   from: string;
   w: number;
@@ -42,39 +98,52 @@ interface Drag {
  * days; their open tasks are laid along it, sized by estimate. Whatever spills
  * past the capacity line is hatched red. Drag a task onto someone else's row to
  * hand it over, or ask FORM to balance the workload.
+ *
+ * Rows are the Phase 1 Team lanes (plan §6.5): the project's members, then the
+ * unassigned work. A lane covers the person's work window, week by week, so its
+ * capacity, over and free are the ones captions and the brief read.
  */
 export function TeamView() {
-  const empty = useForm((s) => s.doc.people.length === 0);
+  const empty = useLaneLoads().every((l) => l.personId === null);
   // Separate components, so the board measures its width when it mounts
   return empty ? <NoTeam /> : <TeamBoard />;
 }
 
 function TeamBoard() {
-  const doc = useForm((s) => s.doc);
-  const commit = useForm((s) => s.commit);
-  const select = useForm((s) => s.select);
-  const resolvePlan = useForm((s) => s.resolvePlan);
-  const submit = useForm((s) => s.submit);
-  const phase = useForm((s) => s.phase);
+  const actions = useActions();
+  const project = useProject();
+  const lanes = useLaneLoads();
+  const previewLanes = useLaneLoads({ preview: true });
+  const proposal = useProposal();
+  const phase = usePhase();
+  // The sample team is labelled as sample data
+  const sample = useHasSamplePerson();
+  const canAddPerson = useCanAddPerson();
   const [ref, width] = useWidth<HTMLDivElement>(0);
   const [drag, setDrag] = useState<Drag | null>(null);
 
-  const plan = doc.plan;
-  const loads = useMemo(() => loadsOf(doc), [doc]);
-  const preview = useMemo(() => (plan ? loadsOf(doc, ownersOf(doc, plan)) : null), [doc, plan]);
-  const moving = useMemo(() => new Map(plan?.moves.map((m) => [m.taskId, m.to]) ?? []), [plan]);
+  const tasks = project?.tasks ?? NO_TASKS;
+  const plan = proposal?.kind === "reassign" ? proposal : null;
+  const preview = plan ? previewLanes : null;
+  // Handovers only: a proposed shift moves a task's dates, not its row
+  const moving = useMemo(() => new Set(plan?.moves.flatMap((m) => (m.type === "owner" ? [m.taskId] : [])) ?? []), [plan]);
 
   const narrow = width < 640;
   const labelW = narrow ? 0 : 260;
   const trackW = Math.max(120, width - labelW - (narrow ? 0 : 16));
-  const span = (l: Load) => Math.max(l.person?.capacity ?? 0, l.days + l.unsized);
-  const maxDays = Math.max(4, ...loads.map(span), ...(preview ?? []).map(span)) + 0.5;
+  const span = (l: LaneLoad) => Math.max(l.capacity ?? 0, l.days, tailOf(l.taskIds, tasks));
+  const maxDays = Math.max(4, ...lanes.map(span), ...(preview ?? []).map(span)) + 0.5;
   const dayW = (trackW - 2 * PAD + GAP) / maxDays;
-  const unassigned = loads[loads.length - 1];
-  const showUnassigned = unassigned.tasks.length > 0 || Boolean(preview?.[preview.length - 1].tasks.length) || drag != null;
-  const rows = showUnassigned ? loads : loads.slice(0, -1);
-  const overloaded = loads.some((l) => l.over > 0) || unassigned.tasks.some((t) => t.estimate != null);
-  const sample = doc.people.some((p) => SAMPLE_IDS.includes(p.id));
+  const unassigned = lanes.find((l) => l.personId === null) ?? null;
+  const nextOf = (personId: PersonId | null) => preview?.find((l) => l.personId === personId) ?? null;
+  const showUnassigned = (unassigned?.taskIds.length ?? 0) > 0 || Boolean(nextOf(null)?.taskIds.length) || drag != null;
+  const people = lanes.filter((l) => l.personId !== null);
+  const rows: RowSpec[] = people.map((l) => ({ id: l.personId!, lane: l, next: nextOf(l.personId) }));
+  for (const l of preview ?? []) {
+    if (l.personId !== null && !people.some((p) => p.personId === l.personId)) rows.push({ id: l.personId, lane: null, next: l });
+  }
+  if (showUnassigned) rows.push({ id: NONE, lane: unassigned, next: nextOf(null) });
+  const overloaded = lanes.some((l) => (l.over ?? 0) > 0) || tasksOf(unassigned?.taskIds ?? NO_IDS, tasks).some((t) => t.estimateDays != null);
 
   const startDrag = (e: RPointerEvent<HTMLElement>, task: Task, from: string) => {
     if (e.button !== 0) return;
@@ -106,18 +175,14 @@ function TeamBoard() {
       window.removeEventListener("pointercancel", onUp);
       if (!started) {
         // A click, not a drag: Point & Ask selection, as everywhere else
-        const st = useForm.getState();
-        select(st.selectedId === task.id ? null : task.id);
+        actions.select(actions.peek().selectedTaskId === task.id ? null : task.id);
         return;
       }
       const to = rowAt(ev.clientX, ev.clientY);
       setDrag(null);
       if (to && to !== from) {
-        const person = doc.people.find((p) => p.id === to);
-        commit(
-          [{ op: "assignTask", taskId: task.id, personId: to === NONE ? null : to }],
-          person ? `${task.title} → ${person.name}` : `unassign ${task.title}`,
-        );
+        if (to === NONE) actions.commit([{ op: "unassignTask", taskId: task.id }], { label: `unassign ${task.title}` });
+        else actions.commit([{ op: "assignTask", taskId: task.id, personId: to as PersonId }], { label: `assign ${task.title}` });
       }
     };
     window.addEventListener("pointermove", onMove);
@@ -158,9 +223,10 @@ function TeamBoard() {
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              disabled={doc.people.length >= PEOPLE_MAX}
-              title={doc.people.length >= PEOPLE_MAX ? `A team holds up to ${PEOPLE_MAX} people` : undefined}
-              onClick={() => commit([{ op: "addPerson", name: `Person ${doc.people.length + 1}` }], "add person")}
+              disabled={!canAddPerson}
+              title={canAddPerson ? undefined : `A workspace holds up to ${PEOPLE_MAX} people`}
+              // A visible, editable 5 days a week (Q3)
+              onClick={() => actions.addPerson()}
               className="focus-ring t-body-s h-[34px] cursor-pointer rounded-full px-3.5 text-text-2 transition-colors hover:bg-black/[0.05] hover:text-text disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
             >
               <ShuffleText text="Add person" />
@@ -169,7 +235,7 @@ function TeamBoard() {
               <button
                 type="button"
                 disabled={phase === "processing"}
-                onClick={() => submit("Balance the workload")}
+                onClick={() => actions.submit("Balance the workload")}
                 className="focus-ring t-body-s h-[34px] cursor-pointer rounded-full bg-ink px-4 text-on-ink transition-transform hover:scale-[1.02] disabled:opacity-50"
               >
                 <ShuffleText text="Balance with FORM" />
@@ -202,32 +268,35 @@ function TeamBoard() {
               }}
               transition={move}
             >
-              <PlanCard doc={doc} plan={plan} loads={loads} onAccept={() => resolvePlan(true)} onDiscard={() => resolvePlan(false)} />
+              <PlanCard
+                plan={plan}
+                tasks={tasks}
+                lanes={lanes}
+                onAccept={() => actions.resolveProposal(true)}
+                onDiscard={() => actions.resolveProposal(false)}
+              />
             </motion.div>
           )}
         </AnimatePresence>
 
         <div ref={ref}>
           {width > 0 &&
-            rows.map((load, i) => {
-              const id = load.person?.id ?? NONE;
-              return (
-                <Row
-                  key={id}
-                  id={id}
-                  load={load}
-                  next={preview?.[loads.indexOf(load)] ?? null}
-                  index={i}
-                  narrow={narrow}
-                  labelW={labelW}
-                  dayW={dayW}
-                  moving={moving}
-                  people={doc.people}
-                  drag={drag}
-                  onDragStart={startDrag}
-                />
-              );
-            })}
+            rows.map(({ id, lane, next }, i) => (
+              <Row
+                key={id}
+                id={id}
+                lane={lane}
+                next={next}
+                tasks={tasks}
+                index={i}
+                narrow={narrow}
+                labelW={labelW}
+                dayW={dayW}
+                moving={moving}
+                drag={drag}
+                onDragStart={startDrag}
+              />
+            ))}
         </div>
 
         <motion.div
@@ -260,48 +329,60 @@ function TeamBoard() {
 
 function Row({
   id,
-  load,
+  lane,
   next,
+  tasks,
   index,
   narrow,
   labelW,
   dayW,
   moving,
-  people,
   drag,
   onDragStart,
 }: {
   id: string;
-  load: Load;
+  /** The lane now; null for a receiver the preview adds, who carries nothing here yet */
+  lane: LaneLoad | null;
   /** The same row with the proposed plan applied */
-  next: Load | null;
+  next: LaneLoad | null;
+  tasks: Tasks;
   index: number;
   narrow: boolean;
   labelW: number;
   dayW: number;
-  moving: Map<string, string | null>;
-  people: Person[];
+  moving: ReadonlySet<TaskId>;
   drag: Drag | null;
   onDragStart: (e: RPointerEvent<HTMLElement>, task: Task, from: string) => void;
 }) {
-  const commit = useForm((s) => s.commit);
-  const p = load.person;
+  const actions = useActions();
+  const p = usePerson(id === NONE ? null : (id as PersonId));
+  const load = lane ?? restingLane(p?.id ?? null, p?.capacityDaysPerWeek ?? null);
   const target = drag != null && drag.over === id && drag.from !== id;
-  const incoming = next ? next.tasks.filter((t) => !load.tasks.some((o) => o.id === t.id)) : [];
-  const nameOf = (pid: string | null) => people.find((x) => x.id === pid)?.name ?? "Unassigned";
+  const mine = tasksOf(load.taskIds, tasks);
+  const incoming = next ? tasksOf(next.taskIds, tasks).filter((t) => !load.taskIds.includes(t.id)) : [];
+  const over = load.over ?? 0;
 
   // Tasks sit end to end along the track, sized by estimate (a task with no estimate takes one day)
-  const lay = (tasks: Task[], start: number) =>
-    tasks.reduce<{ at: number; w: number }[]>((acc, t) => {
+  const lay = (list: Task[], start: number) =>
+    list.reduce<{ at: number; w: number }[]>((acc, t) => {
       const prev = acc[acc.length - 1];
-      acc.push({ at: prev ? prev.at + prev.w : start, w: Math.max(1, t.estimate ?? 1) * dayW });
+      acc.push({ at: prev ? prev.at + prev.w : start, w: Math.max(1, t.estimateDays ?? 1) * dayW });
       return acc;
     }, []);
-  const own = lay(load.tasks, 0);
+  const own = lay(mine, 0);
   const tail = own.length ? own[own.length - 1].at + own[own.length - 1].w : 0;
   const landing = lay(incoming, tail);
-  const laneEnd = p ? 2 * PAD + p.capacity * dayW - GAP : 0;
+  /** The point `days` along the track */
+  const along = (days: number) => 2 * PAD + days * dayW - GAP;
   const workEnd = tail ? 2 * PAD + tail - GAP : 0;
+  // The lane holds `capacity` days; with no capacity (Q3) it is as long as the work, with no capacity line
+  const laneEnd = !p ? 0 : load.capacity === null ? workEnd : along(load.capacity);
+  // The overload spans [days − over, days] of this project's work. It is summed week by week, so it
+  // can start before the capacity line when one week has slack and another too much (plan §12
+  // item 3); that part stays under the lane, as v0 paints it, and the figure and ring still say it
+  // (Phase 4 replaces the lane with the weekly grid)
+  const hatchFrom = over > 0 ? along(Math.max(0, load.days - over)) : laneEnd;
+  const hatchTo = over > 0 ? along(load.days) : laneEnd;
 
   return (
     <motion.div
@@ -330,14 +411,14 @@ function Row({
         animate={{ opacity: 1, filter: "blur(0px)", transitionEnd: { filter: "none" } }}
         transition={{ delay: BUILD.label + index * BUILD.step, duration: 0.6, ease: ease.out }}
       >
-        <Avatar person={p} over={load.over > 0} />
+        <Avatar person={p} over={over > 0} />
         <div className="flex min-w-0 flex-1 flex-col">
           {p ? (
             <EditableText
               value={p.name}
               label="Name"
               maxLength={40}
-              onCommit={(v) => commit([{ op: "updatePerson", id: p.id, patch: { name: v } }], "rename person")}
+              onCommit={(v) => actions.commit([{ op: "updatePerson", personId: p.id, field: "name", value: v }], { label: "rename person" })}
               className="t-body min-w-0 truncate"
             />
           ) : (
@@ -363,17 +444,19 @@ function Row({
               className="absolute inset-y-0 rounded-r-full"
               style={{ background: HATCH }}
               initial={false}
-              animate={{ left: laneEnd - TRACK_H / 2, width: Math.max(TRACK_H / 2, workEnd - laneEnd + TRACK_H / 2), opacity: workEnd > laneEnd ? 1 : 0 }}
+              animate={{ left: hatchFrom - TRACK_H / 2, width: Math.max(TRACK_H / 2, hatchTo - hatchFrom + TRACK_H / 2), opacity: over > 0 ? 1 : 0 }}
               transition={move}
             />
             <motion.div className="absolute inset-y-0 left-0 rounded-full bg-[#e9e9e7]" initial={false} animate={{ width: laneEnd }} transition={move} />
-            <motion.div className="absolute -inset-y-1 w-[1.5px] rounded-full bg-ink" initial={false} animate={{ left: laneEnd }} transition={move} />
+            {load.capacity !== null && (
+              <motion.div className="absolute -inset-y-1 w-[1.5px] rounded-full bg-ink" initial={false} animate={{ left: laneEnd }} transition={move} />
+            )}
           </>
         ) : (
           <div className="absolute inset-0 rounded-full border border-dashed border-line-2" />
         )}
 
-        {load.tasks.map((t, i) => {
+        {mine.map((t, i) => {
           const { at, w } = own[i];
           return (
             <Segment
@@ -392,23 +475,30 @@ function Row({
         <AnimatePresence>
           {incoming.map((t, i) => {
             const { at, w } = landing[i];
-            return (
-              <motion.div
-                key={`in-${t.id}`}
-                className="t-body-s pointer-events-none absolute flex items-center gap-2 rounded-full border-[1.5px] border-dashed border-ink px-3.5 text-text"
-                style={{ left: PAD + at, width: w - GAP, top: PAD, height: SEG_H }}
-                initial={{ opacity: 0, filter: "blur(6px)" }}
-                animate={{ opacity: 1, filter: "blur(0px)" }}
-                exit={{ opacity: 0, transition: { duration: 0.35, ease: ease.out } }}
-                transition={{ duration: 0.5, ease: ease.out, delay: 0.25 }}
-              >
-                <span className="truncate">{t.title}</span>
-                <span className="t-data ml-auto shrink-0 text-text-3">from {nameOf(t.owner && people.some((x) => x.id === t.owner) ? t.owner : null)}</span>
-              </motion.div>
-            );
+            return <Incoming key={`in-${t.id}`} task={t} left={at} width={w} />;
           })}
         </AnimatePresence>
       </motion.div>
+    </motion.div>
+  );
+}
+
+/** A handover's landing spot in the receiver's row, naming who it comes from */
+function Incoming({ task, left, width }: { task: Task; left: number; width: number }) {
+  const owner = usePerson(task.ownerId);
+  // An archived owner reads as unassigned (Q7)
+  const from = owner && !owner.archived ? owner.name : "Unassigned";
+  return (
+    <motion.div
+      className="t-body-s pointer-events-none absolute flex items-center gap-2 rounded-full border-[1.5px] border-dashed border-ink px-3.5 text-text"
+      style={{ left: PAD + left, width: width - GAP, top: PAD, height: SEG_H }}
+      initial={{ opacity: 0, filter: "blur(6px)" }}
+      animate={{ opacity: 1, filter: "blur(0px)" }}
+      exit={{ opacity: 0, transition: { duration: 0.35, ease: ease.out } }}
+      transition={{ duration: 0.5, ease: ease.out, delay: 0.25 }}
+    >
+      <span className="truncate">{task.title}</span>
+      <span className="t-data ml-auto shrink-0 text-text-3">from {from}</span>
     </motion.div>
   );
 }
@@ -429,8 +519,15 @@ function Segment({
   onPointerDown: (e: RPointerEvent<HTMLElement>) => void;
 }) {
   const { selected, highlight, dim } = useTaskSurface(task);
-  const ink = task.emphasis;
-  const unsized = task.estimate == null;
+  // A leaving segment is the task's ghost, light whatever its emphasis: dimmed ink under light text would fail contrast
+  const ink = task.emphasis && !leaving;
+  const unsized = task.estimateDays == null;
+  const surface = ink ? SEG_INK : leaving ? SEG_LEAVING : dim ? SEG_DIM : SEG;
+  const shadow = leaving
+    ? "shadow-[0_8px_22px_-14px_rgba(0,0,0,0.16)]"
+    : dim
+      ? "shadow-[0_8px_22px_-14px_rgba(0,0,0,0.2)]"
+      : "shadow-[0_8px_22px_-14px_rgba(0,0,0,0.4)]";
   return (
     // Same width in every row, so a handover only moves it: position-only layout, nothing stretches
     <motion.div
@@ -438,20 +535,21 @@ function Segment({
       layout="position"
       data-task-id={task.id}
       onPointerDown={onPointerDown}
-      className={`${ink ? "tone-dark bg-ink text-on-ink" : "tone-light bg-white/90 text-text"} t-body-s absolute flex cursor-grab touch-none items-center gap-2 overflow-hidden px-3.5 shadow-[0_8px_22px_-14px_rgba(0,0,0,0.4)] select-none active:cursor-grabbing ${
-        unsized || leaving ? "border-[1.5px] border-dashed border-text-3" : ""
+      className={`${ink ? "tone-dark text-on-ink" : "tone-light text-text"} t-body-s absolute flex cursor-grab touch-none items-center gap-2 overflow-hidden px-3.5 ${shadow} select-none active:cursor-grabbing ${
+        unsized || leaving ? "border-[1.5px] border-dashed border-line-strong" : ""
       } ${selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""}`}
       style={{ left: PAD + left, top: PAD, height: SEG_H, borderRadius: SEG_H / 2 }}
       initial={false}
-      animate={{ width: width - GAP, opacity: dragging ? 0.25 : leaving ? 0.4 : dim ? 0.5 : 1 }}
-      transition={{ layout: move, width: move, opacity: { duration: 0.3 } }}
-      title={`${task.title} · ${unsized ? "no estimate" : `${task.estimate}d`} · ${task.progress}%`}
+      // The drag source stays faint: the floating copy carries its text while it moves
+      animate={{ width: width - GAP, backgroundColor: surface, opacity: dragging ? 0.25 : 1 }}
+      transition={{ layout: move, width: move, backgroundColor: { duration: 0.3 }, opacity: { duration: 0.3 } }}
+      title={`${task.title} · ${unsized ? "no estimate" : `${task.estimateDays}d`} · ${task.progress}%`}
     >
       {highlight && <span className="h-[6px] w-[6px] shrink-0 rounded-full bg-signal" />}
       <span className="min-w-0 truncate">{task.title}</span>
       <span className={`t-data ml-auto shrink-0 ${ink ? "text-on-ink/60" : "text-text-3"}`}>
-        {unsized ? "?d" : `${task.estimate}d`}
-        {task.progress > 0 && <span className="opacity-70"> · {task.progress}%</span>}
+        {unsized ? "?d" : `${task.estimateDays}d`}
+        {task.progress > 0 && <span> · {task.progress}%</span>}
       </span>
     </motion.div>
   );
@@ -462,32 +560,38 @@ function Avatar({ person, over }: { person: Person | null; over: boolean }) {
     return <span className="t-body-s grid h-[40px] w-[40px] shrink-0 place-items-center rounded-full border border-dashed border-text-4 text-text-3">?</span>;
   return (
     <span
-      className={`t-body-s relative grid h-[40px] w-[40px] shrink-0 place-items-center rounded-full bg-ink font-medium text-on-ink ring-offset-2 ring-offset-[var(--paper)] transition-[box-shadow] duration-500 ${over ? "ring-2 ring-signal" : "ring-0 ring-transparent"}`}
+      className={`t-body-s relative grid h-[40px] w-[40px] shrink-0 place-items-center rounded-full bg-ink font-medium text-on-ink ring-offset-2 ring-offset-[var(--paper)] transition-[box-shadow] duration-500 ${over ? "ring-2 ring-signal-graphic" : "ring-0 ring-transparent"}`}
     >
       {initials(person.name)}
     </span>
   );
 }
 
-function LoadFigure({ load, next }: { load: Load; next: Load | null }) {
-  const cap = load.person!.capacity;
+/**
+ * "{days}/{capacity}d" and "+{over}d over" or "{free}d free"; with the proposal previewed, the
+ * figures after it. An unknown capacity (Q3) gives the days of work and no verdict.
+ */
+function LoadFigure({ load, next }: { load: LaneLoad; next: LaneLoad | null }) {
   const changes = next != null && next.days !== load.days;
+  const shown = changes ? next : load;
   return (
     <div className="flex shrink-0 flex-col items-end">
       <span className="t-num text-[17px] tracking-[-0.025em] whitespace-nowrap">
         {changes ? (
           <>
-            <span className="text-text-3 line-through decoration-1">{fmtLoad(load.days)}</span> {fmtLoad(next!.days)}
+            <span className="text-text-3 line-through decoration-1">{fmtLoad(load.days)}</span> {fmtLoad(next.days)}
           </>
         ) : (
           fmtLoad(load.days)
         )}
-        <span className="text-text-3">/{fmtLoad(cap)}d</span>
+        <span className="text-text-3">{shown.capacity === null ? "d" : <>/{fmtLoad(shown.capacity)}d</>}</span>
       </span>
-      {(changes ? next!.over : load.over) > 0 ? (
-        <span className="t-data text-signal">+{fmtLoad(changes ? next!.over : load.over)}d over</span>
+      {shown.capacity === null ? (
+        <span className="t-data text-text-3">Capacity unknown</span>
+      ) : (shown.over ?? 0) > 0 ? (
+        <span className="t-data text-signal-text">+{fmtLoad(shown.over ?? 0)}d over</span>
       ) : (
-        <span className="t-data text-text-3">{fmtLoad(changes ? next!.free : load.free)}d free</span>
+        <span className="t-data text-text-3">{fmtLoad(shown.free ?? 0)}d free</span>
       )}
     </div>
   );
@@ -497,30 +601,56 @@ function LoadFigure({ load, next }: { load: Load; next: Load | null }) {
    Plan — FORM's proposal, in the agent's ink material
    ------------------------------------------------------------------ */
 
-function PlanCard({ doc, plan, loads, onAccept, onDiscard }: { doc: Doc; plan: ReassignPlan; loads: Load[]; onAccept: () => void; onDiscard: () => void }) {
-  const name = (id: string | null) => (id ? (doc.people.find((p) => p.id === id)?.name ?? "?") : "Unassigned");
-  const moves = plan.moves.map((m) => ({ ...m, task: doc.tasks[m.taskId] })).filter((m) => m.task);
-  const worst = loads.filter((l) => l.over > 0).sort((a, b) => b.over - a.over)[0];
-  const one = moves.length === 1 ? moves[0] : null;
+/** A move of the pending reassign proposal, with its task */
+type PlanMove = ReassignMove & { task: Task };
+
+function PlanCard({
+  plan,
+  tasks,
+  lanes,
+  onAccept,
+  onDiscard,
+}: {
+  plan: ReassignProposal;
+  tasks: Tasks;
+  lanes: readonly LaneLoad[];
+  onAccept: () => void;
+  onDiscard: () => void;
+}) {
+  const moves: PlanMove[] = plan.moves.flatMap((m) => (Object.hasOwn(tasks, m.taskId) ? [{ ...m, task: tasks[m.taskId] }] : []));
+  // The most overloaded person now (the first of a tie)
+  const worst = lanes.reduce<LaneLoad | null>((w, l) => (l.personId !== null && (l.over ?? 0) > (w?.over ?? 0) ? l : w), null);
+  const first = moves.length === 1 ? moves[0] : null;
+  const one = first?.type === "owner" ? first : null;
+  const worstPerson = usePerson(worst?.personId ?? null);
+  const receiver = usePerson(one?.to ?? null);
+  const to = receiver?.name ?? "?";
+  // /demo proposes handovers only; a start shift (balance v2's fallback) is listed as a change
+  const handovers = moves.every((m) => m.type === "owner");
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 p-5 md:p-6">
         <div className="min-w-0">
           <span className="t-micro text-on-ink/50">FORM suggests</span>
-          <p className="t-title mt-2">{one ? `Move ${one.task.title} to ${name(one.to)}` : `${moves.length} handovers to balance the team`}</p>
+          <p className="t-title mt-2">
+            {one
+              ? `Move ${one.task.title} to ${to}`
+              : handovers
+                ? `${moves.length} handovers to balance the team`
+                : `${moves.length} ${moves.length === 1 ? "change" : "changes"} to balance the team`}
+          </p>
           <p className="t-body-s mt-1.5 text-on-ink/60">
-            {worst?.person ? `${worst.person.name} is ${fmtLoad(worst.over)}d over capacity. ` : ""}
-            {one ? `${name(one.to)} has room for its ${one.task.estimate}d.` : "Each move fits the receiver's capacity."}
+            {worst && worstPerson ? `${worstPerson.name} is ${fmtLoad(worst.over ?? 0)}d over capacity. ` : ""}
+            {one
+              ? `${to} has room for its ${one.task.estimateDays ?? "?"}d.`
+              : handovers
+                ? "Each move fits the receiver's capacity."
+                : "Each change keeps the team within capacity."}
           </p>
           {!one && (
             <ul className="mt-3 flex flex-col gap-1">
               {moves.map((m) => (
-                <li key={m.taskId} className="t-body-s flex items-center gap-2 text-on-ink/85">
-                  <span>{m.task.title}</span>
-                  <span className="t-data text-on-ink/50">
-                    {name(m.task.owner)} → {name(m.to)} · {m.task.estimate}d
-                  </span>
-                </li>
+                <PlanItem key={m.taskId} item={m} />
               ))}
             </ul>
           )}
@@ -546,12 +676,34 @@ function PlanCard({ doc, plan, loads, onAccept, onDiscard }: { doc: Doc; plan: R
   );
 }
 
+/** One move of a proposal with several: who hands the task to whom, or how far its start moves */
+function PlanItem({ item }: { item: PlanMove }) {
+  const owner = usePerson(item.task.ownerId);
+  const receiver = usePerson(item.type === "owner" ? item.to : null);
+  // An archived owner reads as unassigned (Q7); an unknown id as "?"
+  const name = (id: PersonId | null, person: Person | null) => (id === null || person?.archived ? "Unassigned" : (person?.name ?? "?"));
+  return (
+    <li className="t-body-s flex items-center gap-2 text-on-ink/85">
+      <span>{item.task.title}</span>
+      <span className="t-data text-on-ink/50">
+        {item.type === "owner" ? (
+          <>
+            {name(item.task.ownerId, owner)} → {name(item.to, receiver)} · {item.task.estimateDays}d
+          </>
+        ) : (
+          <>starts {item.days}d later</>
+        )}
+      </span>
+    </li>
+  );
+}
+
 /* ------------------------------------------------------------------
    No team yet
    ------------------------------------------------------------------ */
 
 function NoTeam() {
-  const commit = useForm((s) => s.commit);
+  const actions = useActions();
   return (
     <div className="glass grid min-h-[320px] place-items-center rounded-[36px] p-8 text-center">
       <div className="flex max-w-[40ch] flex-col items-center gap-3">
@@ -562,14 +714,14 @@ function NoTeam() {
         <div className="mt-2 flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => commit([{ op: "addSampleTeam" }], "sample team")}
+            onClick={() => actions.addSampleTeam()}
             className="focus-ring t-body-s h-[36px] cursor-pointer rounded-full bg-ink px-4 text-on-ink transition-transform hover:scale-[1.02]"
           >
             <ShuffleText text="Use a sample team" />
           </button>
           <button
             type="button"
-            onClick={() => commit([{ op: "addPerson", name: "Person 1" }], "add person")}
+            onClick={() => actions.addPerson()}
             className="focus-ring t-body-s h-[36px] cursor-pointer rounded-full px-4 text-text-2 transition-colors hover:bg-black/[0.05] hover:text-text"
           >
             <ShuffleText text="Add a person" />

@@ -1,0 +1,4 @@
+{
+  "base": "B",
+  "note": "The baseline CI compares HEAD with (scripts/e2e/compare.mjs). B since the agent fix (plan step 5): the route move, the Q14 tokens and the settling agent loop, on the v0 code, tagged phase1-baseline-b locally. The engine switchover is gated against it (plan section 10.8)."
+}

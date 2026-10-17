@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
-import { useForm } from "@/lib/store";
+import { useActions, useIntro } from "@/lib/store/hooks";
 import { ease, move } from "@/lib/motion";
 import { AgentMark } from "./agent/AgentMark";
 import { DecodeText, RevealText } from "./text/TextMotion";
@@ -38,9 +38,8 @@ const block = (i: number) => ({
  * out of focus, behind it. Reopened from the About button in the top bar.
  */
 export function Intro() {
-  const open = useForm((s) => s.intro);
-  const setIntro = useForm((s) => s.setIntro);
-  const engine = useForm((s) => s.engine);
+  const open = useIntro();
+  const { setIntro } = useActions();
   const dialog = useRef<HTMLElement>(null);
 
   // Decide before the first paint, so a first-time visitor never sees the workspace flash in unblurred
@@ -122,9 +121,7 @@ export function Intro() {
             </motion.div>
 
             <motion.div {...block(3)} className="mt-9 flex flex-wrap items-center justify-between gap-x-6 gap-y-4 border-t border-line pt-6">
-              <span className="t-data max-w-[30ch] text-text-3">
-                {engine === "claude" ? "Commands are interpreted by Claude, server-side." : "Commands run on a built-in demo parser. Your work is saved in this browser."}
-              </span>
+              <span className="t-data max-w-[30ch] text-text-3">Commands run on a built-in demo parser. Your work is saved in this browser.</span>
               <button
                 type="button"
                 onClick={close}

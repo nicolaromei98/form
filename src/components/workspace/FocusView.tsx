@@ -1,19 +1,36 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type MouseEvent, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { DecodeText, TEXT, revealBlocks, revealWords } from "../text/TextMotion";
-import { useForm } from "@/lib/store";
+import {
+  type FocusCandidate,
+  type FocusResult,
+  useActions,
+  useFocus,
+  useFocusFor,
+  useIsSelected,
+  useProject,
+  useReducedMotion,
+  useSteps,
+  useTask,
+  useTaskIds,
+  useTaskNumber,
+  useViewConfig,
+} from "@/lib/store/hooks";
 import { move } from "@/lib/motion";
-import { focusPick, pickFor, summaryOf, type FocusPick } from "@/lib/focus";
-import { fmtDays, taskNumber, topLevel } from "@/lib/selectors";
-import { STATUS_LABEL, type Doc, type Task } from "@/lib/schema";
+import { STATUS_LABEL } from "@/lib/domain/labels";
+import type { TaskId } from "@/lib/domain/schema/ids";
+import type { Task } from "@/lib/domain/schema/project";
+import { fmtDays, summaryOf } from "@/lib/planning/format";
 import { useViewport } from "@/lib/useViewport";
 import { EditableText, ProposalBlock } from "./parts";
-import { useTaskSurface } from "./TaskCard";
 import { ShuffleText } from "../text/ShuffleText";
+
+type FocusPick = NonNullable<FocusResult["pick"]>;
+type Tasks = Readonly<Record<TaskId, Task>>;
 
 /**
  * Representation: focus — a full-viewport stage, readable in one glance.
@@ -22,11 +39,19 @@ import { ShuffleText } from "../text/ShuffleText";
  * Changing focus never swaps elements — the volumes trade places.
  */
 export function FocusView() {
-  const doc = useForm((s) => s.doc);
-  const pick = useMemo(() => focusPick(doc), [doc]);
-  const volumes = useMemo(() => topLevel(doc).filter((t) => t.id === pick?.task.id || !(doc.view.hideDone && t.status === "done")), [doc, pick]);
+  const pick = useFocus()?.pick ?? null;
+  const tasks = useProject()?.tasks ?? null;
+  const ids = useTaskIds();
+  const hideDone = useViewConfig()?.hideDone ?? false;
+  const pickId = pick?.taskId ?? null;
+  const task = pickId !== null && tasks !== null && Object.hasOwn(tasks, pickId) ? tasks[pickId] : null;
+  // Every task is a volume, in workflow order; "hide done" lets finished ones go unless in focus
+  const volumes = useMemo(
+    () => (tasks === null ? [] : ids.map((id) => tasks[id]).filter((t) => t.id === pickId || !(hideDone && t.status === "done"))),
+    [ids, tasks, hideDone, pickId],
+  );
 
-  if (!pick) {
+  if (!pick || !task || !tasks) {
     return (
       <div className="grid min-h-[calc(100svh-300px)] place-items-center text-center">
         <div>
@@ -39,8 +64,8 @@ export function FocusView() {
 
   return (
     <div className="grid min-h-[calc(100svh-300px)] grid-cols-1 items-center gap-x-16 gap-y-14 pb-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-      <DecisionStack pick={pick} doc={doc} />
-      <Fluid pick={pick} volumes={volumes} doc={doc} />
+      <DecisionStack pick={pick} />
+      <Fluid task={task} volumes={volumes} tasks={tasks} />
     </div>
   );
 }
@@ -51,27 +76,51 @@ export function FocusView() {
  * Overlapping swap: every focus that has been shown stays mounted in the same
  * grid cell until its GSAP exit completes, so old and new never jump layout.
  */
-function useStack(id: string) {
-  const [items, setItems] = useState<{ id: string; leaving: boolean }[]>([{ id, leaving: false }]);
+function useStack(id: TaskId) {
+  const [items, setItems] = useState<{ id: TaskId; leaving: boolean }[]>([{ id, leaving: false }]);
   const last = items[items.length - 1];
   if (last.id !== id || last.leaving) {
     setItems([...items.filter((i) => i.id !== id).map((i) => ({ ...i, leaving: true })), { id, leaving: false }]);
   }
-  const gone = useCallback((gid: string) => setItems((cur) => cur.filter((i) => !(i.id === gid && i.leaving))), []);
+  const gone = useCallback((gid: TaskId) => setItems((cur) => cur.filter((i) => !(i.id === gid && i.leaving))), []);
   return { items, gone };
 }
 
-function DecisionStack({ pick, doc }: { pick: FocusPick; doc: Doc }) {
-  const { items, gone } = useStack(pick.task.id);
+function DecisionStack({ pick }: { pick: FocusPick }) {
+  const { items, gone } = useStack(pick.taskId);
   return (
     <div className="grid min-w-0">
-      {items.map((it) => {
-        const p = it.id === pick.task.id ? pick : pickFor(doc, it.id, pick.chosenBy);
-        if (!p) return null;
-        return <Decision key={it.id} pick={p} number={taskNumber(doc, it.id)} leaving={it.leaving} onGone={gone} />;
-      })}
+      {items.map((it) => (
+        <DecisionItem key={it.id} id={it.id} chosenBy={pick.chosenBy} leaving={it.leaving} onGone={gone} />
+      ))}
     </div>
   );
+}
+
+/**
+ * One focus of the stack: the shown one, or one dissolving. A leaving task can stop being a
+ * candidate while it dissolves (done, or blocked), so it keeps the last reasons it had; a
+ * removed task renders nothing, as in v0.
+ */
+function DecisionItem({
+  id,
+  chosenBy,
+  leaving,
+  onGone,
+}: {
+  id: TaskId;
+  chosenBy: FocusPick["chosenBy"];
+  leaving: boolean;
+  onGone: (id: TaskId) => void;
+}) {
+  const task = useTask(id);
+  const live = useFocusFor(id);
+  const number = useTaskNumber(id);
+  const [kept, setKept] = useState(live);
+  if (live !== null && live !== kept) setKept(live);
+  const candidate = live ?? kept;
+  if (!task || !candidate) return null;
+  return <Decision task={task} candidate={candidate} chosenBy={chosenBy} number={number} leaving={leaving} onGone={onGone} />;
 }
 
 /**
@@ -104,16 +153,30 @@ function useFitLine(text: string) {
   return box;
 }
 
-function Decision({ pick, number, leaving, onGone }: { pick: FocusPick; number: string; leaving: boolean; onGone: (id: string) => void }) {
-  const { task, next, chosenBy } = pick;
-  const { lead, point } = summaryOf(pick);
+function Decision({
+  task,
+  candidate,
+  chosenBy,
+  number,
+  leaving,
+  onGone,
+}: {
+  task: Task;
+  candidate: FocusCandidate;
+  chosenBy: FocusPick["chosenBy"];
+  number: string;
+  leaving: boolean;
+  onGone: (id: TaskId) => void;
+}) {
+  const steps = useSteps(task.id);
+  // The first step not done, when the task has been broken down
+  const next = candidate.nextStepId === null ? null : (steps.find((s) => s.id === candidate.nextStepId) ?? null);
+  // Where it stands, then why it matters now
+  const { lead, point } = summaryOf(candidate, task);
   const root = useRef<HTMLElement>(null);
   const titleBox = useFitLine(task.title);
-  const update = useForm((s) => s.updateTask);
-  const commit = useForm((s) => s.commit);
-  const select = useForm((s) => s.select);
-  const submit = useForm((s) => s.submit);
-  const reduced = useForm((s) => s.reducedMotion);
+  const { commit, select, submit } = useActions();
+  const reduced = useReducedMotion();
 
   // Enter: the product's one text motion — title words condense out of a blur, the rest follows
   useGSAP(
@@ -148,7 +211,12 @@ function Decision({ pick, number, leaving, onGone }: { pick: FocusPick; number: 
       </div>
 
       <div ref={titleBox} data-r="title" className="mt-5 min-w-0">
-        <EditableText value={task.title} label="Task title" onCommit={(v) => update(task.id, { title: v })} className="t-display-xl whitespace-nowrap" />
+        <EditableText
+          value={task.title}
+          label="Task title"
+          onCommit={(v) => commit([{ op: "updateTask", taskId: task.id, field: "title", value: v }], { label: "edit" })}
+          className="t-display-xl whitespace-nowrap"
+        />
       </div>
 
       {/* One sentence instead of chips and lists: where it stands, then why it matters now */}
@@ -161,11 +229,11 @@ function Decision({ pick, number, leaving, onGone }: { pick: FocusPick; number: 
         <div className="tone-dark flex min-h-[56px] items-center gap-3 rounded-full bg-ink py-2 pr-2 pl-6 text-on-ink">
           <span className="t-micro shrink-0 text-on-ink-3">Next</span>
           <span className="t-body min-w-0 flex-1 truncate">{next ? next.title : "Break it into smaller steps"}</span>
-          {next && <span className="t-data shrink-0 text-on-ink-3">{fmtDays(next.estimate)}</span>}
+          {next && <span className="t-data shrink-0 text-on-ink-3">{fmtDays(next.estimateDays)}</span>}
           <button
             type="button"
             onClick={() => {
-              if (next) commit([{ op: "updateTask", id: next.id, patch: { status: "done" } }], "step done");
+              if (next) commit([{ op: "updateStep", taskId: task.id, stepId: next.id, field: "done", value: true }], { label: "step done" });
               else {
                 select(task.id);
                 submit("Break this task into smaller steps");
@@ -213,7 +281,7 @@ const LOBES = [
 ];
 
 /** Crown slots keep their owners: the old nucleus takes the slot of the volume that replaced it. */
-function useSlots(focusId: string, volumes: Task[]) {
+function useSlots(focusId: TaskId, volumes: readonly Task[]) {
   const ids = volumes.filter((t) => t.id !== focusId).map((t) => t.id);
   const [state, setState] = useState({ focusId, slots: ids });
   let slots = state.slots;
@@ -227,16 +295,22 @@ function useSlots(focusId: string, volumes: Task[]) {
   return kept.concat(ids.filter((id) => !kept.includes(id)));
 }
 
-function Fluid({ pick, volumes, doc }: { pick: FocusPick; volumes: Task[]; doc: Doc }) {
+function Fluid({ task, volumes, tasks }: { task: Task; volumes: readonly Task[]; tasks: Tasks }) {
   const { w: vw } = useViewport();
-  const { task } = pick;
-  const { onClick: selectFocus } = useTaskSurface(task);
-  const commit = useForm((s) => s.commit);
+  const selected = useIsSelected(task.id);
+  const { commit, select } = useActions();
   const [hover, setHover] = useState<Task | null>(null);
   const slots = useSlots(task.id, volumes);
 
+  // The nucleus selects its task the way a card does
+  const selectFocus = (e: MouseEvent) => {
+    if ((e.target as HTMLElement).closest("[data-interactive]")) return;
+    e.stopPropagation();
+    select(selected ? null : task.id);
+  };
+
   const D = Math.round(Math.max(200, Math.min(290, vw * 0.2)));
-  const vol = (t: Task) => Math.round(D * (t.status === "done" ? 0.17 : 0.26 + Math.min(8, t.estimate ?? 3) * 0.008));
+  const vol = (t: Task) => Math.round(D * (t.status === "done" ? 0.17 : 0.26 + Math.min(8, t.estimateDays ?? 3) * 0.008));
   const geometry = (t: Task) => {
     if (t.id === task.id) return { x: 0, y: 0, d: D, slot: -1 };
     const i = slots.indexOf(t.id);
@@ -298,7 +372,7 @@ function Fluid({ pick, volumes, doc }: { pick: FocusPick; volumes: Task[]; doc: 
                     if (focus) return selectFocus(e);
                     e.stopPropagation();
                     setHover(null);
-                    commit([{ op: "setView", patch: { focusId: t.id } }], `focus ${t.title}`);
+                    commit([{ op: "setFocus", taskId: t.id }], { label: `focus ${t.title}` });
                   }}
                   animate={focus ? { x: 0, y: 0 } : { x: FLOAT_X, y: FLOAT_Y }}
                   transition={{ layout: move, ...(focus ? { x: move, y: move } : floatT(g.slot)) }}
@@ -312,7 +386,7 @@ function Fluid({ pick, volumes, doc }: { pick: FocusPick; volumes: Task[]; doc: 
 
         {/* Crisp layer above the goo: the nucleus readout and the volume numbers ride the same curve */}
         <div className="pointer-events-none absolute left-1/2" style={{ top: cy }}>
-          <Readout task={task} size={D} doc={doc} />
+          <Readout task={task} size={D} tasks={tasks} />
           {volumes.map((t) => {
             const g = geometry(t);
             const focus = g.slot < 0;
@@ -330,7 +404,7 @@ function Fluid({ pick, volumes, doc }: { pick: FocusPick; volumes: Task[]; doc: 
                   animate={focus ? { x: 0, y: 0 } : { x: FLOAT_X, y: FLOAT_Y }}
                   transition={focus ? undefined : floatT(Math.max(0, g.slot))}
                 >
-                  {t.status === "done" ? "✓" : taskNumber(doc, t.id)}
+                  {t.status === "done" ? "✓" : <TaskNumber id={t.id} />}
                 </motion.span>
               </motion.span>
             );
@@ -355,22 +429,27 @@ function Fluid({ pick, volumes, doc }: { pick: FocusPick; volumes: Task[]; doc: 
   );
 }
 
+/** A volume's workflow number ("01"), as bare text inside its label */
+function TaskNumber({ id }: { id: TaskId }) {
+  return useTaskNumber(id);
+}
+
 /** The figure inside the nucleus: the old value blurs away while the new one comes into focus. */
-function Readout({ task, size, doc }: { task: Task; size: number; doc: Doc }) {
+function Readout({ task, size, tasks }: { task: Task; size: number; tasks: Tasks }) {
   const { items, gone } = useStack(task.id);
   return (
     <div className="absolute grid place-items-center" style={{ width: size, height: size, left: -size / 2, top: -size / 2 }}>
       {items.map((it) => {
-        const t = doc.tasks[it.id];
+        const t = Object.hasOwn(tasks, it.id) ? tasks[it.id] : null;
         return t ? <ReadoutItem key={it.id} task={t} leaving={it.leaving} onGone={gone} /> : null;
       })}
     </div>
   );
 }
 
-function ReadoutItem({ task, leaving, onGone }: { task: Task; leaving: boolean; onGone: (id: string) => void }) {
+function ReadoutItem({ task, leaving, onGone }: { task: Task; leaving: boolean; onGone: (id: TaskId) => void }) {
   const root = useRef<HTMLDivElement>(null);
-  const reduced = useForm((s) => s.reducedMotion);
+  const reduced = useReducedMotion();
 
   useGSAP(
     () => {

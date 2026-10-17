@@ -12,6 +12,16 @@
 
 # testing
 /coverage
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+# e2e runs: screenshots, frames, videos, traces and reports (baselines are rebuilt from a git ref)
+/e2e/.out/
+
+# audit harness re-runs and their local tools
+/scripts/audit/.out/
+/scripts/audit/perf/tools/node_modules/
 
 # next.js
 /.next/

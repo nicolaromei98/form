@@ -1,4 +1,4 @@
-import type { Representation } from "@/lib/schema";
+import type { ViewKind } from "@/lib/domain/schema/primitives";
 
 /**
  * Agent geometry. Every visual state of FORM's agent is a set of circles
@@ -158,11 +158,11 @@ export const NODE = {
   /** Phones: gap between the pill's top and the row's bottom (flat edges fuse more easily, so it is wider than the chain gap) */
   rowGap: 21,
   /** Fixed widths so goo and label agree without measuring: 20px either side of "+ Label" (Satoshi, t-body-s) */
-  w: { cards: 96, board: 90, timeline: 102, team: 86, focus: 88, brief: 82 } as Record<Representation, number>,
+  w: { cards: 96, board: 90, timeline: 102, team: 86, focus: 88, brief: 82 } as Record<ViewKind, number>,
 };
 
 export interface NodeFrame {
-  view: Representation;
+  view: ViewKind;
   x: number;
   y: number;
   w: number;
@@ -170,7 +170,7 @@ export interface NodeFrame {
 }
 
 /** Where the offered views sit around the docked pill, and the point inside the pill they bud from. */
-export function nodeFrames(dock: Vec, vw: number, views: Representation[]): { layout: "chain" | "row"; frames: NodeFrame[]; origin: Vec } {
+export function nodeFrames(dock: Vec, vw: number, views: readonly ViewKind[]): { layout: "chain" | "row"; frames: NodeFrame[]; origin: Vec } {
   const half = (COMPACT.lead + COMPACT.w - COMPACT.overlap) / 2;
   if (vw >= 768) {
     // A chain on the pill's centre line, to its right; it ends before the xl corner metadata
@@ -186,7 +186,7 @@ export function nodeFrames(dock: Vec, vw: number, views: Representation[]): { la
     return { layout: "chain", frames, origin: { x: dock.x + half - COMPACT.h / 2, y: dock.y } };
   }
   // Phones: under 80px beside the pill, so a centred row above it
-  const fit: Representation[] = [];
+  const fit: ViewKind[] = [];
   let total = -NODE.gap;
   for (const view of views) {
     if (total + NODE.gap + NODE.w[view] > vw - 32) break;

@@ -1,0 +1,364 @@
+{
+  "state": {
+    "doc": {
+      "tool": {
+        "id": "tool-xr5c51",
+        "kind": "project",
+        "template": "website",
+        "title": "New website",
+        "startDate": "2026-09-28",
+        "startDateIsSample": true,
+        "blocks": [
+          "header",
+          "metrics",
+          "collection"
+        ],
+        "views": [
+          "cards",
+          "board",
+          "timeline",
+          "team",
+          "focus",
+          "brief"
+        ]
+      },
+      "tasks": {
+        "t-research": {
+          "status": "done",
+          "priority": "low",
+          "progress": 100,
+          "estimate": 3,
+          "cost": null,
+          "parentId": null,
+          "emphasis": false,
+          "origin": "template",
+          "owner": "p-sara",
+          "id": "t-research",
+          "title": "Research"
+        },
+        "t-visual": {
+          "status": "review",
+          "priority": "high",
+          "progress": 85,
+          "estimate": 4,
+          "cost": null,
+          "parentId": null,
+          "emphasis": false,
+          "origin": "template",
+          "owner": "p-marta",
+          "id": "t-visual",
+          "title": "Visual Direction"
+        },
+        "t-ui": {
+          "status": "active",
+          "priority": "urgent",
+          "progress": 30,
+          "estimate": 6,
+          "cost": null,
+          "parentId": null,
+          "emphasis": false,
+          "origin": "template",
+          "owner": "p-marta",
+          "id": "t-ui",
+          "title": "UI Design"
+        },
+        "t-dev": {
+          "status": "todo",
+          "priority": "medium",
+          "progress": 0,
+          "estimate": 8,
+          "cost": null,
+          "parentId": null,
+          "emphasis": false,
+          "origin": "template",
+          "owner": "p-luca",
+          "id": "t-dev",
+          "title": "Development"
+        }
+      },
+      "order": [
+        "t-research",
+        "t-visual",
+        "t-ui",
+        "t-dev"
+      ],
+      "view": {
+        "representation": "cards",
+        "density": "comfortable",
+        "layout": "grid",
+        "columns": null,
+        "sort": "manual",
+        "hideDone": false,
+        "highlightUrgent": false,
+        "fields": {
+          "priority": true,
+          "estimate": true,
+          "progress": true
+        }
+      },
+      "proposal": null,
+      "mood": [],
+      "people": [
+        {
+          "id": "p-marta",
+          "name": "Marta",
+          "role": "Art director",
+          "capacity": 7
+        },
+        {
+          "id": "p-sara",
+          "name": "Sara",
+          "role": "Designer",
+          "capacity": 8
+        },
+        {
+          "id": "p-luca",
+          "name": "Luca",
+          "role": "Developer",
+          "capacity": 10
+        },
+        {
+          "id": "p-p4ae3s",
+          "name": "Person 01",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-regk2o",
+          "name": "Person 02",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-146p2b",
+          "name": "Person 03",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-a6spwc",
+          "name": "Person 04",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-rp6wsy",
+          "name": "Person 05",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-9khgy9",
+          "name": "Person 06",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-ynniaj",
+          "name": "Person 07",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-ucfguz",
+          "name": "Person 08",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-hywhqe",
+          "name": "Person 09",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-w2xmqc",
+          "name": "Person 10",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-mku95r",
+          "name": "Person 11",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-couy0i",
+          "name": "Person 12",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-jy15tt",
+          "name": "Person 13",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-ywgfyz",
+          "name": "Person 14",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-zl1g4b",
+          "name": "Person 15",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-sc8m87",
+          "name": "Person 16",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-glzykv",
+          "name": "Person 17",
+          "role": null,
+          "capacity": 10
+        },
+        {
+          "id": "p-extra21",
+          "name": "Person 21",
+          "role": null,
+          "capacity": 10
+        }
+      ],
+      "plan": null,
+      "brief": {
+        "edits": {},
+        "lines": []
+      }
+    },
+    "log": [
+      {
+        "at": 1791966240000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791966180000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791966120000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791966060000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791966000000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965940000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965880000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965820000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965760000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965700000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965640000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965580000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965520000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965460000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965400000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965340000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965280000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965220000,
+        "label": "add person",
+        "source": "direct"
+      },
+      {
+        "at": 1791965160000,
+        "label": "view → cards",
+        "source": "direct"
+      },
+      {
+        "at": 1791965100000,
+        "label": "view → brief",
+        "source": "direct"
+      },
+      {
+        "at": 1791965040000,
+        "label": "view → focus",
+        "source": "direct"
+      },
+      {
+        "at": 1791964980000,
+        "label": "view → team",
+        "source": "direct"
+      },
+      {
+        "at": 1791964920000,
+        "label": "view → timeline",
+        "source": "direct"
+      },
+      {
+        "at": 1791964860000,
+        "label": "view → board",
+        "source": "direct"
+      },
+      {
+        "at": 1791964800000,
+        "label": "Create a project tracker for my new website",
+        "source": "agent"
+      }
+    ]
+  },
+  "version": 1
+}

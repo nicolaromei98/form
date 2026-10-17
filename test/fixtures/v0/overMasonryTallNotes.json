@@ -1,0 +1,416 @@
+{
+  "state": {
+    "doc": {
+      "tool": {
+        "id": "tool-c3stfv",
+        "kind": "project",
+        "template": "website",
+        "title": "New website",
+        "startDate": "2026-09-28",
+        "startDateIsSample": true,
+        "blocks": [
+          "header",
+          "metrics",
+          "collection",
+          "moodboard"
+        ],
+        "views": [
+          "cards",
+          "board",
+          "timeline",
+          "team",
+          "focus",
+          "brief"
+        ]
+      },
+      "tasks": {
+        "t-research": {
+          "status": "done",
+          "priority": "low",
+          "progress": 100,
+          "estimate": 3,
+          "cost": null,
+          "parentId": null,
+          "emphasis": false,
+          "origin": "template",
+          "owner": "p-sara",
+          "id": "t-research",
+          "title": "Research"
+        },
+        "t-visual": {
+          "status": "review",
+          "priority": "high",
+          "progress": 85,
+          "estimate": 4,
+          "cost": null,
+          "parentId": null,
+          "emphasis": false,
+          "origin": "template",
+          "owner": "p-marta",
+          "id": "t-visual",
+          "title": "Visual Direction"
+        },
+        "t-ui": {
+          "status": "active",
+          "priority": "urgent",
+          "progress": 30,
+          "estimate": 6,
+          "cost": null,
+          "parentId": null,
+          "emphasis": false,
+          "origin": "template",
+          "owner": "p-marta",
+          "id": "t-ui",
+          "title": "UI Design"
+        },
+        "t-dev": {
+          "status": "todo",
+          "priority": "medium",
+          "progress": 0,
+          "estimate": 8,
+          "cost": null,
+          "parentId": null,
+          "emphasis": false,
+          "origin": "template",
+          "owner": "p-luca",
+          "id": "t-dev",
+          "title": "Development"
+        }
+      },
+      "order": [
+        "t-research",
+        "t-visual",
+        "t-ui",
+        "t-dev"
+      ],
+      "view": {
+        "representation": "cards",
+        "density": "comfortable",
+        "layout": "grid",
+        "columns": null,
+        "sort": "manual",
+        "hideDone": false,
+        "highlightUrgent": false,
+        "fields": {
+          "priority": true,
+          "estimate": true,
+          "progress": true
+        }
+      },
+      "proposal": null,
+      "mood": [
+        {
+          "id": "m-g16230",
+          "kind": "note",
+          "x": 0.03,
+          "y": 0.03,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 1"
+        },
+        {
+          "id": "m-ym5fh9",
+          "kind": "note",
+          "x": 0.26949999999999996,
+          "y": 0.03,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 2"
+        },
+        {
+          "id": "m-8ik3fg",
+          "kind": "note",
+          "x": 0.5089999999999999,
+          "y": 0.03,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 3"
+        },
+        {
+          "id": "m-kcavyh",
+          "kind": "note",
+          "x": 0.7484999999999999,
+          "y": 0.03,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 4"
+        },
+        {
+          "id": "m-n6wrhy",
+          "kind": "note",
+          "x": 0.03,
+          "y": 11.123,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 5"
+        },
+        {
+          "id": "m-uxilfy",
+          "kind": "note",
+          "x": 0.26949999999999996,
+          "y": 11.123,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 6"
+        },
+        {
+          "id": "m-cexadt",
+          "kind": "note",
+          "x": 0.5089999999999999,
+          "y": 11.123,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 7"
+        },
+        {
+          "id": "m-w9ughw",
+          "kind": "note",
+          "x": 0.7484999999999999,
+          "y": 11.123,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 8"
+        },
+        {
+          "id": "m-du09nh",
+          "kind": "note",
+          "x": 0.03,
+          "y": 22.216,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 9"
+        },
+        {
+          "id": "m-c5jc64",
+          "kind": "note",
+          "x": 0.26949999999999996,
+          "y": 22.216,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 10"
+        },
+        {
+          "id": "m-tf3wf4",
+          "kind": "note",
+          "x": 0.5089999999999999,
+          "y": 22.216,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 11"
+        },
+        {
+          "id": "m-r9n6uo",
+          "kind": "note",
+          "x": 0.7484999999999999,
+          "y": 22.216,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 12"
+        },
+        {
+          "id": "m-kr9d84",
+          "kind": "note",
+          "x": 0.03,
+          "y": 33.309,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 13"
+        },
+        {
+          "id": "m-glto99",
+          "kind": "note",
+          "x": 0.26949999999999996,
+          "y": 33.309,
+          "w": 0.22149999999999997,
+          "h": 11.075,
+          "r": 0,
+          "asset": null,
+          "hex": null,
+          "text": "Reference note 14"
+        }
+      ],
+      "people": [
+        {
+          "id": "p-marta",
+          "name": "Marta",
+          "role": "Art director",
+          "capacity": 7
+        },
+        {
+          "id": "p-sara",
+          "name": "Sara",
+          "role": "Designer",
+          "capacity": 8
+        },
+        {
+          "id": "p-luca",
+          "name": "Luca",
+          "role": "Developer",
+          "capacity": 10
+        }
+      ],
+      "plan": null,
+      "brief": {
+        "edits": {},
+        "lines": []
+      }
+    },
+    "log": [
+      {
+        "at": 1791966120000,
+        "label": "arrange masonry",
+        "source": "direct"
+      },
+      {
+        "at": 1791966060000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791966000000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791965940000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791965880000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791965820000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791965760000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791965700000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791965640000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791965580000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791965520000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791965460000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791965400000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791965340000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791965280000,
+        "label": "resize",
+        "source": "direct"
+      },
+      {
+        "at": 1791965220000,
+        "label": "add notes",
+        "source": "direct"
+      },
+      {
+        "at": 1791965160000,
+        "label": "view → cards",
+        "source": "direct"
+      },
+      {
+        "at": 1791965100000,
+        "label": "view → brief",
+        "source": "direct"
+      },
+      {
+        "at": 1791965040000,
+        "label": "view → focus",
+        "source": "direct"
+      },
+      {
+        "at": 1791964980000,
+        "label": "view → team",
+        "source": "direct"
+      },
+      {
+        "at": 1791964920000,
+        "label": "view → timeline",
+        "source": "direct"
+      },
+      {
+        "at": 1791964860000,
+        "label": "view → board",
+        "source": "direct"
+      },
+      {
+        "at": 1791964800000,
+        "label": "Create a project tracker for my new website",
+        "source": "agent"
+      }
+    ]
+  },
+  "version": 1
+}

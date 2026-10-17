@@ -1,0 +1,167 @@
+# FORM CI (docs/PHASE-1-PLAN.md §10.1)
+#   checks:   typecheck → lint → unit → golden
+#   property: 10,000 runs per property, four shards with their own random seeds
+#   perf:     budgets stretched with PERF_SCALE=3 for shared runners
+#   build:    next build
+#   e2e:      Playwright on macOS (Chromium and WebKit, Q23): HEAD against the gate's baseline (§10.8)
+#   nightly:  the property suite at 100,000 runs (scheduled runs use the default branch's workflow)
+name: CI
+
+on:
+  push:
+    branches: [main, "phase-*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  checks:
+    name: Typecheck, lint, unit, golden
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit
+        run: npm run test:unit
+      - name: Golden
+        run: npm run test:golden
+
+  property:
+    name: Property (shard ${{ matrix.shard }}/4)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      FC_RUNS: 10000
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Pick a seed
+        run: |
+          seed=$(( (RANDOM << 15) | RANDOM ))
+          echo "FC_SEED=$seed" >> "$GITHUB_ENV"
+          echo "Shard ${{ matrix.shard }}: replay with FC_SEED=$seed FC_RUNS=$FC_RUNS"
+      # A shard can be empty while the suite is small
+      - name: Property suite
+        run: npx vitest run --project property --shard ${{ matrix.shard }}/4 --passWithNoTests
+
+  perf:
+    name: Perf
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PERF_SCALE: 3
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Perf suite
+        run: npm run test:perf
+
+  build:
+    name: Build
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Next build
+        run: npm run build
+
+  e2e:
+    name: E2E and visual (Chromium, WebKit)
+    # Builds the baseline named in e2e/baselines/gate.json and this commit in worktrees, serves them
+    # on 3500 and 3501, writes the baseline's screenshots and compares this commit's with them, on the
+    # same runner (§10.8: no screenshots are committed)
+    # macOS minutes cost about 10× Linux on a private repo: run on pull requests and on demand,
+    # not on every phase-branch push (DECISIONS.md, "CI e2e trigger")
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The baseline commit is rebuilt from history
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install browsers
+        run: npx playwright install chromium webkit
+      - name: Compare with the baseline
+        run: npm run e2e:compare -- --workdir "$RUNNER_TEMP/form-e2e"
+      - name: Upload screenshots, videos and reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e
+          path: e2e/.out/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  property-nightly:
+    name: Property nightly (shard ${{ matrix.shard }}/4)
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      FC_RUNS: 100000
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Pick a seed
+        run: |
+          seed=$(( (RANDOM << 15) | RANDOM ))
+          echo "FC_SEED=$seed" >> "$GITHUB_ENV"
+          echo "Shard ${{ matrix.shard }}: replay with FC_SEED=$seed FC_RUNS=$FC_RUNS"
+      - name: Property suite
+        run: npx vitest run --project property --shard ${{ matrix.shard }}/4 --passWithNoTests

@@ -18,28 +18,36 @@
   --ink-2: #161616;
   --ink-3: #242424;
 
-  /* Text on paper */
+  /* Text on paper (Q14): every text token reaches 4.5:1 on paper-lo, glass, the sheet and a
+     dimmed card (scripts/audit/a11y/q14.mjs). Tertiary hierarchy comes from the type role. */
   --text: #0a0a0a;
-  --text-2: rgba(10, 10, 10, 0.58);
-  --text-3: rgba(10, 10, 10, 0.38);
+  --text-2: rgba(10, 10, 10, 0.72);
+  --text-3: rgba(10, 10, 10, 0.6);
+  /* Disabled controls and decorative hairlines only: never information or placeholders */
   --text-4: rgba(10, 10, 10, 0.2);
 
   /* Text on ink */
   --on-ink: #f4f4f2;
   --on-ink-2: rgba(244, 244, 242, 0.6);
-  --on-ink-3: rgba(244, 244, 242, 0.34);
+  --on-ink-3: rgba(244, 244, 242, 0.56);
 
-  /* Lines */
+  /* Lines: hairlines are decoration; a stroke that carries meaning (an off ring, a switch track,
+     a state border, a focus ring) uses --line-strong, 3:1 on every light surface */
   --line: rgba(10, 10, 10, 0.08);
   --line-2: rgba(10, 10, 10, 0.14);
+  --line-strong: rgba(10, 10, 10, 0.46);
 
   /* Frosted surfaces */
   --glass: rgba(255, 255, 255, 0.52);
   --glass-hi: rgba(250, 250, 248, 0.92);
   --glass-edge: rgba(255, 255, 255, 0.85);
 
-  /* The only decorative colour: a functional alert red (battery reference) */
+  /* The only decorative colour: a functional alert red (battery reference).
+     --signal fills dots and strokes on glass, cards and ink; on paper or the timeline bar track
+     red is --signal-graphic (3:1); red text is --signal-text (4.5:1, per tone below). */
   --signal: #ff3b2f;
+  --signal-graphic: #e8261b;
+  --signal-text: #b81f17;
 
   /* Radii — circles and capsules are the only primitives */
   --r-card: 28px;
@@ -49,6 +57,9 @@
   /* Elevation */
   --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 0 0 1px rgba(10, 10, 10, 0.025),
     0 18px 40px -28px rgba(10, 10, 10, 0.22);
+  /* A dimmed card (Q14): the surface recedes, never its text. The frame and shadow at 55% */
+  --shadow-card-dim: 0 1px 0 rgba(255, 255, 255, 0.495) inset, 0 0 0 1px rgba(10, 10, 10, 0.014),
+    0 18px 40px -28px rgba(10, 10, 10, 0.121);
   --shadow-float: 0 1px 0 rgba(255, 255, 255, 0.95) inset, 0 0 0 1px rgba(10, 10, 10, 0.04),
     0 10px 24px -16px rgba(10, 10, 10, 0.2);
 }
@@ -67,7 +78,10 @@
   --color-on-ink-3: var(--on-ink-3);
   --color-line: var(--line);
   --color-line-2: var(--line-2);
+  --color-line-strong: var(--line-strong);
   --color-signal: var(--signal);
+  --color-signal-graphic: var(--signal-graphic);
+  --color-signal-text: var(--signal-text);
 
   /* Typography roles (client-specified):
      Satoshi for titles, paragraphs, UI and numbers · Geist Mono only for eyebrows */
@@ -234,8 +248,10 @@ body {
   --c-chip: rgba(255, 255, 255, 0.66);
   --c-chip-hover: rgba(255, 255, 255, 0.92);
   --c-line: rgba(10, 10, 10, 0.14);
-  --c-dot-off: rgba(10, 10, 10, 0.15);
+  --c-line-strong: var(--line-strong);
+  --c-dot-off: var(--line-strong);
   --c-hover: rgba(10, 10, 10, 0.045);
+  --signal-text: #b81f17;
   color: var(--c-fg);
 }
 .tone-dark {
@@ -248,8 +264,10 @@ body {
   --c-chip: rgba(255, 255, 255, 0.09);
   --c-chip-hover: rgba(255, 255, 255, 0.16);
   --c-line: rgba(255, 255, 255, 0.2);
-  --c-dot-off: rgba(255, 255, 255, 0.22);
+  --c-line-strong: rgba(255, 255, 255, 0.4);
+  --c-dot-off: rgba(255, 255, 255, 0.4);
   --c-hover: rgba(255, 255, 255, 0.07);
+  --signal-text: #ff3b2f;
   color: var(--c-fg);
 }
 .tone-light,
@@ -269,7 +287,7 @@ body {
 }
 .editable:focus {
   background: var(--c-chip-hover);
-  box-shadow: 0 0 0 1px var(--c-line);
+  box-shadow: 0 0 0 1px var(--c-line-strong, var(--line-strong));
 }
 
 /* Remove default focus outline; every control defines its own visible state */

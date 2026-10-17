@@ -4,10 +4,27 @@ import { AnimatePresence, LayoutGroup, motion, useIsPresent } from "motion/react
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useGSAP } from "@gsap/react";
 import { DecodeText, RevealText, revealWords } from "../text/TextMotion";
-import { useForm } from "@/lib/store";
+import { SORT_LABEL, VIEW_LABEL } from "@/lib/domain/labels";
+import { PROJECT_TITLE } from "@/lib/domain/limits";
+import { formatMoney } from "@/lib/domain/money";
+import type { TaskId } from "@/lib/domain/schema/ids";
+import type { SortKey, ViewKind } from "@/lib/domain/schema/primitives";
+import type { ViewConfig } from "@/lib/domain/schema/project";
+import { fmtDate } from "@/lib/planning/format";
+import {
+  useActions,
+  useActiveView,
+  useFx,
+  useMetrics,
+  usePlan,
+  useProject,
+  useReducedMotion,
+  useTask,
+  useTaskIds,
+  useViewConfig,
+  useViews,
+} from "@/lib/store/hooks";
 import { TAB_GROW_MS, ease, move } from "@/lib/motion";
-import { fmtEuro, metrics, parseISODate, topLevel } from "@/lib/selectors";
-import { REPRESENTATION_LABEL, SORT_LABEL, TOOL_TITLE_MAX, type Representation, type Sort } from "@/lib/schema";
 import { EditableText, Popover, usePopover } from "./parts";
 import { useBlockReveal } from "./reveal";
 import { CardsView } from "./CardsView";
@@ -40,27 +57,29 @@ export function BlockShell({ children, className = "", order = 0 }: { children: 
 }
 
 /* ------------------------------------------------------------------
-   Header — title, representation switch, live view config
+   Header — title, view tabs, live view config
    ------------------------------------------------------------------ */
 
 export function HeaderBlock() {
-  const doc = useForm((s) => s.doc);
-  const commit = useForm((s) => s.commit);
-  const tool = doc.tool!;
-  const m = useMemo(() => metrics(doc), [doc]);
+  const project = useProject();
+  const m = useMetrics();
+  const rep = useActiveView();
+  const { commit } = useActions();
   const reveal = useBlockReveal();
-  const start = parseISODate(tool.startDate);
+  if (project === null || m === null) return null;
 
   const d = reveal ?? 0.05;
-  const subtitle = `${m.count} tasks${m.missingEstimates > 0 ? ` · ${m.missingEstimates} without duration` : ""} · ${tool.startDateIsSample ? "sample start" : "starts"} ${start.getDate()} ${start.toLocaleString("en-US", { month: "short" })}`;
+  // "sample start" until the user confirms a start (plan §8.2); without a start date the subtitle says nothing about it
+  const start = project.startDate === null ? "" : ` · ${project.startConfirmed ? "starts" : "sample start"} ${fmtDate(project.startDate)}`;
+  const subtitle = `${m.count} tasks${m.missingEstimates > 0 ? ` · ${m.missingEstimates} without duration` : ""}${start}`;
 
   // Focus is a stage: the header steps down to a single line so the decision owns the viewport
-  if (doc.view.representation === "focus") {
+  if (rep === "focus") {
     return (
       <BlockShell className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-baseline gap-3">
           <DecodeText text="Focus" delay={d} className="t-meta text-text-3" />
-          <RevealText text={tool.title} delay={d + 0.1} className="t-body truncate text-text-2" />
+          <RevealText text={project.title} delay={d + 0.1} className="t-body truncate text-text-2" />
         </div>
         <RepresentationSwitch />
       </BlockShell>
@@ -70,10 +89,16 @@ export function HeaderBlock() {
   return (
     <BlockShell className="mb-7 flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
       <div className="min-w-0">
-        {/* The eyebrow re-decodes whenever the representation changes */}
-        <DecodeText text={`Project · ${REPRESENTATION_LABEL[doc.view.representation]}`} delay={d} className="t-meta mb-3 block text-text-3" />
+        {/* The eyebrow re-decodes whenever the view changes */}
+        <DecodeText text={`Project · ${VIEW_LABEL[rep]}`} delay={d} className="t-meta mb-3 block text-text-3" />
         <TitleReveal delay={d + 0.08}>
-          <EditableText value={tool.title} label="Project title" maxLength={TOOL_TITLE_MAX} onCommit={(v) => commit([{ op: "renameTool", title: v }], "rename project")} className="t-display-l tone-light" />
+          <EditableText
+            value={project.title}
+            label="Project title"
+            maxLength={PROJECT_TITLE}
+            onCommit={(v) => commit([{ op: "updateProject", field: "title", value: v }], { label: "rename project" })}
+            className="t-display-l tone-light"
+          />
         </TitleReveal>
         <RevealText as="p" text={subtitle} delay={d + 0.3} className="t-body mt-3 text-text-2" />
       </div>
@@ -88,7 +113,7 @@ export function HeaderBlock() {
 /** Condenses an editable title word by word on mount, then restores it for editing. */
 function TitleReveal({ delay, children }: { delay: number; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
-  const reduced = useForm((s) => s.reducedMotion);
+  const reduced = useReducedMotion();
   useGSAP(
     () => {
       const el = ref.current?.querySelector("[contenteditable]");
@@ -103,27 +128,26 @@ function TitleReveal({ delay, children }: { delay: number; children: ReactNode }
   );
 }
 
-/** Fresh array for a doc without a tool (never rendered: the header needs a tool) */
-const NO_VIEWS: Representation[] = [];
 /** Last change whose new tab already grew, so a remount (focus header) never holds the ink again */
 let grownSeq = -1;
 
 /** A created view's tab growing in, and the tab the ink waits on meanwhile */
 interface Hold {
-  view: Representation;
-  from: Representation;
+  view: ViewKind;
+  from: ViewKind;
   seq: number;
 }
 
-// memo: HeaderBlock re-renders on every doc change, which must not interrupt a growing tab
+// memo: HeaderBlock re-renders on every project change, which must not interrupt a growing tab
 const RepresentationSwitch = memo(function RepresentationSwitch() {
-  const rep = useForm((s) => s.doc.view.representation);
-  const views = useForm((s) => s.doc.tool?.views ?? NO_VIEWS);
-  const fx = useForm((s) => s.fx);
-  const reduced = useForm((s) => s.reducedMotion);
-  const setRep = useForm((s) => s.setRepresentation);
+  // The tab on screen is local (Q6): switching tabs is no command and no history entry
+  const rep = useActiveView();
+  const views = useViews();
+  const fx = useFx();
+  const reduced = useReducedMotion();
+  const { showView } = useActions();
   const listRef = useRef<HTMLDivElement>(null);
-  // Only the views this project has, in creation order; the current one is a safety net for direct commits
+  // Only the views this project has, in creation order; the current one is a safety net
   const tabs = views.includes(rep) ? views : [...views, rep];
   // The ink waits on the previous tab while the new one grows, then slides over — never onto a box
   // still opening. The hold belongs to the growth: a toggle or an edit during it doesn't cut it short.
@@ -153,7 +177,7 @@ const RepresentationSwitch = memo(function RepresentationSwitch() {
         {/* initial={false}: the tabs a header mounts with are just there; every tab added later grows in */}
         <AnimatePresence initial={false}>
           {tabs.map((r) => (
-            <ViewTab key={r} view={r} selected={rep === r} inked={pill === r} reduced={reduced} onPick={setRep} />
+            <ViewTab key={r} view={r} selected={rep === r} inked={pill === r} reduced={reduced} onPick={showView} />
           ))}
         </AnimatePresence>
       </div>
@@ -161,7 +185,7 @@ const RepresentationSwitch = memo(function RepresentationSwitch() {
   );
 });
 
-function ViewTab({ view, selected, inked, reduced, onPick }: { view: Representation; selected: boolean; inked: boolean; reduced: boolean; onPick: (r: Representation) => void }) {
+function ViewTab({ view, selected, inked, reduced, onPick }: { view: ViewKind; selected: boolean; inked: boolean; reduced: boolean; onPick: (v: ViewKind) => void }) {
   // A closing tab renders with its last props: it drops the ink at once so the ink slides to the neighbour
   const present = useIsPresent();
   const ink = inked && present;
@@ -192,30 +216,35 @@ function ViewTab({ view, selected, inked, reduced, onPick }: { view: Representat
           animate={{ opacity: 1, filter: "blur(0px)", transition: { duration: reduced ? 0 : 0.5, ease: ease.out, delay: reduced ? 0 : 0.24 } }}
           exit={{ opacity: 0, filter: "blur(8px)", transition: { duration: reduced ? 0 : 0.24 } }}
         >
-          <ShuffleText text={REPRESENTATION_LABEL[view]} />
+          <ShuffleText text={VIEW_LABEL[view]} />
         </motion.span>
       </motion.span>
     </button>
   );
 }
 
+/** /demo's sorts: v0's six (the demo can't set due dates until Phase 3) */
+const SORTS: readonly SortKey[] = ["manual", "priority", "progress", "status", "title", "estimate"];
+
+/** What the header's controls change: the view options and the brief's length */
+type ViewPatch = Partial<Pick<ViewConfig, "sort" | "density" | "hideDone" | "highlightUrgent">> & { briefShort?: boolean };
+
 function ViewControls() {
-  const view = useForm((s) => s.doc.view);
-  const commit = useForm((s) => s.commit);
+  const view = useViewConfig();
+  const rep = useActiveView();
+  const { commit } = useActions();
   const { setAnchor: sortPopAnchor, anchor: sortPopEl, pos: sortPopPos, open: sortPopOpen, toggle: sortPopToggle, close: sortPopClose } = usePopover<HTMLButtonElement>();
-  const sorts: Sort[] = ["manual", "priority", "progress", "status", "title", "estimate"];
+  if (view === null) return null;
   // Timeline follows workflow order; focus shows one task — sorting means nothing there
-  const timeline = view.representation === "timeline" || view.representation === "focus";
+  const timeline = rep === "timeline" || rep === "focus";
+  // View options commit and undo, and stay out of Activity (Q6)
+  const setView = (patch: ViewPatch, label: string) => commit([{ op: "setView", patch }], { label });
 
   // The brief is prose: its only control is its length; the task-view toggles would do nothing there
-  if (view.representation === "brief") {
+  if (rep === "brief") {
     return (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <Toggle
-          label="Short version"
-          on={view.briefShort ?? false}
-          onChange={(v) => commit([{ op: "setView", patch: { briefShort: v } }], v ? "short brief" : "full brief")}
-        />
+        <Toggle label="Short version" on={view.brief.short} onChange={(v) => setView({ briefShort: v }, v ? "short brief" : "full brief")} />
       </div>
     );
   }
@@ -246,14 +275,14 @@ function ViewControls() {
       </button>
       <Popover anchor={sortPopEl} pos={sortPopPos} onClose={sortPopClose}>
         <div role="menu" className="flex w-[160px] flex-col">
-          {sorts.map((s) => (
+          {SORTS.map((s) => (
             <button
               key={s}
               type="button"
               role="menuitemradio"
               aria-checked={view.sort === s}
               onClick={() => {
-                if (s !== view.sort) commit([{ op: "setView", patch: { sort: s } }], `sort ${s}`);
+                if (s !== view.sort) setView({ sort: s }, `sort ${s}`);
                 sortPopClose();
               }}
               className={`focus-ring t-body-s h-9 cursor-pointer rounded-full px-3 text-left transition-colors ${view.sort === s ? "bg-ink text-on-ink" : "text-text hover:bg-black/[0.05]"}`}
@@ -264,13 +293,9 @@ function ViewControls() {
         </div>
       </Popover>
 
-      <Toggle
-        label="Compact"
-        on={view.density === "compact"}
-        onChange={(v) => commit([{ op: "setView", patch: { density: v ? "compact" : "comfortable" } }], "density")}
-      />
-      <Toggle label="Hide done" on={view.hideDone} onChange={(v) => commit([{ op: "setView", patch: { hideDone: v } }], "hide done")} />
-      <Toggle label="Urgent" on={view.highlightUrgent} onChange={(v) => commit([{ op: "setView", patch: { highlightUrgent: v } }], "highlight")} />
+      <Toggle label="Compact" on={view.density === "compact"} onChange={(v) => setView({ density: v ? "compact" : "comfortable" }, "density")} />
+      <Toggle label="Hide done" on={view.hideDone} onChange={(v) => setView({ hideDone: v }, "hide done")} />
+      <Toggle label="Urgent" on={view.highlightUrgent} onChange={(v) => setView({ highlightUrgent: v }, "highlight")} />
     </div>
   );
 }
@@ -284,7 +309,8 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
       onClick={() => onChange(!on)}
       className="focus-ring t-body-s group flex h-[30px] cursor-pointer items-center gap-2 rounded-full px-1.5 text-text-3 transition-colors hover:text-text"
     >
-      <span className={`relative h-[15px] w-[26px] rounded-full transition-colors duration-300 ${on ? "bg-ink" : "bg-black/[0.09]"}`}>
+      {/* The off track is a meaningful stroke (Q14): 3:1 against the paper, and the white knob 3.8:1 against it */}
+      <span className={`relative h-[15px] w-[26px] rounded-full transition-colors duration-300 ${on ? "bg-ink" : "bg-line-strong"}`}>
         <motion.span
           className="absolute top-[2px] h-[11px] w-[11px] rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.18)]"
           initial={false}
@@ -302,17 +328,19 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
    ------------------------------------------------------------------ */
 
 export function MetricsBlock() {
-  const doc = useForm((s) => s.doc);
-  const m = useMemo(() => metrics(doc), [doc]);
-  const costs = useMemo(() => topLevel(doc).filter((t) => t.cost != null), [doc]);
-  const cost = costs.reduce((s, t) => s + (t.cost ?? 0), 0);
+  const plan = usePlan();
+  const tasks = plan?.project.tasks;
+  // "Known cost" sums the manual costs, shown once any task has one (v0)
+  const costed = useMemo(() => (tasks === undefined ? false : Object.values(tasks).some((t) => t.costCents !== null)), [tasks]);
+  if (plan === null) return null;
+  const m = plan.metrics;
 
   // A single slim instrument strip: eyebrow + figure per segment, hairlines between
   return (
     <BlockShell order={1} className="no-scrollbar -mx-4 mb-8 overflow-x-auto px-4 py-1 md:mx-0 md:overflow-visible md:px-0">
       <motion.div layout className="glass inline-flex h-[48px] shrink-0 items-center pr-1.5 pl-1.5" style={{ borderRadius: 999 }} transition={move}>
-        <Stat label="Complete" lead={<MiniRing value={m.progress} />}>
-          {m.progress}
+        <Stat label="Complete" lead={<MiniRing value={m.completePct} />}>
+          {m.completePct}
           <span className="text-text-3">%</span>
         </Stat>
         <Stat label="Done">
@@ -323,11 +351,11 @@ export function MetricsBlock() {
           {m.totalEstimate}
           <span className="text-text-3">d</span>
         </Stat>
-        <Stat label="Urgent" lead={m.urgent > 0 ? <span className="h-[6px] w-[6px] rounded-full bg-signal" /> : undefined}>
-          {m.urgent}
+        <Stat label="Urgent" lead={m.urgentOpen > 0 ? <span className="h-[6px] w-[6px] rounded-full bg-signal" /> : undefined}>
+          {m.urgentOpen}
         </Stat>
-        {m.subtasks > 0 && <Stat label="Steps">{m.subtasks}</Stat>}
-        {costs.length > 0 && <Stat label="Known cost">{fmtEuro(cost)}</Stat>}
+        {m.steps > 0 && <Stat label="Steps">{m.steps}</Stat>}
+        {costed && <Stat label="Known cost">{formatMoney(m.budget.knownCents, m.budget.currency)}</Stat>}
       </motion.div>
     </BlockShell>
   );
@@ -372,33 +400,23 @@ function MiniRing({ value }: { value: number }) {
    ------------------------------------------------------------------ */
 
 export function ProgressBlock() {
-  const doc = useForm((s) => s.doc);
-  const m = useMemo(() => metrics(doc), [doc]);
-  const tasks = useMemo(() => topLevel(doc), [doc]);
+  const m = useMetrics();
+  // Every task in workflow order (v0 topLevel): the view's filters don't apply to the whole
+  const ids = useTaskIds();
+  if (m === null) return null;
   return (
     <BlockShell order={2} className="mb-6">
       <div className="glass flex items-center gap-4 rounded-full p-2 pr-3">
         <div className="flex shrink-0 flex-col pl-5">
           <span className="t-micro text-text-3">Progress</span>
           <span className="t-num mt-1.5 text-[28px]">
-            {m.progress}
+            {m.completePct}
             <span className="ml-px align-top text-[13px] text-text-3">%</span>
           </span>
         </div>
         <div className="flex h-[48px] min-w-0 flex-1 gap-1">
-          {tasks.map((t) => (
-            <div key={t.id} className="relative min-w-[28px] overflow-hidden rounded-full bg-black/[0.07]" style={{ flex: t.estimate ?? 1 }} title={`${t.title} · ${t.progress}%`}>
-              <span className="t-data absolute top-1/2 left-4 hidden -translate-y-1/2 whitespace-nowrap text-text-2 sm:block">{t.title}</span>
-              {/* The fill clips an inverted copy of the label, so text stays legible across the edge */}
-              <motion.div
-                className="absolute inset-y-0 left-0 overflow-hidden rounded-full bg-ink"
-                initial={{ width: 0 }}
-                animate={{ width: `${t.progress}%` }}
-                transition={{ ...move, delay: 0.15 }}
-              >
-                <span className="t-data absolute top-1/2 left-4 hidden -translate-y-1/2 whitespace-nowrap text-on-ink sm:block">{t.title}</span>
-              </motion.div>
-            </div>
+          {ids.map((id) => (
+            <ProgressSegment key={id} id={id} />
           ))}
         </div>
       </div>
@@ -407,11 +425,31 @@ export function ProgressBlock() {
   );
 }
 
+/** One task's segment: sized by its estimate (unknown counts as 1 day), filled by its progress */
+function ProgressSegment({ id }: { id: TaskId }) {
+  const t = useTask(id);
+  if (t === null) return null;
+  return (
+    <div className="relative min-w-[28px] overflow-hidden rounded-full bg-black/[0.07]" style={{ flex: t.estimateDays ?? 1 }} title={`${t.title} · ${t.progress}%`}>
+      <span className="t-data absolute top-1/2 left-4 hidden -translate-y-1/2 whitespace-nowrap text-text-2 sm:block">{t.title}</span>
+      {/* The fill clips an inverted copy of the label, so text stays legible across the edge */}
+      <motion.div
+        className="absolute inset-y-0 left-0 overflow-hidden rounded-full bg-ink"
+        initial={{ width: 0 }}
+        animate={{ width: `${t.progress}%` }}
+        transition={{ ...move, delay: 0.15 }}
+      >
+        <span className="t-data absolute top-1/2 left-4 hidden -translate-y-1/2 whitespace-nowrap text-on-ink sm:block">{t.title}</span>
+      </motion.div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------
    Collection — one data set, three representations (ShapeShift)
    ------------------------------------------------------------------ */
 
-const REPRESENTATIONS: Record<Representation, () => ReactNode> = {
+const REPRESENTATIONS: Record<ViewKind, () => ReactNode> = {
   cards: CardsView,
   board: BoardView,
   timeline: TimelineView,
@@ -421,10 +459,10 @@ const REPRESENTATIONS: Record<Representation, () => ReactNode> = {
 };
 
 /** Views with their own spatial model: they build themselves instead of morphing task surfaces */
-const HANDOVER: Representation[] = ["timeline", "team", "brief"];
+const HANDOVER: readonly ViewKind[] = ["timeline", "team", "brief"];
 
 export function CollectionBlock() {
-  const rep = useForm((s) => s.doc.view.representation);
+  const rep = useActiveView();
   const View = REPRESENTATIONS[rep];
   // Cards, board and focus morph into each other through shared surfaces. Timeline and team are
   // different spatial models, so they hand over instead: they draw themselves in, and a view

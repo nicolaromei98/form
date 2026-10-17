@@ -6,28 +6,46 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --project unit --project unit-dom --project golden",
+    "test:unit": "vitest run --project unit --project unit-dom",
+    "test:golden": "vitest run --project golden",
+    "test:property": "vitest run --project property",
+    "test:perf": "vitest run --project perf",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "e2e": "playwright test --config e2e/playwright.config.ts",
+    "e2e:compare": "node scripts/e2e/compare.mjs",
+    "fixtures:v0": "jiti scripts/fixtures/gen-v0.mts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.133.0",
     "@gsap/react": "^2.1.2",
+    "fractional-indexing": "4.0.0",
     "gsap": "^3.15.0",
+    "immer": "11.1.21",
     "motion": "^14.1.0",
+    "nanoid": "6.0.2",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "server-only": "^0.0.1",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.64.0",
     "@tailwindcss/turbopack": "^4",
-    "@types/node": "^20",
+    "@types/node": "22.20.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "5.0.4",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
+    "fast-check": "4.10.2",
+    "happy-dom": "21.0.1",
+    "jiti": "2.7.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "5.0.4"
   }
 }

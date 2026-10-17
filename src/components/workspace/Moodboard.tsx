@@ -2,11 +2,14 @@
 
 import { AnimatePresence, motion, useDragControls, useMotionValue } from "motion/react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from "react";
-import { useForm } from "@/lib/store";
+import { MOOD_ADD_MAX, MOOD_TEXT } from "@/lib/domain/limits";
+import type { MoodItemId } from "@/lib/domain/schema/ids";
+import type { MoodLayout } from "@/lib/domain/schema/primitives";
+import type { MoodItem } from "@/lib/domain/schema/project";
+import { type BoardPoint, useActions, useMoodItems } from "@/lib/store/hooks";
 import { ease, move } from "@/lib/motion";
-import { ingestImage, isImageFile, useAssetUrl } from "@/lib/assets";
+import { isImageFile, useAssetUrl } from "@/lib/assets";
 import { useWidth } from "@/lib/useWidth";
-import type { MoodInput, MoodItem, MoodLayout } from "@/lib/schema";
 import { BlockShell } from "./blocks";
 import { Popover } from "./parts";
 import { ColorPicker } from "./ColorPicker";
@@ -18,21 +21,19 @@ const isEditable = (t: EventTarget | null) =>
   t instanceof HTMLElement && Boolean(t.closest("input, textarea, select, [contenteditable='true'], [contenteditable='plaintext-only']"));
 const hasFiles = (e: { dataTransfer: DataTransfer | null }) => Boolean(e.dataTransfer?.types.includes("Files"));
 
-/** Image width when it lands, in board-width units */
-const DROP_W = 0.24;
-
 /**
  * Moodboard — a free canvas of references kept with the project. Drop, paste
  * or browse images; add notes and colours; drag to arrange, resize from the
  * corner, or let FORM tidy it into a masonry, a grid or a collage.
  */
 export function MoodboardBlock() {
-  const items = useForm((s) => s.doc.mood);
-  const commit = useForm((s) => s.commit);
+  // Bottom to top (z order): later tiles paint over earlier ones, as v0's array order did
+  const items = useMoodItems();
+  const actions = useActions();
   // Width starts at 0: tiles only mount once the real width is known, so nothing slides in from a guess
   const [boardRef, W] = useWidth<HTMLDivElement>(0);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [editing, setEditing] = useState<string | null>(null);
+  const [selected, setSelected] = useState<MoodItemId | null>(null);
+  const [editing, setEditing] = useState<MoodItemId | null>(null);
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -45,29 +46,20 @@ export function MoodboardBlock() {
   const height = Math.max(items.length ? (bottom + 0.08) * W : 0, W * 0.4, 240);
 
   const addFiles = useCallback(
-    async (files: File[], at?: { x: number; y: number }) => {
-      const images = files.filter(isImageFile).slice(0, 24);
-      if (!images.length) return;
-      setBusy((n) => n + images.length);
+    async (files: File[], at?: BoardPoint) => {
+      // The images addImages takes from these files: at most 24 at once
+      const count = Math.min(files.filter(isImageFile).length, MOOD_ADD_MAX);
+      if (!count) return;
+      setBusy((n) => n + count);
       try {
-        const done = await Promise.all(images.map(ingestImage));
-        // Dropped files land under the pointer as one row centred on it; pasted or browsed ones find free spots
-        const gap = 0.018;
-        const w = Math.min(DROP_W, (0.94 - (done.length - 1) * gap) / done.length);
-        const rowW = done.length * w + (done.length - 1) * gap;
-        const rowH = Math.max(...done.map((d) => d.aspect * w));
-        const x0 = at ? clamp(at.x - rowW / 2, 0.03, 0.97 - rowW) : 0;
-        const inputs: MoodInput[] = done.map(({ asset, aspect }, i) =>
-          at
-            ? { kind: "image", asset, w, h: w * aspect, x: x0 + i * (w + gap), y: Math.max(0.03, at.y - rowH / 2) }
-            : { kind: "image", asset, w: DROP_W, h: DROP_W * aspect },
-        );
-        commit([{ op: "addMoodItems", items: inputs }], `add ${inputs.length} image${inputs.length > 1 ? "s" : ""}`);
+        // Stored under fresh ast_ ids, then added in one command. Dropped files land under the
+        // pointer as one row centred on it; pasted or browsed ones find free spots
+        await actions.addImages(files, at);
       } finally {
-        setBusy((n) => n - images.length);
+        setBusy((n) => n - count);
       }
     },
-    [commit],
+    [actions],
   );
 
   // Paste anywhere, and never let a missed drop navigate the page away to the file
@@ -97,6 +89,10 @@ export function MoodboardBlock() {
     };
   }, [addFiles, boardRef]);
 
+  // A selected reference can leave the board (undo, a typed command). Deleting it then does
+  // nothing, as in v0: the op would be refused, and a refusal speaks
+  const selectedOnBoard = selected !== null && items.some((it) => it.id === selected);
+
   // Keyboard: delete the selected reference, Escape lets go
   useEffect(() => {
     if (!selected) return;
@@ -104,7 +100,7 @@ export function MoodboardBlock() {
       if (isEditable(e.target)) return;
       if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
-        commit([{ op: "removeMoodItem", id: selected }], "remove reference");
+        if (selectedOnBoard) actions.commit([{ op: "removeMoodItem", itemId: selected }], { label: "remove reference" });
         setSelected(null);
       } else if (e.key === "Escape") setSelected(null);
     };
@@ -117,7 +113,7 @@ export function MoodboardBlock() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("pointerdown", onDown);
     };
-  }, [selected, commit, boardRef]);
+  }, [selected, selectedOnBoard, actions, boardRef]);
 
   const toggleColour = () => {
     if (colourAt || !colourAnchor) return setColourAt(null);
@@ -131,12 +127,14 @@ export function MoodboardBlock() {
   const closeColour = useCallback(() => setColourAt(null), []);
 
   const addNote = () => {
-    commit([{ op: "addMoodItems", items: [{ kind: "note", text: "" }] }], "add note");
-    const id = useForm.getState().doc.mood.at(-1)?.id ?? null;
+    // An empty note, open for writing; null when the board refused it (full)
+    const id = actions.addNote();
     setSelected(id);
     setEditing(id);
   };
-  const arrange = (layout: MoodLayout) => commit([{ op: "arrangeMood", layout }], `arrange ${layout}`);
+  // The op names the references on the board now, so a replay arranges only what was seen
+  const arrange = (layout: MoodLayout) =>
+    actions.commit([{ op: "arrangeMood", layout, itemIds: items.map((it) => it.id) }], { label: `arrange ${layout}` });
 
   return (
     <BlockShell order={3} className="mt-20">
@@ -192,7 +190,7 @@ export function MoodboardBlock() {
           <Popover anchor={colourAnchor} pos={colourAt} onClose={closeColour}>
             <ColorPicker
               onAdd={(hex, name) => {
-                commit([{ op: "addMoodItems", items: [{ kind: "color", hex, text: name }] }], "add colour");
+                actions.addColour(hex, name);
                 closeColour();
               }}
             />
@@ -242,7 +240,7 @@ export function MoodboardBlock() {
                 onEdit={() => setEditing(it.id)}
                 onEditEnd={() => setEditing(null)}
                 onRemove={() => {
-                  commit([{ op: "removeMoodItem", id: it.id }], "remove reference");
+                  actions.commit([{ op: "removeMoodItem", itemId: it.id }], { label: "remove reference" });
                   setSelected(null);
                 }}
               />
@@ -326,7 +324,7 @@ function Tile({
   onEditEnd: () => void;
   onRemove: () => void;
 }) {
-  const commit = useForm((s) => s.commit);
+  const { commit } = useActions();
   const controls = useDragControls();
   // Position lives in motion values: drag writes them, the document animates them
   const x = useMotionValue(item.x * W);
@@ -357,7 +355,7 @@ function Tile({
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointercancel", onUp);
-      if (liveRef.current) commit([{ op: "updateMoodItem", id: item.id, patch: liveRef.current }], "resize reference");
+      if (liveRef.current) commit([{ op: "updateMoodItem", itemId: item.id, patch: liveRef.current, toFront: false }], { label: "resize reference" });
       liveRef.current = null;
       setLive(null);
     };
@@ -393,7 +391,8 @@ function Tile({
       onDragStart={() => setDragging(true)}
       onDragEnd={() => {
         setDragging(false);
-        commit([{ op: "updateMoodItem", id: item.id, patch: { x: x.get() / W, y: y.get() / W }, raise: true }], "move reference");
+        // A moved reference goes on top of the stack (v0 raise)
+        commit([{ op: "updateMoodItem", itemId: item.id, patch: { x: x.get() / W, y: y.get() / W }, toFront: true }], { label: "move reference" });
       }}
     >
       <div
@@ -401,7 +400,7 @@ function Tile({
           dragging ? "shadow-[0_30px_60px_-24px_rgba(0,0,0,0.45)]" : "shadow-[0_14px_34px_-22px_rgba(0,0,0,0.4)]"
         } ${selected ? "outline-[1.5px] outline-offset-[3px] outline-ink outline-solid" : ""}`}
       >
-        {item.kind === "image" && <ImageFace asset={item.asset} />}
+        {item.kind === "image" && <ImageFace asset={item.assetId} />}
         {item.kind === "color" && <ColorFace hex={item.hex ?? "#000000"} name={item.text} width={w} />}
         {item.kind === "note" && <NoteFace item={item} width={w} editing={editing} onEditEnd={onEditEnd} />}
       </div>
@@ -431,6 +430,7 @@ function Tile({
   );
 }
 
+/** An `ast_` id; lib/assets falls back to a migrated v0 image's legacy `img-` key */
 function ImageFace({ asset }: { asset: string | null }) {
   const { url, missing } = useAssetUrl(asset);
   if (missing) return <Placeholder>Image not stored in this browser</Placeholder>;
@@ -443,16 +443,34 @@ function Placeholder({ children }: { children: ReactNode }) {
   return <div className="t-data grid h-full w-full place-items-center bg-black/[0.05] p-3 text-center text-text-3">{children}</div>;
 }
 
-function ColorFace({ hex, name, width }: { hex: string; name: string | null; width: number }) {
+/** WCAG 2.x relative luminance of a #rrggbb colour */
+function luminance(hex: string) {
   const n = parseInt(hex.slice(1), 16);
-  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  const lin = (c: number) => (c / 255 <= 0.04045 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+}
+const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+
+/**
+ * The swatch label's ink (Q14): the off-black or the off-white, whichever contrasts more with the
+ * swatch; pure black or white for the few mid-tones where neither reaches 4.5:1.
+ */
+function labelInk(hex: string) {
+  const l = luminance(hex);
+  const dark = contrast(l, luminance("#0c0c0c"));
+  const light = contrast(l, luminance("#f4f3f0"));
+  if (Math.max(dark, light) >= 4.5) return dark >= light ? "#0c0c0c" : "#f4f3f0";
+  return contrast(l, 0) >= contrast(l, 1) ? "#000000" : "#ffffff";
+}
+
+function ColorFace({ hex, name, width }: { hex: string; name: string | null; width: number }) {
   return (
-    <div className="flex h-full w-full flex-col justify-end p-3" style={{ background: hex, color: lum > 0.6 ? "#0c0c0c" : "#f4f3f0" }}>
+    <div className="flex h-full w-full flex-col justify-end p-3" style={{ background: hex, color: labelInk(hex) }}>
       {/* Too small to label legibly: the chip speaks for itself */}
       {width >= 84 && (
         <>
           {name && <span className="t-body-s truncate">{name}</span>}
-          <span className="t-data uppercase opacity-80">{hex}</span>
+          <span className="t-data uppercase">{hex}</span>
         </>
       )}
     </div>
@@ -460,7 +478,7 @@ function ColorFace({ hex, name, width }: { hex: string; name: string | null; wid
 }
 
 function NoteFace({ item, width, editing, onEditEnd }: { item: MoodItem; width: number; editing: boolean; onEditEnd: () => void }) {
-  const commit = useForm((s) => s.commit);
+  const { commit } = useActions();
   const ref = useRef<HTMLParagraphElement>(null);
 
   // The text node belongs to the browser while editing; React only writes it when idle
@@ -498,11 +516,11 @@ function NoteFace({ item, width, editing, onEditEnd }: { item: MoodItem; width: 
           }
         }}
         onBlur={(e) => {
-          const text = (e.currentTarget.textContent ?? "").trim().slice(0, 400);
+          const text = (e.currentTarget.textContent ?? "").trim().slice(0, MOOD_TEXT);
           onEditEnd();
-          if (text !== (item.text ?? "")) commit([{ op: "updateMoodItem", id: item.id, patch: { text } }], "edit note");
+          if (text !== (item.text ?? "")) commit([{ op: "updateMoodItem", itemId: item.id, patch: { text }, toFront: false }], { label: "edit note" });
         }}
-        className="h-full overflow-hidden leading-[1.3] tracking-[-0.015em] text-text outline-none empty:before:text-text-4 empty:before:content-[attr(data-placeholder)]"
+        className="h-full overflow-hidden leading-[1.3] tracking-[-0.015em] text-text outline-none empty:before:text-text-3 empty:before:content-[attr(data-placeholder)]"
       />
     </div>
   );
